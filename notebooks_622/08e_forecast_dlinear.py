@@ -1,0 +1,147 @@
+"""
+08e_forecast_dlinear.py — Forecast B2 per DLinear imputer (ore 6-22)
+=====================================================================
+Esegue naive + LGB M5 + MLP M5 forecaster con completed_sales di DLinear.
+
+Eseguire con: PYTHONUNBUFFERED=1 freshnet/bin/python notebooks_622/08e_forecast_dlinear.py
+"""
+import sys, os, gc, time, functools
+import numpy as np, pandas as pd
+print = functools.partial(print, flush=True)
+
+PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, PROJECT_ROOT)
+
+DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+COMPLETED_DIR = os.path.join(DATA_DIR, 'completed_sales_622')
+RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
+
+H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 21
+IMP_KEY = 'dlinear'; IMP_LABEL = 'DLinear'
+SEED = 42; np.random.seed(SEED)
+
+print('=' * 72)
+print(f'  FORECAST B2 — DLinear imputer (ore 6-22)')
+print('=' * 72)
+
+# ===========================================================================
+# 1. Load data
+# ===========================================================================
+print('\n1. Caricamento dati...')
+df_train_hf = pd.read_parquet(os.path.join(DATA_DIR, 'frn50k_train.parquet'))
+df_eval = pd.read_parquet(os.path.join(DATA_DIR, 'frn50k_eval.parquet'))
+df_train_hf['dt_parsed'] = pd.to_datetime(df_train_hf['dt'])
+df_eval['dt_parsed'] = pd.to_datetime(df_eval['dt'])
+df_full = pd.concat([df_train_hf, df_eval], ignore_index=True)
+df_full = df_full.sort_values(['store_id','product_id','dt_parsed']).reset_index(drop=True)
+all_dates = sorted(df_full['dt_parsed'].unique())
+date_to_day = {d: i+1 for i, d in enumerate(all_dates)}
+df_full['day_num'] = df_full['dt_parsed'].map(date_to_day)
+df_full['dow'] = df_full['dt_parsed'].dt.dayofweek
+
+sales_orig = np.array(df_full['hours_sale'].tolist(), dtype=np.float64)[:, H_START:H_END]
+stock_orig = np.array(df_full['hours_stock_status'].tolist(), dtype=np.int8)[:, H_START:H_END]
+del df_train_hf, df_eval
+
+# Align completed_sales
+df_cs = pd.read_parquet(os.path.join(COMPLETED_DIR, f'{IMP_KEY}.parquet'))
+cs_sales = np.array(df_cs['hours_sale'].tolist(), dtype=np.float64)
+completed_full = sales_orig.copy()
+cs_keys = (df_cs['store_id'].astype(str)+'_'+df_cs['product_id'].astype(str)+'_'+df_cs['dt']).values
+full_keys = (df_full['store_id'].astype(str)+'_'+df_full['product_id'].astype(str)+'_'+df_full['dt']).values
+km = dict(zip(cs_keys, range(len(df_cs))))
+matched = 0
+for i in range(len(df_full)):
+    k = full_keys[i]
+    if k in km: completed_full[i] = cs_sales[km[k]]; matched += 1
+print(f'  Matched: {matched:,}/{len(df_full):,}')
+del df_cs, cs_sales, km, cs_keys, full_keys
+
+# Build series list
+series_list = []
+for (sid,pid), grp in df_full.groupby(['store_id','product_id'], sort=False):
+    gs = grp.sort_values('day_num')
+    idx = gs.index.values
+    series_list.append({'store_id':sid,'product_id':pid,'idx':idx,
+                        'days':df_full.loc[idx,'day_num'].values,
+                        'dows':df_full.loc[idx,'dow'].values})
+print(f'  {len(series_list):,} serie')
+
+# ===========================================================================
+# 2. Naive forecasters
+# ===========================================================================
+print('\n2. Naive forecasters...')
+
+def eval_instock(pred, obs, stk):
+    instock = stk == 0
+    ph, oh = pred[instock], obs[instock]
+    sae_h, sao_h = np.abs(ph-oh).sum(), np.abs(oh).sum()
+    se_h, so_h = (ph-oh).sum(), oh.sum()
+    nd = pred.shape[0]
+    sae_d, sao_d, se_d, so_d, nvd = 0., 0., 0., 0., 0
+    for d in range(nd):
+        m = instock[d]
+        if m.any():
+            pv, ov = pred[d,m].sum(), obs[d,m].sum()
+            sae_d += abs(pv-ov); sao_d += abs(ov); se_d += pv-ov; so_d += ov; nvd += 1
+    return {'sae_h':sae_h,'sao_h':sao_h,'se_h':se_h,'so_h':so_h,
+            'sae_d':sae_d,'sao_d':sao_d,'se_d':se_d,'so_d':so_d,'n_in':int(instock.sum()),'n_vd':nvd}
+
+def gm(s,d,mx): m=d<=mx; return s[m].mean(0) if m.any() else np.zeros(N_HOURS)
+def dwm(s,d,dw,mx):
+    m=d<=mx; p={}
+    for dow in range(7):
+        dm=m&(dw==dow); p[dow]=s[dm].mean(0) if dm.any() else (s[m].mean(0) if m.any() else np.zeros(N_HOURS))
+    return p
+def ma(s,d,a,K):
+    av=d<=a
+    if not av.any(): return np.zeros(N_HOURS)
+    return s[av][-min(K,av.sum()):].mean(0)
+
+for fc in ['Global Mean','DoW Mean',f'MA (K={MA_K})']:
+    pooled = {k:0. for k in ['sae_h','sao_h','se_h','so_h','sae_d','sao_d','se_d','so_d']}
+    ps_recs = []
+    for si, ser in enumerate(series_list):
+        if (si+1)%10000==0: print(f'    ... {si+1:,}/{len(series_list):,}')
+        idx=ser['idx']; days=ser['days']; dows=ser['dows']
+        sc=completed_full[idx]; obs_r=sales_orig[idx]; stk=stock_orig[idx]
+        em=(days>=91)&(days<=97)
+        if not em.any(): continue
+        ne=em.sum(); obs=obs_r[em]; st=stk[em]; ed=dows[em]
+        if fc=='Global Mean': pred=np.tile(gm(sc,days,90),(ne,1))
+        elif fc=='DoW Mean': p=dwm(sc,days,dows,90); pred=np.array([p[d] for d in ed])
+        else: pred=np.tile(ma(sc,days,90,MA_K),(ne,1))
+        m=eval_instock(pred,obs,st)
+        for k2 in pooled: pooled[k2]+=m[k2]
+        hw=m['sae_h']/m['sao_h'] if m['sao_h']>0 else np.nan
+        hwp=m['se_h']/m['so_h'] if m['so_h']!=0 else np.nan
+        dw2=m['sae_d']/m['sao_d'] if m['sao_d']>0 else np.nan
+        dwp=m['se_d']/m['so_d'] if m['so_d']!=0 else np.nan
+        ps_recs.append({'store_id':ser['store_id'],'product_id':ser['product_id'],
+                        'hourly_wape':hw,'hourly_wpe':hwp,'daily_wape':dw2,'daily_wpe':dwp})
+    p=pooled
+    pm={'hourly_wape':p['sae_h']/p['sao_h'],'hourly_wpe':p['se_h']/p['so_h']}
+    ps=pd.DataFrame(ps_recs)
+    mm={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
+    fc_safe=fc.lower().replace(' ','_').replace('(','').replace(')','').replace('=','')
+    ps.to_parquet(os.path.join(RESULTS_DIR,f'{IMP_KEY}__{fc_safe}_test_per_series.parquet'),index=False)
+    print(f'  {IMP_LABEL} × {fc}: WAPE_h pool={pm["hourly_wape"]:.4f}, med={mm["hourly_wape"]:.4f}')
+
+del completed_full
+gc.collect()
+
+# ===========================================================================
+# 3. LGB M5 lags — use 08d_lgb_single.py
+# ===========================================================================
+print('\n3. LGB M5 lags...')
+os.system(f'PYTHONUNBUFFERED=1 {sys.executable} notebooks_622/08d_lgb_single.py {IMP_KEY}')
+
+# ===========================================================================
+# 4. MLP M5 lags — use 08c_mlp_single.py
+# ===========================================================================
+print('\n4. MLP M5 lags...')
+os.system(f'PYTHONUNBUFFERED=1 {sys.executable} notebooks_622/08c_mlp_single.py {IMP_KEY}')
+
+print('\n' + '=' * 72)
+print(f'  DONE — Forecast B2 per {IMP_LABEL}')
+print('=' * 72)

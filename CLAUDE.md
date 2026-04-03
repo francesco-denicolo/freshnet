@@ -1,0 +1,578 @@
+# PINN-Retail: Physics-Informed Neural Networks per Demand Forecasting di Prodotti Deperibili
+
+## Obiettivo del progetto
+
+Costruire un modello PINN (Physics-Informed Neural Network) per prevedere la domanda latente di prodotti deperibili nel retail, gestendo nativamente il censoring da stockout senza una fase di imputation separata.
+
+**Proposta di ricerca B6** — Target: pubblicazione su NeurIPS/ICLR/JCP.
+
+---
+
+## Dataset: FreshRetailNet-50K
+
+- **Fonte**: https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K
+- **Dimensione**: 4.500.000 righe (train) + 350.000 (eval)
+- **Periodo**: Marzo–Giugno 2024, 90 giorni
+- **Granularità**: Oraria (vendite e stock status)
+- **Copertura**: 898 negozi, 18 città cinesi, 863 SKU deperibili
+
+### Colonne del dataset
+
+| Colonna | Tipo | Descrizione |
+|---------|------|-------------|
+| city_id | int | ID città |
+| store_id | int | ID negozio |
+| management_group_id | int | Gruppo gestione |
+| first_category_id | int | Categoria livello 1 |
+| second_category_id | int | Categoria livello 2 |
+| third_category_id | int | Categoria livello 3 |
+| product_id | int | ID prodotto |
+| dt | str | Data (giornaliera) |
+| sale_amount | float | Vendite giornaliere totali |
+| hours_sale | str/list | Vendite per fascia oraria |
+| stock_hour6_22_cnt | int | Ore di stockout tra 6:00 e 22:00 (conta degli 1 in hours_stock_status) |
+| hours_stock_status | str/list | Stato stock binario per fascia oraria (0=in stock, 1=stockout) |
+| discount | float | Sconto promozionale |
+| holiday_flag | int | Flag festività |
+| activity_flag | int | Flag attività promozionale |
+| precpt | float | Precipitazioni |
+| avg_temperature | float | Temperatura media |
+| avg_humidity | float | Umidità media |
+| avg_wind_level | float | Livello vento medio |
+
+### IMPORTANTE: cosa NON c'è nel dataset
+
+- **NON c'è il livello di inventario continuo I(t)**. C'è solo lo stato binario (in stock / stockout).
+- **NON ci sono i rifornimenti R(t)**.
+- **NON c'è lo scarto per deterioramento W(t)**.
+- I campi `hours_sale` e `hours_stock_status` sono probabilmente stringhe JSON o liste da parsare.
+
+---
+
+## Formulazione matematica
+
+### Il problema del censoring
+
+Le vendite osservate NON sono la domanda vera:
+
+```
+S_obs(t) = min(D(t), I(t))
+```
+
+Quando c'è stockout, S_obs = 0 indipendentemente dalla domanda vera. I modelli standard imparano a prevedere zero durante gli stockout → sottostima sistematica → ciclo vizioso.
+
+### Architettura del modello PINN-Retail
+
+**Componenti:**
+1. **Encoder** (MLP): processa le features dell'ora target. Architettura semplice perché il contributo è nella loss, non nell'encoder. Si può scalare a LSTM/Transformer dopo aver validato la loss.
+2. **Testa domanda** (Linear + softplus): produce D*(t) > 0 (domanda latente)
+3. **Testa inventario** (Linear + softplus): produce I*(t) ≥ 0 (inventario latente)
+
+**DECISIONE: niente decoder deterioramento.** Il dataset non ha dati sullo scarto, quindi modellare il deterioramento sarebbe speculativo (variabile latente che dipende da altra variabile latente senza supervisione).
+
+**DECISIONE: stock_status NON è un input del network.** Motivazioni:
+1. A inference non lo conosciamo (stiamo prevedendo il futuro)
+2. Se fosse input, il network imparerebbe status=1 → D≈0, replicando il censoring
+3. stock_status va usato SOLO nella loss (per distinguere regime in-stock vs stockout)
+
+**Output:** La rete produce due quantità tramite teste separate:
+```
+h(t)  = encoder(features(t))
+D*(t) = softplus(head_D(h(t)))    — domanda latente (sempre > 0)
+I*(t) = softplus(head_I(h(t)))    — inventario latente (sempre ≥ 0)
+```
+
+**Features di input** (NO stock_status):
+- Temporali: ora del giorno, giorno della settimana, giorno del mese
+- Categoriali: city_id, store_id, product_id, category L1/L2/L3
+- Esogene: temperatura, umidità, precipitazioni, vento, discount, holiday, activity
+- Storiche: lag di vendite osservate (da determinare con analisi autocorrelazione)
+  NOTA: gli zeri da stockout nello storico sono segnale censurato, non domanda zero.
+  Opzioni: (a) usare lag raw, (b) mascherare/imputare zeri da stockout nei lag.
+  La scelta (a) vs (b) sarà validata sperimentalmente.
+
+**Vendite predette** (codifica: 0=in stock, 1=stockout):
+- Quando stock_status(t) = 0 (in-stock): S_pred(t) = D*(t) — domanda soddisfatta
+- Quando stock_status(t) = 1 (stockout): S_pred(t) = 0 — vendite censurate
+
+### Loss function — 3 termini
+
+```
+L_total = L_data + λ₁·L_boundary + λ₂·L_cons
+```
+
+La non-negatività di D* e I* è garantita da softplus (non serve L_nonneg esplicito).
+Il collasso della domanda durante stockout è prevenuto dall'ARCHITETTURA (stock_status
+non è un input → il modello non può distinguere ore in-stock da stockout → D* generalizza
+automaticamente), non da un termine nella loss.
+
+**Termine 1 — L_data (aderenza ai dati, SOLO ore in-stock):**
+```
+L_data = (1/|T_in|) · Σ_{t: status=0} (D*(t) − S_obs(t))²
+dove T_in = {t : stock_status(t) = 0}    (ore in-stock)
+```
+Nessun downweighting α: le ore di stockout sono ESCLUSE, non downweightate.
+Giustificazione EDA: durante in-stock S_obs = D (75.1% dei dati, segnale abbondante).
+Durante stockout S_obs ≈ 0 nel 97.1% dei casi → L_data sarebbe inutile.
+
+**Termine 2 — L_boundary (condizioni al contorno da stock_status):**
+```
+L_boundary = (1/|T_so|) · Σ_{t: status=1} I*(t)²
+           + (1/|T_in|) · Σ_{t: status=0} ReLU(D*(t) − I*(t))²
+dove T_so = {t : stock_status(t) = 1}    (ore di stockout)
+```
+Due sotto-vincoli:
+- **Stockout → I* ≈ 0**: quando status=1, l'inventario deve essere esaurito.
+- **In-stock → I* ≥ D***: quando status=0, l'inventario è sufficiente a soddisfare
+  la domanda (altrimenti sarebbe stockout). Equivale a dire S_obs = D, non min(D,I).
+Giustificazione EDA: il pattern di deplezione giornaliera (5% stockout ore 7 → 42% ore 22)
+mostra che I* si azzera progressivamente. stock_status binario funge da supervisione per I*.
+
+**Termine 3 — L_cons (conservazione dell'inventario, DISUGUAGLIANZA):**
+```
+L_cons = (1/(T−1)) · Σ_t ReLU(−[I*(t+1) − I*(t) + min(D*(t), I*(t))])²
+```
+Fisica: I(t+1) = I(t) − min(D(t), I(t)) + R(t), con R(t) ≥ 0.
+Riarrangiando: I(t+1) − I(t) + min(D(t), I(t)) = R(t) ≥ 0.
+Il termine penalizza SOLO quando R(t) implicito < 0 (fisicamente impossibile).
+Perché disuguaglianza e non uguaglianza: la formulazione originale (r_cons² → 0)
+imponeva R(t) = 0 ∀t. Ma l'EDA mostra che il rifornimento avviene (stockout si resetta
+tra giorni). La disuguaglianza permette R(t) > 0 dove serve.
+
+**DECISIONE: L_censor (Tobit) eliminato.** Poiché stock_status NON è un input del network,
+il modello non può distinguere ore in-stock da ore di stockout a livello di features.
+D*(t) dipende solo da (ora, giorno, meteo, categoria, storico) e generalizza automaticamente.
+L_censor sarebbe ridondante e potrebbe introdurre bias positivo nelle ore a domanda
+naturalmente bassa (es. 3am). L'unico rischio residuo è che lo storico vendite censurato
+(zeri da stockout) influenzi le predizioni, ma questo va gestito nel preprocessing dei lag,
+non nella loss.
+
+### Ottimizzazione: Lagrangiano Aumentato (ALM)
+
+I λ₁, λ₂ non sono fissi — sono variabili ottimizzate con ALM:
+
+```
+L_ALM = L_data + Σ_k [λ_k · V_k + (ρ_k/2) · V_k²]
+dove k ∈ {boundary, cons} e V_k è la violazione del vincolo k
+```
+
+Training a 3 fasi per ogni iterazione:
+1. Passo primale: aggiorna Θ (pesi rete) con Adam minimizzando L_ALM
+2. Passo duale: λ_k ← max(0, λ_k + ρ_k · V_k)
+3. Adattamento: se V_k non migliora, ρ_k ← γ · ρ_k
+
+A convergenza, λ_k* = shadow prices (interpretazione economica).
+- λ_boundary* misura il "costo" della violazione delle condizioni di stockout
+- λ_cons* misura il "costo" della violazione della conservazione dell'inventario
+
+---
+
+## Piano sperimentale
+
+### Livello 1 — Baseline naive (direct forecast, ignorano il censoring)
+- Naive direct (profilo ultimo giorno → applicato a tutto l'orizzonte)
+- MA direct (profilo media ultimi K giorni → applicato a tutto l'orizzonte)
+- Global Mean (profilo medio su tutto il training)
+- DoW Mean (profilo medio per giorno della settimana)
+- LightGBM su S_obs
+- MLP su S_obs
+
+### Livello 2 — Two-stage (imputation + forecasting)
+- Imputation con media condizionata + LightGBM
+- Imputation con TimesNet/iTransformer + TFT (come nel paper baseline)
+
+### Livello 3 — PINN-Retail (nostro contributo)
+- End-to-end, nessuna imputation, vincoli fisici nella loss
+
+### Metriche
+- **WAPE** (Weighted Absolute Percentage Error) — accuratezza
+- **WPE** (Weighted Percentage Error) — bias/sottostima
+- **Violazione vincoli** (solo PINN) — consistenza fisica
+
+### Windowing
+- Input: finestra di H ore (es. H=168, una settimana)
+- Target: FH ore successive (es. FH=24, un giorno)
+- Stride: 1 (o maggiore per ridurre correlazione)
+- Campioni: ~N−H−FH+1 per serie, ×50.000 serie per modello globale
+
+---
+
+## Stato attuale
+
+**PASSO 1 (completato):** Analisi esplorativa del dataset.
+- ✅ Dati scaricati da HuggingFace e salvati come parquet in data/
+- ✅ Parsing campi orari: numpy array di 24 elementi (ore 0-23)
+- ✅ Statistiche descrittive complete
+- ✅ 13 visualizzazioni in notebooks/figures/
+- ✅ Notebook completo: notebooks/01_eda.py
+
+**PASSO 3 (completato):** Framework metriche.
+- ✅ Framework metriche riusabile: src/evaluation/metrics.py
+- ✅ compute_metrics(), format_metrics_table()
+- ✅ Parquet per-serie salvati in notebooks/results/ per confronto con modelli successivi
+
+Note: WAPE mediana per-serie > WAPE pooled perché il pooled è volume-weighted
+(serie ad alto volume hanno WAPE più basso e pesano di più).
+
+**PASSO 3a (completato):** Global Mean Profile baseline.
+- ✅ Notebook: notebooks/04_baseline_global_mean.py
+- ✅ Per ogni serie, predizione = media hours_sale (profilo fisso 24h)
+  - Val: profilo calcolato su giorni 1-83 (solo train)
+  - Test: profilo calcolato su giorni 1-90 (train+val)
+- ✅ Risultati (Global Mean):
+
+| Split | WAPE_overall | WAPE_instock | WAPE_stockout | WPE_overall |
+|-------|-------------|-------------|--------------|------------|
+| Train (gg 2-83) | 1.1259 | 0.9745 | 6.9214 | -0.0033 |
+| Val (gg 84-90) | 1.0418 | 0.9311 | 5.9399 | -0.1793 |
+| Test (eval) | 1.0444 | 0.9319 | 6.1081 | -0.1630 |
+
+Mediana per-serie WAPE (test): 1.2590
+
+**PASSO 3b (completato):** Day-of-Week Mean Profile baseline.
+- ✅ Notebook: notebooks/05_baseline_dow_mean.py
+- ✅ Per ogni serie, 7 profili medi (uno per giorno della settimana) → cattura stagionalità settimanale
+  - Val: profili calcolati su giorni 1-83 (solo train, 11-12 gg per DoW)
+  - Test: profili calcolati su giorni 1-90 (train+val, 12-13 gg per DoW)
+- ✅ Risultati (DoW Mean):
+
+| Split | WAPE_overall | WAPE_instock | WAPE_stockout | WPE_overall |
+|-------|-------------|-------------|--------------|------------|
+| Train (gg 2-83) | 1.0457 | 0.9044 | 6.4554 | -0.0017 |
+| Val (gg 84-90) | 1.0397 | 0.9298 | 5.9041 | -0.1802 |
+| Test (eval) | 1.0410 | 0.9291 | 6.0781 | -0.1638 |
+
+Mediana per-serie WAPE (test): 1.2517
+
+**PASSO 3c (completato):** Naive Direct Forecast.
+- ✅ Notebook: notebooks/06_baseline_naive_direct.py
+- ✅ Predizione: profilo dell'ultimo giorno prima dell'orizzonte, applicato a tutti i 7 giorni
+  - Val: profilo = S_obs(giorno 83) → applicato a giorni 84-90
+  - Test: profilo = S_obs(giorno 90) → applicato a giorni 91-97
+- ✅ Nessuna osservazione del periodo di forecast viene usata
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 1.1469 | 1.0351 | -0.1215 |
+| Test | 1.1765 | 1.0605 | -0.0198 |
+
+Mediana per-serie WAPE (test): 1.3505
+
+**PASSO 3d (completato):** MA Direct Forecast (K selection su val).
+- ✅ Notebook: notebooks/07_baseline_ma_direct.py
+- ✅ K selezionato su val in modalità direct forecast (profilo fisso, no osservazioni val)
+- ✅ Criteri discordanti: K=14 (pooled) vs K=83 (median, ≈ Global Mean). Usato K*=14.
+- ✅ Test: profilo = media ultimi 14 giorni prima del test (giorni 77-90, include val)
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 1.0160 | 0.9069 | -0.1208 |
+| Test | 1.0210 | 0.9072 | -0.0553 |
+
+Mediana per-serie WAPE (test): 1.2735
+
+**PASSO 3e (completato):** MLP Baseline (variante A, no history).
+- ✅ Notebook: notebooks/08_baseline_mlp.py (training + variant selection)
+- ✅ Notebook: notebooks/08b_mlp_evaluate.py (valutazione test + confronto)
+- ✅ Notebook: notebooks/08c_mlp_instock_plots.py (boxplot in-stock)
+- ✅ Architettura: embeddings (store→32, product→32, city→8, dow→4) + continuous(7) = 83 dim input
+  → Linear(128)+ReLU → Linear(64)+ReLU → Linear(24)+Softplus
+- ✅ Training: MSE loss su tutte le ore, 30 epoche, Adam lr=1e-3, batch=4096, MPS (Apple Silicon)
+- ✅ Solo variante A (no history) completata — varianti B-E troppo lente per sessione singola
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 0.9785 | 0.8638 | -0.2423 |
+| Test | 0.9766 | 0.8686 | -0.2933 |
+
+Mediana per-serie WAPE (test): 1.1835
+Mediana per-serie WAPE in-stock (test): 1.0815
+
+**PASSO 3e-bis (completato):** MLP Baseline (variante F, M5-style lag features).
+- ✅ Notebook: notebooks/08_baseline_mlp.py (aggiornato per variante F)
+- ✅ 11 lag features M5-style × 24 ore = 264 valori + 11 binary masks = 275 dim lag
+- ✅ NaN handling: 0 + binary mask (1=disponibile, 0=mancante). Scelto dall'utente.
+- ✅ Normalizzazione lag: media/std dal training set
+- ✅ Input totale: 76 (emb) + 7 (cont) + 275 (lag+mask) = 358 dim → 112K parametri
+- ✅ Training: early stopping a epoca 8, val WAPE=0.9635, batch=4096
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 0.9635 | 0.8629 | -0.2054 |
+| Test | 0.9590 | 0.8588 | -0.1776 |
+
+Mediana per-serie WAPE (test): 1.2029
+Mediana per-serie WAPE in-stock (test): 1.0859
+
+Note MLP A vs F:
+- F migliora WAPE pooled (-1.8%: 0.977→0.959) ma peggiora mediana (+1.6%: 1.184→1.203)
+- F riduce il bias del 39% (WPE -0.293→-0.178). Stesso pattern di LGB A→F.
+- Conferma: lag features beneficiano le serie ad alto volume (pooled) ma non le piccole serie (mediana)
+
+**PASSO 3f (completato):** LightGBM Baseline (variante A, no history).
+- ✅ Notebook: notebooks/09_baseline_lgb.py
+- ✅ Modello singolo per-ora: ogni riga = (store, product, giorno, ora) → 1 vendita
+  Features categoriche native (no embedding): store_id, product_id, city_id, dow, hour
+  Features continue: discount, avg_temperature, avg_humidity, precpt, avg_wind_level, holiday_flag, activity_flag
+- ✅ Training: MAE loss, 98M righe, 298 boosting rounds (early stopping 20)
+- ✅ HP non ottimizzati: num_leaves=31, lr=0.1, bagging=0.3, max_bin=127
+- ✅ Variante A (no history) e variante F (M5-style, 11 lag features) completate
+- ✅ Variante F: 11 features lag M5-style (raw lags, rolling means/std, DoW-specific, daily agg, momentum)
+  NaN per lag mancanti (LightGBM gestisce nativamente). 497 boosting rounds, MAE val = 0.0498
+
+Risultati variante A (no history):
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 1.0310 | 0.9106 | -0.1302 |
+| Test | 1.0340 | 0.9197 | -0.1691 |
+
+Risultati variante F (M5-style, 11 lag features):
+
+| Split | WAPE_overall | WAPE_instock | WPE_overall |
+|-------|-------------|-------------|------------|
+| Val | 0.9981 | 0.8838 | -0.1151 |
+| Test | 0.9993 | 0.8827 | -0.0747 |
+
+Feature importance F (top 5): rmean_7d(360K), rmean_14d(284K), rmean_dow(82K), hour(76K), store_id(47K)
+Le rolling means dominano; i raw lags (lag_1d=17K) sono meno informativi.
+
+**Confronto tutti i baseline direct forecast (test):**
+
+| Modello | WAPE_in med | WPE_in med | WAPE_all med | WAPE_pooled |
+|---------|:----------:|:----------:|:------------:|:-----------:|
+| MLP (var A) | **1.0815** | -0.4045 | **1.1835** | 0.9766 |
+| DoW Mean | 1.1176 | -0.2279 | 1.2517 | 1.0410 |
+| LGB (var A) | 1.1221 | -0.2271 | 1.2644 | 1.0340 |
+| Global Mean | 1.1243 | -0.2272 | 1.2590 | 1.0444 |
+| LGB (var F) | 1.1293 | -0.1827 | 1.2747 | **0.9993** |
+| MA (K=14) | 1.1341 | -0.1722 | 1.2735 | 1.0210 |
+| Naive Direct | 1.2192 | -0.1520 | 1.3505 | 1.1765 |
+
+Note:
+- MLP è il miglior baseline su WAPE mediana ma ha il WPE più negativo (-0.40 in-stock)
+- LGB var F è il miglior baseline su WAPE pooled (0.999) ma mediana per-serie è nella media
+- Le lag features M5-style migliorano il pooled (volume-weighted) -3.4% ma non la mediana per-serie
+- Trade-off WAPE vs WPE confermato: modelli più accurati tendono a sottostimare di più
+- LGB var F ha il WPE meno negativo tra i modelli ML (-0.183 vs MLP -0.405)
+
+**PASSO 4 (completato):** Two-Stage (Imputation + LightGBM Forecasting).
+- ✅ Notebook: notebooks/10_twostage_lgb.py
+- ✅ Stage 1: due metodi di imputation per ore di stockout
+  - Conditional Mean: media per (store, product, dow, hour) su ore in-stock
+  - LGB Imputation: LGB trainato su in-stock hours (12 base features, no lag)
+- ✅ Stage 2: LGB con M5 lag features calcolati da completed_sales (decontaminati)
+  - Target = completed Y(t) = S_obs se in-stock, D̂ se stockout
+  - Early stopping su val MAE (completed Y)
+- ✅ LGB Imputation selezionato come metodo migliore
+
+Imputation diagnostica:
+- Media D̂ imputata (LGB): 0.0409 vs media S_obs in-stock: 0.0547 (ratio 0.75)
+- momentum_1d_7d NaN: 18.6% (vs 42% nel single-stage) — meno NaN grazie ai valori imputati
+
+Stage 2 selection (val):
+
+| Metodo | WAPE_in pool | WAPE_in med | Iter |
+|--------|:---:|:---:|:---:|
+| Conditional Mean | 0.9057 | 1.143 | 77 |
+| LGB Imputation | 0.8945 | 1.138 | 493 |
+
+Risultati Two-Stage LGB (best = LGB Imputation):
+
+| Split | WAPE_overall | WAPE_instock | WAPE_stockout | WPE_overall |
+|-------|-------------|-------------|--------------|------------|
+| Val | 1.0611 | 0.8945 | 8.4369 | +0.0553 |
+| Test | 1.0567 | 0.8952 | 8.3207 | +0.0752 |
+
+Mediana per-serie (test):
+- WAPE_instock: 1.1573, WPE_instock: -0.0727, WAPE_overall: 1.3450
+
+Feature importance Stage 2 (top 5): rmean_7d(365K), rmean_dow(318K), rmean_14d(186K), hour(105K), lag_1d(77K)
+rmean_dow sale dal 3° al 2° posto vs single-stage — lag DoW beneficiano della de-censoring.
+
+**PASSO 4b (completato):** Two-Stage MLP (Imputation + MLP Forecasting).
+- ✅ Notebook: notebooks/11_twostage_mlp.py
+- ✅ Stage 1: LGB Imputation (stesso approccio di notebook 10, 497 iter, MAE 0.0585)
+  - Media D̂ imputata: 0.0409 vs S_obs in-stock: 0.0547 (ratio 0.75)
+- ✅ Stage 2: MLP con M5-style lag features da completed_sales
+  - Target = completed Y(t), early stopping su val WAPE vs completed_Y
+  - Architettura: [128, 64] + Softplus, 112K parametri, input 358 dim
+  - Early stopping a epoca 4, val WAPE=0.774 (vs completed_Y)
+- ✅ Dataset construction vettorizzato: 63s (vs ~20min con loop naive)
+  - cumsum per rolling mean/std, searchsorted per DoW features, pre-allocation
+
+Risultati Two-Stage MLP (vs S_obs originale):
+
+| Split | WAPE_overall | WAPE_instock | WAPE_stockout | WPE_overall |
+|-------|-------------|-------------|--------------|------------|
+| Val | 1.0270 | 0.8746 | 7.7731 | -0.0293 |
+| Test | 1.0141 | 0.8721 | 7.4008 | -0.0367 |
+
+Mediana per-serie (test):
+- WAPE_instock: 1.1146, WPE_instock: -0.1883, WAPE_overall: 1.2765
+
+**Confronto tutti i modelli (test, mediana per-serie in-stock):**
+
+| Modello | WAPE_in med | WPE_in med | WAPE_all med | WAPE_in pool |
+|---------|:----------:|:----------:|:------------:|:------------:|
+| MLP (var A) | **1.0815** | -0.4045 | **1.1835** | 0.8686 |
+| MLP (var F) | 1.0859 | -0.3235 | 1.2029 | 0.8588 |
+| 2-Stage MLP | 1.1146 | -0.1883 | 1.2765 | **0.8721** |
+| DoW Mean | 1.1176 | -0.2279 | 1.2517 | 0.9291 |
+| LGB (var A) | 1.1186 | -0.2365 | 1.2586 | 0.9197 |
+| Global Mean | 1.1243 | -0.2272 | 1.2590 | 0.9319 |
+| LGB (var F) | 1.1268 | -0.2013 | 1.2747 | 0.8827 |
+| MA (K=14) | 1.1341 | -0.1722 | 1.2735 | 0.9072 |
+| 2-Stage LGB | 1.1573 | **-0.0727** | 1.3450 | 0.8952 |
+| Naive Direct | 1.2192 | -0.1520 | 1.3505 | 1.0605 |
+
+Note:
+- **Two-Stage MLP** si posiziona al 3° posto su WAPE mediana (1.115) dopo MLP-A (1.082) e MLP-F (1.086)
+- Riduce il bias del 53% vs MLP-A (WPE -0.19 vs -0.40) — a metà strada tra single-stage e two-stage LGB
+- WAPE pooled (0.872) comparabile a MLP-A (0.869) — il two-stage non peggiora il pooled
+- Two-Stage MLP > Two-Stage LGB su WAPE (1.115 vs 1.157) ma peggio su WPE (-0.19 vs -0.07)
+- L'MLP cattura meglio i pattern di domanda ma sotto-imputa rispetto al LGB (il modello "si fida meno" delle lag decontaminate)
+- Trade-off confermato: il two-stage sposta il cursore bias↔varianza. MLP single-stage minimizza WAPE, two-stage riduce il bias
+- Il PINN dovrà dimostrare: ridurre il bias (come two-stage) senza sacrificare WAPE (come single-stage)
+
+**PASSO 5 (completato):** PINN-Retail (end-to-end, physics-informed loss).
+- ✅ Notebook: notebooks/12_pinn.py
+- ✅ Architettura: stesso backbone MLP-F (358 dim input) + due teste (D* domanda, I* inventario)
+  - Encoder: [128, 64] + ReLU condiviso, poi head_D(64→24)+Softplus e head_I(64→24)+Softplus
+  - 113,916 parametri (vs 112K MLP — aggiunta solo head_I: 1,560 params)
+  - stock_status NON è input — usato solo nella loss
+  - Lag features M5-style da S_obs (non completati, end-to-end senza imputation)
+- ✅ Loss: L_data (MSE in-stock only) + L_boundary (I*≈0 stockout, I*≥D* instock) + L_cons (R(h)≥0 within-day)
+- ✅ Training ALM: warmup 3 epoche L_data only, poi max 15 iter ALM × 3 epoche interne
+  - Early stopping a ALM iter 8 (best iter 3, epoch 12)
+  - V_c (conservazione) ≈ 0 dall'inizio — la disuguaglianza R(h)≥0 è naturalmente soddisfatta
+  - V_b (boundary) scende da 0.026 → 0.001 ma rho cresce troppo → WAPE degrada dopo iter 3
+  - Shadow prices: λ_boundary=0.068, λ_conservation≈0
+  - Training time: 3915s (~65 min, 27 epoche totali)
+
+Risultati PINN-Retail (test):
+
+| Split | WAPE_overall | WAPE_instock | WAPE_stockout | WPE_overall |
+|-------|-------------|-------------|--------------|------------|
+| Val | 0.9078 | 0.8403 | 3.8938 | -0.3572 |
+| Test | 0.9043 | 0.8357 | 3.9872 | -0.3376 |
+
+Mediana per-serie (test):
+- WAPE_instock: 1.0404, WPE_instock: -0.4743, WAPE_overall: 1.1052
+
+Constraint metrics (test):
+- V_boundary: 0.016 (I* stockout mean=0.012, gap instock mean=0.005)
+- V_conservation: 0.00001 (quasi perfetto)
+- D* mean instock: 0.038, D* mean stockout: 0.017
+
+**Confronto tutti i modelli (test, mediana per-serie in-stock):**
+
+| Modello | WAPE_in med | WPE_in med | WAPE_all med | WAPE_in pool |
+|---------|:----------:|:----------:|:------------:|:------------:|
+| **PINN-Retail** | **1.0404** | -0.4743 | **1.1052** | **0.8357** |
+| MLP (var A) | 1.0815 | -0.4045 | 1.1835 | 0.8686 |
+| MLP (var F) | 1.0859 | -0.3235 | 1.2029 | 0.8588 |
+| 2-Stage MLP | 1.1146 | -0.1883 | 1.2765 | 0.8721 |
+| DoW Mean | 1.1176 | -0.2279 | 1.2517 | 0.9291 |
+| LGB (var A) | 1.1186 | -0.2365 | 1.2586 | 0.9197 |
+| Global Mean | 1.1243 | -0.2272 | 1.2590 | 0.9319 |
+| LGB (var F) | 1.1268 | -0.2013 | 1.2747 | 0.8827 |
+| MA (K=14) | 1.1341 | -0.1722 | 1.2735 | 0.9072 |
+| 2-Stage LGB | 1.1573 | **-0.0727** | 1.3450 | 0.8952 |
+| Naive Direct | 1.2192 | -0.1520 | 1.3505 | 1.0605 |
+
+Note:
+- **PINN è il miglior modello su WAPE** (accuratezza) su tutte le metriche:
+  - WAPE_in pooled: 0.836 (-2.7% vs MLP-F, -3.8% vs MLP-A)
+  - WAPE_in mediana: 1.040 (-3.8% vs MLP-A)
+  - WAPE_all mediana: 1.105 (-6.6% vs MLP-A)
+- **Ma il bias (WPE) è il peggiore**: -0.474 (peggio di MLP-A -0.405)
+- I vincoli fisici (L_boundary, L_cons) agiscono come **regolarizzatore efficace** → migliorano la generalizzazione
+- Il bias non migliora perché la causa è nei **lag features contaminati** (stockout zeros), non nella loss
+  - L_boundary vincola I* ma non decontamina i lag
+  - Il vincolo I*≥D* (instock) può spingere D* verso il basso → più sottostima
+- WAPE_stockout basso (3.99 vs 7-8 per two-stage) → D* è più conservativo durante stockout
+- La conservazione V_c≈0 è triviale: l'inequality R(h)≥0 è automaticamente soddisfatta dal softplus
+- Il trade-off fondamentale persiste: decontaminare i lag (two-stage) riduce bias ma peggiora WAPE
+
+**PROSSIMI PASSI:**
+- Passo 6: Confronto sistematico e analisi approfondita
+
+---
+
+## Decisioni prese
+
+1. **No deterioramento**: eliminato W_pred e L_decay. Il dataset non ha dati di scarto.
+2. **Due teste (D*, I*)**: il network predice domanda latente e inventario latente tramite teste separate con softplus. L'inventario è vincolato dallo stock_status binario via L_boundary.
+3. **3 termini nella loss**: L_data + L_boundary + L_cons. Non-negatività implicita via softplus.
+4. **Modello globale**: un unico modello su tutte le 50.000 serie (non locale per serie).
+5. **stock_status NON è input**: usato solo nella loss per distinguere regime in-stock/stockout. A inference non è disponibile e contaminerebbe la predizione. Questa decisione architetturale è ciò che previene il collasso della domanda durante stockout.
+6. **L_data solo in-stock**: eliminato il downweighting α. Le ore di stockout sono escluse da L_data (EDA: S_obs ≈ 0 nel 97.1% dei casi di stockout, inutile fittarle).
+7. **L_cons come disuguaglianza**: permette R(t) ≥ 0, non forza R(t) = 0 (EDA: il rifornimento avviene tra giorni).
+8. **L_censor Tobit eliminato**: ridondante dato che stock_status non è input. Il collasso è prevenuto dall'architettura, non dalla loss. L_censor introdurrebbe bias positivo nelle ore a domanda naturalmente bassa.
+9. **Encoder MLP (non Transformer)**: il contributo è nella loss, non nell'encoder. MLP semplice per validare la loss, scalabile a architetture più complesse successivamente.
+
+## Scoperte dall'EDA (Passo 1)
+
+1. **Codifica stock_status**: la documentazione ufficiale HuggingFace conferma **0=in stock, 1=stockout** (il CLAUDE.md originale aveva la codifica invertita — ora corretto). `stock_hour6_22_cnt` conta le ore di stockout (gli 1) tra 6 e 22.
+2. **Tasso stockout reale**: 24.9% delle ore-slot sono in stockout (stock_status=1). Il 60% delle righe-giorno ha almeno 1h di stockout. Il 40% non ha alcun stockout. Il 3.8% ha stockout completo (24h).
+3. **Vendite e stockout coerenti**: media vendite/ora in-stock=0.054 (28.6% ore con vendite>0), media vendite/ora stockout=0.004 (2.9% ore con vendite>0). Il censoring funziona come atteso: durante lo stockout le vendite sono quasi zero.
+4. **Campi orari**: numpy arrays di 24 elementi. sum(hours_sale) ≈ sale_amount (coerente). stock_hour6_22_cnt corrisponde solo al 58% con sum(stock[6:23]) — possibile metodo di calcolo diverso nel dataset originale.
+5. **Pattern temporali**: stockout minimo nelle ore notturne (~6% ore 0-5, prodotto disponibile ma nessuno compra), massimo nel tardo pomeriggio-sera. Vendite bimodali (picchi ore 8-10 e 15-17). Weekend +25% vendite.
+6. **Variabili esogene**: discount < 0.7 → vendite +59%, holiday → +27%, meteo effetto debole.
+7. **Eval set**: 7 giorni subito dopo train, covariate shift (temp +7°C, pioggia +59%).
+
+---
+
+## Riferimenti chiave
+
+- Raissi et al. (2019) — PINNs fondativi, J. Computational Physics
+- Cranmer et al. (2020) — Lagrangian Neural Networks, NeurIPS
+- Shin et al. (2020) — Convergenza PINNs
+- Bertsekas (1982) — ALM convergenza
+- Ghare & Schrader (1963) — ODE inventario deperibile
+- FreshRetailNet-50K paper (2025) — arxiv 2505.16319
+- Covert & Philip (1973) — Weibull deterioration
+- Xiao et al. (2024) — Generalized LNNs
+
+---
+
+## Struttura progetto prevista
+
+```
+pinn-retail/
+├── CLAUDE.md              ← questo file
+├── data/
+│   ├── frn50k_train.parquet
+│   └── frn50k_eval.parquet
+├── notebooks/
+│   ├── 01_eda.py          ← analisi esplorativa
+│   ├── 04_baseline_global_mean.py    ← global mean profile baseline (direct)
+│   ├── 05_baseline_dow_mean.py       ← day-of-week mean profile baseline (direct)
+│   ├── 06_baseline_naive_direct.py   ← naive direct forecast baseline
+│   ├── 07_baseline_ma_direct.py      ← MA direct forecast baseline (K=14)
+│   ├── 08_baseline_mlp.py            ← MLP baseline (training + variant selection)
+│   ├── 08b_mlp_evaluate.py           ← MLP evaluation on test + confronto
+│   ├── 08c_mlp_instock_plots.py      ← boxplot in-stock tutti i modelli
+│   ├── 09_baseline_lgb.py            ← LightGBM baseline (direct forecast)
+│   ├── 10_twostage_lgb.py            ← Two-stage: imputation + LightGBM
+│   ├── 11_twostage_mlp.py            ← Two-stage: imputation + MLP
+│   └── 12_pinn.py                    ← PINN-Retail (end-to-end, physics-informed)
+├── src/
+│   ├── data/
+│   │   ├── dataset.py     ← loading e parsing
+│   │   └── windowing.py   ← creazione finestre train/val/test
+│   ├── models/
+│   │   ├── baselines.py   ← seasonal naive, media mobile, LightGBM
+│   │   ├── twostage.py    ← imputation + forecasting
+│   │   └── pinn_retail.py ← il modello PINN
+│   ├── losses/
+│   │   └── pinn_loss.py   ← L_data, L_boundary, L_cons, ALM
+│   ├── training/
+│   │   └── trainer.py     ← loop di training con ALM
+│   └── evaluation/
+│       └── metrics.py     ← WAPE, WPE, violazione vincoli
+├── configs/
+│   └── default.yaml       ← iperparametri
+└── main.py                ← entry point
+```

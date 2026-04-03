@@ -1,0 +1,46 @@
+========================================================================
+  LIGHTGBM VARIANTE A — PER-SERIES EVALUATION
+========================================================================
+
+1. Caricamento dati...
+  Full: 4,850,000 righe
+
+2. Costruzione dataset...
+  Train: 98,400,000 righe, 12 features
+  Val:   8,400,000 righe
+
+3. Training LightGBM variante A...
+Training until validation scores don't improve for 30 rounds
+[50]	val's l1: 0.0531046
+[100]	val's l1: 0.0522747
+[150]	val's l1: 0.0520293
+[200]	val's l1: 0.0518115
+[250]	val's l1: 0.0517325
+[300]	val's l1: 0.0516058
+[350]	val's l1: 0.0515039
+[400]	val's l1: 0.0514444
+[450]	val's l1: 0.051367
+[500]	val's l1: 0.0513309
+Did not meet early stopping. Best iteration is:
+[500]	val's l1: 0.0513309
+  Best iter: 500, MAE: 0.051331
+
+4. Valutazione per-serie...
+
+  val...
+    8,400,000 righe
+    Salvato: /Users/utente/Desktop/FreshNetRetail/notebooks/results/lgb_a_val_per_series.parquet (50,000 serie)
+    WAPE pooled: 1.024861, WPE pooled: -0.130131
+    WAPE_in mediana: 1.1106, WPE_in mediana: -0.2174
+
+  test...
+    8,400,000 righe
+    Salvato: /Users/utente/Desktop/FreshNetRetail/notebooks/results/lgb_a_test_per_series.parquet (50,000 serie)
+    WAPE pooled: 1.027808, WPE pooled: -0.171407
+    WAPE_in mediana: 1.1186, WPE_in mediana: -0.2365
+
+  Tempo totale: 915.9s
+
+========================================================================
+  DONE
+========================================================================
