@@ -576,3 +576,195 @@ pinn-retail/
 │   └── default.yaml       ← iperparametri
 └── main.py                ← entry point
 ```
+
+---
+---
+
+# PIVOT (2026-04 / 2026-05): Benchmark Imputer × Forecaster su FreshRetailNet-50K
+
+> **NOTA**: il progetto ha cambiato direzione. Dal PINN-Retail (sopra) si è passati a un **benchmark sistematico** delle combinazioni imputer × forecaster sulle stesse serie. Il PINN-Retail resta documentato sopra come contesto storico. Il lavoro **attivo** è descritto qui sotto.
+
+## Obiettivo del pivot
+
+Studiare l'impatto della scelta dell'imputer di stockout sul forecasting di domanda nel retail deperibile, su un benchmark sistematico di **11 imputer × 8 forecaster = 88 celle**. Target: pubblicazione su rivista applicata (es. International Journal of Forecasting, Decision Support Systems, Expert Systems with Applications).
+
+## Setup
+
+- **Dataset**: FreshRetailNet-50K (Liu et al., 2025, arXiv:2505.16319). 50.000 serie × 90 giorni di train + 7 giorni di test (2024-03-28 → 2024-07-02). Distribuzione molto sbilanciata: City 0 = 25.811 serie (52%), City 8 = 65 serie.
+- **Restrizione orario**: ore 6-22 (17 ore/giorno operative). Le ore notturne 0-5 e 23 hanno vendite ~0 e sono escluse.
+- **Split temporale**:
+  - Train interno: gg 1-83 (training modelli)
+  - Validation: gg 84-90 (early stopping, selezione HP)
+  - Test: gg 91-97 (HF eval, valutazione finale)
+- **Direct forecast**: lag features fissati all'anchor giorno 90, applicati a tutti i 7 giorni di test. Niente recursive forecast.
+- **Valutazione**: WAPE e WPE solo sulle ore in-stock del test.
+
+## Matrice 11 × 8
+
+### 11 imputer (4 famiglie)
+
+| Famiglia | Imputer |
+|---|---|
+| Baseline | No imputation |
+| Naive aggregati | Media globale, Media condizionata, **Mediana globale**, Mediana condizionata |
+| Time-series classici | Forward Fill, Seasonal Naive, Linear Interpolation |
+| ML/Deep Learning | LGB imputer, DLinear, SAITS |
+
+Mediana globale aggiunta successivamente per completare il design 2×2 (mean/median × global/conditional).
+
+### 8 forecaster
+
+| Famiglia | Forecaster |
+|---|---|
+| Naive | Global Mean, DoW Mean, MA (K=21), Naive Direct |
+| ML tabellare | LGB (no lags), LGB (M5 lags) |
+| Deep Learning | MLP (no lags), MLP (M5 lags) |
+| Foundation Model | Chronos-bolt (small) |
+
+Lag M5-style: 11 lag features (lag_1d, lag_7d, lag_14d, rmean_7d, rmean_14d, rstd_7d, lag_dow, rmean_dow, daily_total_lag1, daily_total_rmean7, momentum_1d_7d).
+
+## Risultati principali
+
+### Top 5 combinazioni globali (WAPE mediana ascendente)
+
+| Rank | Imputer + Forecaster | WAPE med | WPE med |
+|:---:|---|:---:|:---:|
+| 1 ★ | No imputation + Chronos-bolt | **1.0066** | -0.96 |
+| 2 | Mediana globale + Chronos-bolt | 1.0090 | -0.95 |
+| 3 | Mediana condizionata + Chronos-bolt | 1.0111 | -0.94 |
+| 4 | SAITS + Chronos-bolt | 1.0117 | -0.94 |
+| 5 | Seasonal Naive + Chronos-bolt | 1.0137 | -0.88 |
+
+### Best per quartile di volume (analisi stratificata)
+
+| Quartile | Combinazione raccomandata | WAPE | Robustezza statistica |
+|---|---|:---:|:---:|
+| Q1-Q2 (basso, 50% serie) | No imp + Chronos-bolt | 1.01 | **Robusta** (large effect, Cliff's δ > 0.6) |
+| Q3 (medio-alto, 25%) | Mediana + MLP M5 | 1.00 | **Equivalenza statistica** (small/negligible vs alternative) |
+| Q4 (alto, 25%) | LGB M5 + Mediana | **0.74** | **Equivalenza statistica** (Mediana ≈ MediaGlob ≈ MediaCond) |
+
+### Findings principali
+
+1. **Trade-off WAPE vs WPE**: Chronos-bolt domina il WAPE ma con WPE catastrofico (-0.96). MLP/LGB hanno WPE migliore (-0.18 a -0.38) a costo di WAPE peggiore.
+
+2. **Crossover volume-dipendente**: su serie piccole (Q1) Chronos-bolt batte MLP (Cliff's δ = +0.85, 93% wins). Su serie grandi (Q4) MLP batte Chronos (δ = -0.64, 82% wins).
+
+3. **Volume vs Stockout — effetti diversi**:
+   - Volume: large effect su tutti (Cliff's δ ≈ 0.71-0.83)
+   - Stockout: small/negligible (Cliff's δ ≈ 0.09-0.20)
+   - Chronos-bolt è il forecaster meno sensibile a entrambe le dimensioni
+
+4. **Imputer "structure-preserving" preservano il crossover** (No imp, Seasonal Naive, DLinear, SAITS, Mediana cond). Imputer "media-based" lo rovinano (Media cond, Media glob, LGB imputer, Forward Fill).
+
+5. **Traccia A non predice Traccia B**: Mediana cond ha il miglior WAPE_recovery (0.846) ma SAITS (4° su recovery) batte Mediana per Chronos-bolt come forecaster downstream.
+
+### Test statistici eseguiti (~600 totali con 11 imputer)
+
+| Test | A cosa serve | Numero |
+|---|---|:---:|
+| Wilcoxon paired (imputer pair × forecaster) | significatività imputer | 270 |
+| Wilcoxon best combo vs alternatives | best globale | 28 |
+| Cliff's δ stratificato (cell × dimension) | sensibilità volume/stockout | 160 |
+| Crossover Chronos vs ML (per quartile) | crossover paired | 48 |
+
+Con N=50.000 serie, p-value ≈ 0 in quasi tutti i test. **Effect size (Cliff's δ, rank-biserial r) è la metrica discriminante**.
+
+## Struttura del codice (cartella `pipeline/`)
+
+```
+pipeline/
+├── 01_fase_a_naive.py                         # Baseline naive forecaster
+├── 02_fase_a_lgb.py                           # LGB forecaster
+├── 03_fase_a_mlp.py                           # MLP forecaster
+├── 04_fase_b1_imputation_naive_ml.py          # 4 imputer (media glob/cond, mediana cond, LGB)
+├── 05_fase_b1_imputation_dlinear.py           # DLinear imputer (PyPOTS)
+├── 06_fase_b2_forecast_naive.py               # Naive × completed_sales
+├── 07_fase_b2_forecast_lgb.py <imputer>       # LGB M5 × imputer
+├── 08_fase_b2_forecast_mlp.py <imputer>       # MLP M5 × imputer
+├── 09_fase_c_analysis.py                      # Analisi globale + heatmap + Wilcoxon
+├── 10_fase_b2_forecast_chronos.py <imputer>   # Chronos-bolt × imputer
+├── 11_fase_c_stratified.py                    # Stratificazione 4×4 (subset)
+├── 12_fase_c_volume_tests.py                  # Test volume (deprecato, sostituito da 13)
+├── 13_fase_c_volume_stockout_tests.py         # Test volume+stockout (Cliff's δ, JT)
+├── 14_fase_b1_imputation_classic.py           # Forward fill, Seasonal Naive, Linear Interp
+├── 14b_fase_b2_forecast_naive_classic.py      # Naive × imputer classici
+├── 15_fase_c_stratified_full.py               # Opzione A+B + crossover Chronos vs ML
+├── 16_fase_b1_imputation_saits.py             # SAITS imputer (training)
+├── 16b_saits_predict.py                       # SAITS predict (continuation)
+├── 17_presentation_figures.py                 # 3 figure ad-hoc per presentazione
+└── 18_fase_b1_imputation_mediana_glob.py      # Mediana globale imputer
+```
+
+## Figure prodotte (cartella `pipeline/figures/`)
+
+```
+fig01_heatmap_wape_median.png          # Matrice 11×8 WAPE
+fig02_heatmap_wpe_median.png           # Matrice 11×8 WPE
+fig03_boxplot_*.png                    # Boxplot per forecaster
+fig04_effect_*.png                     # Effect size heatmap
+fig05_saturation.png                   # WAPE recovery vs forecasting
+fig06_best_vs_all.png                  # Best combo vs altre
+fig07_heatmap_full_matrix.png          # Heatmap completa
+fig08_heatmap_full_matrix_wpe.png      # Heatmap completa WPE
+fig09_stratified_matrix.png            # 4×4 grid (vol × stockout)
+fig10_trend_stockout.png               # Trend stockout
+fig11_spearman_rho.png                 # Effect size volume
+fig12_cliff_delta_volume.png           # Cliff's δ volume per cella
+fig12_cliff_delta_stockout.png         # Cliff's δ stockout per cella
+fig13_distribution_volume_stockout.png # Distribuzione volume/stockout (quartili)
+fig14_scatter_volume_stockout.png      # Scatter volume × stockout
+fig15_tradeoff_wape_wpe.png            # Trade-off WAPE × |WPE|
+fig16_crossover_volume.png             # Line chart crossover
+fig17_cliff_delta_dim_bars.png         # Bar chart effect size per dimension
+fig18_distribution_city_store.png      # Distribuzione city/store
+```
+
+## File risultati chiave (cartella `pipeline/results/`)
+
+```
+{imputer}__{forecaster}_test_per_series.parquet  # 88 cells (per-serie WAPE/WPE)
+traccia_a*.parquet                               # WAPE_recovery imputer
+stratification.parquet                           # vol_bin, so_bin per serie
+volume_stockout_tests.parquet                    # 176 test stratificati
+crossover_tests.parquet                          # Crossover Chronos vs ML
+wilcoxon_all.parquet                             # 270 test pairwise imputer
+wilcoxon_combos.parquet                          # 21 test best combo
+wilcoxon_best_vs_all.parquet                     # 7 test best globale
+ranked_combinations.parquet                      # 88 celle ordinate per WAPE med
+best_per_group_16_v2.parquet                     # Best per gruppo (16 vol×so)
+```
+
+## Decisioni metodologiche del pivot
+
+1. **Direct forecast** per tutti i forecaster — i lag sono fissati all'anchor giorno 90.
+2. **Niente HP optimization** — tutti i forecaster usano HP fissi e standardizzati.
+3. **Split temporale** per i naive/ML, **split per-serie 80/20** per DLinear/SAITS (limitazione di PyPOTS).
+4. **Mediana globale aggiunta a posteriori** per completare il design 2×2 dei naive aggregati.
+5. **Effect size (Cliff's δ) è la metrica primaria**, non il p-value (che è ~0 con N=50K).
+
+## Limitazioni dichiarate
+
+- 1 dataset, retail cinese deperibile (3.5 mesi)
+- Orizzonte breve (7 giorni)
+- HP non ottimizzati (uguali per tutte le celle)
+- DLinear/SAITS non retrained su tutte le 50K serie (asimmetria con i naive/ML)
+- City 0 contiene 52% del dataset (sbilanciamento geografico)
+
+## Stato attuale (data: 2026-05-05)
+
+- ✅ Matrice **88 celle completata** (11 imputer × 8 forecaster)
+- ✅ **Mediana globale al rank 2 globale** (Chronos-bolt, WAPE med = 1.0090, miglior su Traccia A WAPE_recovery = 0.809)
+- ✅ Analisi statistica completa (Wilcoxon + Cliff's δ + JT + Spearman, ~600 test)
+- ✅ Analisi stratificata volume × stockout (4×4 quartili, 16 gruppi)
+- ✅ Crossover Chronos vs ML dimostrato statisticamente (Cliff's δ ±0.6-0.8 LARGE)
+- ✅ Pipeline riproducibile, 88 parquet per-serie, 18+ figure rigenerate per matrice 11×8
+- ✅ STUDY_REPORT.md (documento standalone) creato per il paper
+- ⏳ **Prossimi passi**: scrittura paper, sensitivity analysis HP (opzionale), eventuale 2° dataset
+
+## Riferimento bibliografico chiave
+
+- **Liu et al. (2025)** — FreshRetailNet-50K: Latent Demand from 50,000 Stores for World-scale Stockout Prediction in Fresh Retail. arXiv:2505.16319.
+- **Du et al. (2023)** — SAITS: Self-Attention-based Imputation for Time Series. NeurIPS.
+- **Zeng et al. (2022)** — DLinear: Are Transformers Effective for Time Series Forecasting? AAAI 2023.
+- **Ansari et al. (2024)** — Chronos: Learning the Language of Time Series. arXiv:2403.07815.
+- **Du et al. (2023)** — PyPOTS: A Python Toolbox for Data Mining on Partially-Observed Time Series. arXiv:2305.18811.
