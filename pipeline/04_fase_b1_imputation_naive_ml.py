@@ -39,7 +39,7 @@ CONT_FEATURES = ['discount','avg_temperature','avg_humidity',
                   'precpt','avg_wind_level','holiday_flag','activity_flag']
 CAT_FEATURES_IMP = ['store_id','product_id','city_id','dow','hour']
 
-LGB_PARAMS = {'objective':'regression','metric':'mae','num_leaves':31,'learning_rate':0.1,
+LGB_PARAMS = {'objective':'regression_l1','metric':'mae','num_leaves':31,'learning_rate':0.1,
               'feature_fraction':0.8,'bagging_fraction':0.3,'bagging_freq':1,
               'min_child_samples':500,'max_bin':127,'verbose':-1,'num_threads':-1,'seed':SEED}
 
