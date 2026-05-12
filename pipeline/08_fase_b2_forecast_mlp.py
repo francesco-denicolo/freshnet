@@ -37,7 +37,9 @@ IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
               'forward_fill':'Forward Fill',
               'seasonal_naive':'Seasonal Naive',
               'linear_interp':'Linear Interp',
-              'saits':'SAITS'}
+              'saits':'SAITS',
+              'itransformer':'iTransformer',
+              'timesnet':'TimesNet'}
 cell_key = f'{IMP_KEY}__mlp_m5lags'
 out_path = os.path.join(RESULTS_DIR, f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path} exists'); sys.exit(0)
@@ -191,7 +193,7 @@ for ep in range(1,MAX_EPOCHS+1):
     model.train(); tl,nb=0.,0
     for c,co,l,t in loader:
         c,co,l,t=c.to(DEVICE),co.to(DEVICE),l.to(DEVICE),t.to(DEVICE)
-        p=model(c,co,l); loss=nn.functional.mse_loss(p,t)
+        p=model(c,co,l); loss=nn.functional.l1_loss(p,t)
         opt.zero_grad(); loss.backward(); opt.step(); tl+=loss.item(); nb+=1
     model.eval()
     with torch.no_grad():

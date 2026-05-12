@@ -42,6 +42,8 @@ IMP_LABELS = {
     'seasonal_naive': 'Seasonal Naive',
     'linear_interp': 'Linear Interp',
     'saits': 'SAITS',
+    'itransformer': 'iTransformer',
+    'timesnet': 'TimesNet',
 }
 assert IMP_KEY in IMP_LABELS, f'Unknown imputer: {IMP_KEY}'
 

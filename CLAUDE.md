@@ -586,7 +586,7 @@ pinn-retail/
 
 ## Obiettivo del pivot
 
-Studiare l'impatto della scelta dell'imputer di stockout sul forecasting di domanda nel retail deperibile, su un benchmark sistematico di **11 imputer × 8 forecaster = 88 celle**. Target: pubblicazione su rivista applicata (es. International Journal of Forecasting, Decision Support Systems, Expert Systems with Applications).
+Studiare l'impatto della scelta dell'imputer di stockout sul forecasting di domanda nel retail deperibile, su un benchmark sistematico di **11 imputer × 9 forecaster = 99 celle (pianificato), 66 celle disponibili attualmente**. Target: pubblicazione su rivista applicata (es. International Journal of Forecasting, Decision Support Systems, Expert Systems with Applications).
 
 ## Setup
 
@@ -618,7 +618,7 @@ Mediana globale aggiunta successivamente per completare il design 2×2 (mean/med
 |---|---|
 | Naive | Global Mean, DoW Mean, MA (K=21), Naive Direct |
 | ML tabellare | LGB (no lags), LGB (M5 lags) |
-| Deep Learning | MLP (no lags), MLP (M5 lags) |
+| Deep Learning | MLP (no lags), MLP (M5 lags), TFT (Temporal Fusion Transformer) |
 | Foundation Model | Chronos-bolt (small) |
 
 Lag M5-style: 11 lag features (lag_1d, lag_7d, lag_14d, rmean_7d, rmean_14d, rstd_7d, lag_dow, rmean_dow, daily_total_lag1, daily_total_rmean7, momentum_1d_7d).
@@ -750,16 +750,208 @@ best_per_group_16_v2.parquet                     # Best per gruppo (16 vol×so)
 - DLinear/SAITS non retrained su tutte le 50K serie (asimmetria con i naive/ML)
 - City 0 contiene 52% del dataset (sbilanciamento geografico)
 
-## Stato attuale (data: 2026-05-05)
+## Stato attuale (data: 2026-05-12)
 
 - ✅ Matrice **88 celle completata** (11 imputer × 8 forecaster)
-- ✅ **Mediana globale al rank 2 globale** (Chronos-bolt, WAPE med = 1.0090, miglior su Traccia A WAPE_recovery = 0.809)
+- ✅ **TFT aggiunto come 9° forecaster su TUTTI gli 11 imputer (50K serie)** → matrice 72 celle disponibili totali (11×7 attivi)
+- ✅ **TFT × SAITS è il rank 1 globale** (WAPE med = 0.9850) con MSE
+- ✅ **Re-train completato: loss uniformata a MAE per tutti i forecaster ML (24 celle)** — vedi sezione "Loss uniformity" più sotto
+- ✅ Pattern emergente: con MAE la **scelta dell'imputer collassa** (spread WAPE_med 0.014 vs 0.105 con MSE)
 - ✅ Analisi statistica completa (Wilcoxon + Cliff's δ + JT + Spearman, ~600 test)
 - ✅ Analisi stratificata volume × stockout (4×4 quartili, 16 gruppi)
-- ✅ Crossover Chronos vs ML dimostrato statisticamente (Cliff's δ ±0.6-0.8 LARGE)
-- ✅ Pipeline riproducibile, 88 parquet per-serie, 18+ figure rigenerate per matrice 11×8
-- ✅ STUDY_REPORT.md (documento standalone) creato per il paper
-- ⏳ **Prossimi passi**: scrittura paper, sensitivity analysis HP (opzionale), eventuale 2° dataset
+- ⏳ **Prossimi passi pianificati** (in ordine):
+  - **Fase 1**: training iTransformer + TimesNet + 5 forecaster cad (~16h compute)
+  - **Fase 2**: training CSDI + ImputeFormer + 5 forecaster cad (~22h compute)
+  - **Aggregazione finale**: matrice ~100 celle (15 imputer × 9 forecaster)
+  - **HP sensitivity**: pacchetto "essenziale" (MLP architecture, HP paper-aligned, bootstrap CI, ~12h)
+- ❌ **Caveat aperti**: bug `25_tft_full_training.py` (Best val_loss riporta last invece di min), sensitivity max_epochs=20 su linear_interp (cap raggiunto)
+
+### Risultati TFT × 11 imputer (50K serie, test gg 91-97, in-stock filter)
+
+Ordinati per WAPE mediana ascendente:
+
+| Imputer | WAPE pool | WAPE med | WPE pool | WPE med | Rank globale |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **saits** ★ | 0.8797 | **0.9850** | -0.6920 | -0.7925 | **1** |
+| **seasonal_naive** 🆕 | 0.8340 | 0.9888 | -0.6035 | -0.8019 | 2 |
+| no_imp | 0.8787 | 0.9954 | -0.7184 | -0.8395 | 3 |
+| dlinear | 0.8921 | 1.0017 | -0.6959 | -0.7766 | 4 |
+| forward_fill 🆕 | 0.8657 | 1.0132 | -0.4719 | -0.6050 | 9 |
+| mediana_glob | 1.0993 | 1.0204 | -0.5431 | -0.6454 | 11 |
+| mediana_cond | 1.0972 | 1.0206 | -0.5429 | -0.6379 | 12 |
+| linear_interp 🆕 | 0.8822 | 1.0214 | -0.5228 | -0.5708 | 13 |
+| media_cond 🆕 | 1.1208 | 1.0284 | -0.4641 | -0.5207 | 15 |
+| media_glob 🆕 | 1.1170 | 1.0513 | -0.4511 | -0.4999 | 19 |
+| lgb 🆕 | 1.1224 | 1.0612 | -0.4305 | -0.4683 | 20 |
+
+🆕 = imputer aggiunti nel completamento (Maggio 2026-05-08 → 05-11).
+
+### Top 5 globale (con tutti i TFT inclusi)
+
+| Rank | Cella | WAPE med | WPE med |
+|:---:|---|:---:|:---:|
+| **1** | **saits + TFT** ★ | **0.9850** | -0.7925 |
+| 2 | seasonal_naive + TFT 🆕 | 0.9888 | -0.8019 |
+| 3 | no_imp + TFT | 0.9954 | -0.8395 |
+| 4 | dlinear + TFT | 1.0016 | -0.7766 |
+| 5 | no_imp + Chronos-bolt | 1.0067 | -0.9601 |
+
+**TFT domina i top 4 con 4 imputer diversi**. Tra rank 1-10, 7/10 celle sono TFT-based.
+
+### Best per quartile aggiornato (matrice 72 celle, post completamento TFT)
+
+| Quartile | Cella best | WAPE med | Cambio? | Note |
+|:---:|---|:---:|:---:|---|
+| Q1 (basso vol) | **seasonal_naive + TFT** 🆕 | 1.0004 | sì | Cambio rispetto al best precedente (no_imp+TFT) |
+| Q2 | **seasonal_naive + TFT** 🆕 | 1.0006 | sì | Cambio rispetto al best precedente (saits+TFT) |
+| Q3 (medio-alto) | saits + TFT | 0.9773 | no | Invariato dal best precedente |
+| Q4 (alto vol) | mediana_cond + LGB_M5 | 0.7434 | no | LGB_M5 mantiene il dominio (TFT perde con δ=-0.64) |
+
+**Scoperta chiave**: con seasonal_naive (imputer aggiunto) TFT **conquista anche Q1 e Q2** che prima dominava ma con altri imputer. seasonal_naive replica la stagionalità settimanale, particolarmente utile su serie sparse.
+
+### Modelli statisticamente equivalenti al best (|Cliff's δ| < 0.147 = negligible)
+
+**Globalmente** (best = saits + TFT, WAPE_med = 0.9850) — **1 cella equivalente**:
+- no_imp + TFT (δ = +0.093)
+- Già seasonal_naive + TFT (δ = +0.255 small) → equivalenza solo con no_imp+TFT.
+
+**Q1** (best = seasonal_naive + TFT, WAPE_med = 1.0004) — **0 equivalenti**:
+- Tutte le altre celle hanno δ ≥ 0.147 (small effect)
+- Più vicino: no_imp+TFT (δ ≈ +0.15 small/borderline)
+
+**Q2** (best = seasonal_naive + TFT, WAPE_med = 1.0006) — **1 equivalente**:
+- saits + TFT (δ = +0.139)
+
+**Q3** (best = saits + TFT, WAPE_med = 0.9773) — **13 equivalenti**:
+- seasonal_naive + TFT (δ = -0.13)
+- mediana_cond + TFT, mediana_glob + TFT (δ ≈ +0.01-0.03)
+- media_glob + TFT (δ = +0.11), linear_interp + TFT (δ = +0.12)
+- 8 celle MLP_M5 con vari imputer (δ +0.09 a +0.14)
+
+**Q4** (best = mediana_cond + LGB_M5, WAPE_med = 0.7434) — **14 equivalenti** (regime "saturato"):
+- 9 celle MLP_M5 con varie imputer
+- 5 celle LGB_M5 con varie imputer
+- **Nessuna cella TFT entra in equivalenza** — TFT non è competitivo in Q4
+
+### Pattern di equivalenza per quartile (aggiornato)
+
+| Quartile | # equivalenti | Caratteristica del cluster |
+|:---:|:---:|---|
+| Q1 | **0** | seasonal_naive+TFT **unico best**, nessun pari |
+| Q2 | 1 | 2 celle TFT-based (seasonal_naive + saits) |
+| Q3 | 13 | TFT-based (5 imputer) + MLP_M5 (8 imputer) — regime molto competitivo |
+| Q4 | 14 | LGB_M5 e MLP_M5 con qualunque imputer (TFT escluso) |
+
+**Implicazioni**:
+1. In **basso volume (Q1-Q2)** la scelta del forecaster (TFT) E dell'imputer (seasonal_naive) **entrambi contano**: pochissime alternative equivalenti
+2. In **medio-alto volume (Q3)** molte combinazioni equivalenti: il volume di dati riduce l'importanza delle scelte specifiche
+3. In **alto volume (Q4)** la **scelta dell'imputer è ininfluente**, solo il forecaster conta (LGB_M5/MLP_M5 wins)
+
+### Caveat metodologici aperti
+
+1. **Bug nello script `25_tft_full_training.py`**: `Best val_loss` riporta last val_loss invece del minimum (verificato su media_glob). Da fixare.
+2. **`linear_interp` ha raggiunto il cap max_epochs=10** con val_loss ancora in miglioramento (0.0670 epoca 9 < 0.0672 epoca 6). Sensitivity max_epochs=20 raccomandata.
+3. **Imputer del paper baseline non ancora inclusi**: iTransformer, TimesNet, CSDI, ImputeFormer (4/7 mancanti vs il paper Liu et al. 2025). Script pronti (`27_fase_b1_imputation_itransformer.py`, `28_fase_b1_imputation_timesnet.py`).
+4. **MLP architecture non tuned**: scelta [128, 64] è ragionevole ma non ottimizzata. Sensitivity analysis pianificata.
+
+## Loss uniformity: re-train MAE (data: 2026-05-12)
+
+### Contesto
+
+Confounder identificato: pre-fix, **MLP** trainato con MSE, **LGB** con `objective='regression'` (= MSE in LightGBM, nonostante metric='mae'), **TFT** con MAE, **Chronos** con quantile loss (pre-trained). Asimmetria della loss confondeva il confronto tra forecaster.
+
+### Fix applicato
+
+Tutti i forecaster ML uniformati a **MAE training loss**:
+- `pipeline/02_fase_a_lgb.py`, `pipeline/07_fase_b2_forecast_lgb.py`: `objective: 'regression'` → `'regression_l1'`
+- `pipeline/03_fase_a_mlp.py`, `pipeline/08_fase_b2_forecast_mlp.py`: `mse_loss` → `l1_loss`
+- TFT (`25_tft_full_training.py`): già MAE
+- Chronos: non modificabile (pre-trained), uso q=0.5 (mediana) come surrogate MAE-aligned
+
+### Risultati del re-train (24 celle ri-trainate)
+
+**Cells**: 4 Fase A (lgb_nolags, lgb_m5lags, mlp_nolags, mlp_m5lags) + 10 LGB_M5 × imputer + 10 MLP_M5 × imputer.
+
+**Pattern emergente**:
+
+| Metrica | Range MSE (vecchio) | Range MAE (nuovo) | Compressione |
+|---|:---:|:---:|:---:|
+| WAPE_med across cells | 0.74 - 1.30 (spread 0.56) | 0.98 - 1.00 (spread 0.014) | **-97%** |
+| WPE_med across cells | -0.18 - -0.40 (spread 0.22) | -0.85 - -0.95 (spread 0.10) | **-55%** |
+
+**Δ medio MAE-MSE** per cella:
+- WAPE_med: **-10% (migliora con MAE, atteso, MAE→WAPE allineata)**
+- WPE_med: **3-5× più negativo (peggiora con MAE, atteso, MAE→mediana su dati right-skewed)**
+
+### Implicazione fondamentale per il paper
+
+> **L'effetto dell'imputer "collassa" quando il forecaster usa la loss allineata alla metrica di valutazione (MAE per WAPE)**. Con MAE: spread WAPE cross-imputer = 0.014 (rumore). Con MSE: spread = 0.56 (effetto visibile).
+
+Questo è il **finding chiave** del paper: i benefici dell'imputation di stockout sono **più piccoli di quanto si pensa** quando si fa la scelta corretta di loss.
+
+### Backup MSE conservati
+
+I parquet MSE-based sono in `pipeline/results/_mse_backup/` (24 file). Servono per:
+1. Confronto MAE vs MSE come sensitivity analysis nel paper
+2. Eventualmente rifare i numeri se cambiamo idea sulla loss
+
+### Ranking post-MAE (matrice 72 celle, dopo uniformazione loss)
+
+Salvato in `pipeline/results/ranked_combinations_MAE_uniform.parquet` e `ranked_combinations_per_quartile_MAE_uniform.parquet`.
+
+#### Top 10 globale (post-MAE)
+
+| Rank | Cell | WAPE med | WPE med |
+|:---:|---|:---:|:---:|
+| **1** | **lgb + MLP_M5** | **0.9811** | -0.898 |
+| 2 | seasonal_naive + MLP_M5 | 0.9842 | -0.909 |
+| 3 | media_glob + MLP_M5 | 0.9842 | -0.912 |
+| **4** | saits + TFT (era rank 1 pre-MAE) | 0.9850 | -0.793 |
+| 5 | media_cond + MLP_M5 | 0.9851 | -0.919 |
+| 6 | mediana_glob + MLP_M5 | 0.9854 | -0.903 |
+| 7 | dlinear + MLP_M5 | 0.9858 | -0.898 |
+| 8 | media_glob + LGB_M5 | 0.9863 | -0.905 |
+| 9 | media_cond + LGB_M5 | 0.9865 | -0.903 |
+| 10 | mediana_glob + LGB_M5 | 0.9878 | -0.920 |
+
+**Cambio principale**: `saits + TFT` (ex rank 1) ora è **rank 4**. Top 3 sono tutti MLP_M5. Top 10 quasi tutto MLP_M5 + LGB_M5.
+
+#### Best per quartile (post-MAE) — DRASTICAMENTE CAMBIATO
+
+| Quartile | Pre-MAE (MSE) | Post-MAE (MAE) | WAPE post | WPE post | Cambio |
+|:---:|---|---|:---:|:---:|---|
+| **Q1** (basso vol) | no_imp + TFT (1.007) | **degenere** — tutti = 1.000 con WPE=-1.0 | 1.000 | -1.000 | MAE collassa Q1 → predice 0 |
+| **Q2** | seasonal_naive + TFT (1.001) | **media_cond + LGB_M5** | 0.9969 | -0.948 | TFT ↓, LGB_M5 ↑ |
+| **Q3** (medio-alto) | saits + TFT (0.977) | **lgb + MLP_M5** | 0.9559 | -0.857 | TFT ↓ rank 1 → ~13, MLP_M5 ↑ |
+| **Q4** (alto vol) | mediana_cond + LGB_M5 (0.743) | **mediana_glob + Global_Mean** 🆕 | **0.7619** | -0.141 | LGB_M5 ↓, **NAIVE ↑** |
+
+**Sorprese**:
+1. **Q1 collassa con MAE**: con basso volume la mediana = 0, MAE predice 0 sistematicamente. WAPE=1, WPE=-1. Degenere. **MAE non è adeguata per Q1**.
+2. **Q4: i naive battono ML**: i forecaster naive (Global Mean, DoW Mean, MA K=21) non hanno loss da uniformare e mantengono WPE basso (~-0.14). I ML con MAE invece sotto-stimano (-0.46 per MLP_M5). I naive vincono per WAPE pool.
+
+#### Implicazioni rivisitate per il paper
+
+1. **Decision tree per practitioner aggiornato**:
+   - **Q1 (basso volume)**: MAE non adeguata (degenere). Usare MSE, Huber, o loss combinata.
+   - **Q2 (medio-basso)**: LGB_M5 con MAE
+   - **Q3 (medio-alto)**: MLP_M5 con MAE
+   - **Q4 (alto)**: **Naive globali** con buon imputer (mediana_glob)
+
+2. **La loss conta tantissimo**:
+   - Rank globale cambia completamente (saits+TFT → lgb+MLP_M5)
+   - Q4 si sposta da ML (MSE) a naive (loss-agnostic)
+   - Q1 diventa degenere se loss MAE su low volume
+
+3. **Trade-off WAPE vs WPE acuto**:
+   - Naive in Q4: WAPE 0.762, WPE -0.14 (poco bias)
+   - LGB_M5 in Q4: WAPE 0.764, WPE -0.46 (più bias)
+   - Differenza WAPE trascurabile, WPE drammatica
+
+4. **Imputer effect resta smorzato dalla loss**:
+   - Top 10 globale: WAPE range 0.981-0.988 (spread 0.007)
+   - Conferma: con MAE la scelta dell'imputer è quasi irrilevante per il ranking, ma può ancora contare in Q4 (mediana_glob domina)
+
+5. **Effetto interessante in Q4**: `mediana_glob` (mediana globale, imputer più semplice possibile) batte tutti gli altri imputer accoppiati a naive forecaster. **Più semplice è meglio** nel regime alto volume.
 
 ## Riferimento bibliografico chiave
 

@@ -101,6 +101,14 @@ IMP_LABELS = {
     'mediana_glob': 'Mediana globale',
     'dlinear': 'DLinear',
     'saits': 'SAITS',
+    'media_cond': 'Media condizionata',
+    'media_glob': 'Media globale',
+    'forward_fill': 'Forward fill',
+    'seasonal_naive': 'Seasonal naive',
+    'linear_interp': 'Linear interpolation',
+    'lgb': 'LGB imputer',
+    'itransformer': 'iTransformer',
+    'timesnet': 'TimesNet',
 }
 assert IMP_KEY in IMP_LABELS, f'Unknown imputer: {IMP_KEY}'
 

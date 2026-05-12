@@ -270,7 +270,7 @@ for use_lags, label in [(False,'mlp_nolags'),(True,'mlp_m5lags')]:
         model.train(); tl,nb=0.,0
         for c,co,l,t in loader:
             c,co,l,t=c.to(DEVICE),co.to(DEVICE),l.to(DEVICE),t.to(DEVICE)
-            p=model(c,co,l); loss=nn.functional.mse_loss(p,t)
+            p=model(c,co,l); loss=nn.functional.l1_loss(p,t)
             optimizer.zero_grad(); loss.backward(); optimizer.step()
             tl+=loss.item(); nb+=1
         model.eval()
@@ -299,10 +299,6 @@ for use_lags, label in [(False,'mlp_nolags'),(True,'mlp_m5lags')]:
 
     del va,te,model,ds,loader,vc,vco,vl_t; gc.collect()
     if DEVICE=='mps': torch.mps.empty_cache()
-
-    # Rebuild series_cache if it was deleted (for next variant)
-    if use_lags and not series_cache:
-        pass  # last variant, no need to rebuild
 
 print('\n' + '=' * 72)
 print('  DONE — 04b_baseline_mlp.py (ore 6-22)')

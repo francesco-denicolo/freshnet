@@ -27,7 +27,7 @@ CONT_FEATURES = ['discount','avg_temperature','avg_humidity',
 CAT_FEATURES = ['store_id','product_id','city_id','dow','hour']
 LAG_NAMES = ['lag_1d','lag_7d','lag_14d','rmean_7d','rmean_14d','rstd_7d',
              'lag_dow','rmean_dow','daily_total_lag1','daily_total_rmean7','momentum_1d_7d']
-LGB_PARAMS = {'objective':'regression','metric':'mae','num_leaves':31,'learning_rate':0.1,
+LGB_PARAMS = {'objective':'regression_l1','metric':'mae','num_leaves':31,'learning_rate':0.1,
               'feature_fraction':0.8,'bagging_fraction':0.3,'bagging_freq':1,
               'min_child_samples':500,'max_bin':127,'verbose':-1,'num_threads':-1,'seed':SEED}
 
