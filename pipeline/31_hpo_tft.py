@@ -11,14 +11,18 @@ warnings.filterwarnings('ignore')
 print = functools.partial(print, flush=True)
 
 import torch
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import EarlyStopping
+import lightning.pytorch as pl  # use new namespace (matches pytorch-forecasting 1.4)
+from lightning.pytorch.callbacks import EarlyStopping
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.metrics import MAE
 from torch.utils.data import DataLoader
 import optuna
-from optuna.integration import PyTorchLightningPruningCallback
+# PyTorchLightningPruningCallback aspetta pytorch-lightning, not lightning. Importa direttamente.
+try:
+    from optuna_integration.pytorch_lightning import PyTorchLightningPruningCallback
+except ImportError:
+    from optuna.integration import PyTorchLightningPruningCallback
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
@@ -105,10 +109,10 @@ else:
     })
     long_data['time_idx'] = long_data['day_num'] * N_HOURS + (long_data['hour'] - H_START)
 
-    # Dtype compression
+    # Dtype compression (pytorch-forecasting requires STRING-based category, not numeric)
     print(f'[{time.time()-T_START:.0f}s]   Compressing dtypes...')
     for c in ['store_id','product_id','city_id','dow','hour','holiday_flag','activity_flag']:
-        long_data[c] = long_data[c].astype('category')
+        long_data[c] = long_data[c].astype(str).astype('category')
     for c in ['discount','avg_temperature','avg_humidity','precpt','avg_wind_level','sales']:
         long_data[c] = long_data[c].astype('float32')
     long_data['stock'] = long_data['stock'].astype('int8')
@@ -122,33 +126,54 @@ else:
 print(f'[{time.time()-T_START:.0f}s] Long_data shape: {long_data.shape}')
 
 # =========================================================================
-# 2. Build TimeSeriesDataSet (UNA SOLA VOLTA, riusato per ogni trial)
+# 2. Build TimeSeriesDataSet (con cache)
 # =========================================================================
-print(f'\n[{time.time()-T_START:.0f}s] Build TimeSeriesDataSet (UNA SOLA VOLTA)...')
+TSD_TRAIN_CACHE = os.path.join(RESULTS_DIR, 'hpo_tft_tsd_train.pkl')
+TSD_VAL_CACHE = os.path.join(RESULTS_DIR, 'hpo_tft_tsd_val.pkl')
 
-# Training: idx <= TRAINING_CUTOFF
-t0 = time.time()
-training = TimeSeriesDataSet(
-    long_data[long_data.time_idx <= TRAINING_CUTOFF],
-    time_idx='time_idx', target='sales', group_ids=['store_id','product_id'],
-    min_encoder_length=ENCODER_LENGTH, max_encoder_length=ENCODER_LENGTH,
-    min_prediction_length=PRED_LENGTH, max_prediction_length=PRED_LENGTH,
-    static_categoricals=['store_id','product_id','city_id'],
-    time_varying_known_categoricals=['dow','hour','holiday_flag','activity_flag'],
-    time_varying_known_reals=['discount','avg_temperature','avg_humidity','precpt','avg_wind_level'],
-    time_varying_unknown_reals=['sales'],
-    target_normalizer=GroupNormalizer(groups=['store_id','product_id'], transformation='softplus'),
-    add_relative_time_idx=True, add_target_scales=True, add_encoder_length=True,
-    allow_missing_timesteps=True,
-)
-print(f'[{time.time()-T_START:.0f}s]   Training: {len(training):,} samples (build {time.time()-t0:.0f}s)')
+if os.path.exists(TSD_TRAIN_CACHE) and os.path.exists(TSD_VAL_CACHE):
+    print(f'\n[{time.time()-T_START:.0f}s] Loading TimeSeriesDataSet from cache...')
+    t0 = time.time()
+    # Workaround torch 2.6+ default weights_only=True (TimeSeriesDataSet richiede pickle dei dati)
+    _orig_torch_load = torch.load
+    torch.load = lambda *a, **kw: _orig_torch_load(*a, **{**kw, 'weights_only': False})
+    try:
+        training = TimeSeriesDataSet.load(TSD_TRAIN_CACHE)
+        validation = TimeSeriesDataSet.load(TSD_VAL_CACHE)
+    finally:
+        torch.load = _orig_torch_load
+    print(f'[{time.time()-T_START:.0f}s]   Training: {len(training):,} samples, '
+          f'Validation: {len(validation):,} samples (loaded in {time.time()-t0:.0f}s)')
+else:
+    print(f'\n[{time.time()-T_START:.0f}s] Build TimeSeriesDataSet (cache miss)...')
+    t0 = time.time()
+    training = TimeSeriesDataSet(
+        long_data[long_data.time_idx <= TRAINING_CUTOFF],
+        time_idx='time_idx', target='sales', group_ids=['store_id','product_id'],
+        min_encoder_length=ENCODER_LENGTH, max_encoder_length=ENCODER_LENGTH,
+        min_prediction_length=PRED_LENGTH, max_prediction_length=PRED_LENGTH,
+        static_categoricals=['store_id','product_id','city_id'],
+        time_varying_known_categoricals=['dow','hour','holiday_flag','activity_flag'],
+        time_varying_known_reals=['discount','avg_temperature','avg_humidity','precpt','avg_wind_level'],
+        time_varying_unknown_reals=['sales'],
+        target_normalizer=GroupNormalizer(groups=['store_id','product_id'], transformation='softplus'),
+        add_relative_time_idx=True, add_target_scales=True, add_encoder_length=True,
+        allow_missing_timesteps=True,
+    )
+    print(f'[{time.time()-T_START:.0f}s]   Training: {len(training):,} samples (build {time.time()-t0:.0f}s)')
 
-t0 = time.time()
-validation = TimeSeriesDataSet.from_dataset(
-    training, long_data[long_data.time_idx <= VAL_CUTOFF],
-    predict=True, stop_randomization=True
-)
-print(f'[{time.time()-T_START:.0f}s]   Validation: {len(validation):,} samples (build {time.time()-t0:.0f}s)')
+    t0 = time.time()
+    validation = TimeSeriesDataSet.from_dataset(
+        training, long_data[long_data.time_idx <= VAL_CUTOFF],
+        predict=True, stop_randomization=True
+    )
+    print(f'[{time.time()-T_START:.0f}s]   Validation: {len(validation):,} samples (build {time.time()-t0:.0f}s)')
+
+    # Save cache
+    t0 = time.time()
+    training.save(TSD_TRAIN_CACHE)
+    validation.save(TSD_VAL_CACHE)
+    print(f'[{time.time()-T_START:.0f}s]   TimeSeriesDataSet cached to disk (save {time.time()-t0:.0f}s)')
 
 # Subsampling training (200K)
 N_TRAINING = len(training)
@@ -162,50 +187,42 @@ else:
     print(f'[{time.time()-T_START:.0f}s]   Using full {N_TRAINING:,} training samples')
 
 # =========================================================================
-# 3. WAPE_med computation function (per-serie, in-stock, min_hours=34)
+# 3. Stock mask for val (computed once, reused across trials)
 # =========================================================================
-def compute_wape_med_val(model, val_loader, val_data):
-    """Calcola WAPE_med per-serie su val (gg 84-90), in-stock, min_hours=34."""
-    preds = model.predict(val_loader, return_y=False, mode='prediction',
-                          trainer_kwargs={'accelerator':'cpu','devices':1,'logger':False,
-                                          'enable_progress_bar':False})
-    if hasattr(preds, 'cpu'):
-        preds = preds.cpu().numpy()
-    preds = np.maximum(preds, 0.0)  # softplus output, ma per safety
+print(f'\n[{time.time()-T_START:.0f}s] Pre-computing val stock mask (riusato per ogni trial)...')
+val_long = long_data[(long_data['time_idx'] > TRAINING_CUTOFF) & (long_data['time_idx'] <= VAL_CUTOFF)].copy()
+val_long_sorted = val_long.sort_values(['store_id','product_id','time_idx'])
+val_stock_by_serie = {}
+for (sid, pid), grp in val_long_sorted.groupby(['store_id','product_id'], sort=False):
+    val_stock_by_serie[(int(sid), int(pid))] = grp['stock'].values[:PRED_LENGTH]
+print(f'[{time.time()-T_START:.0f}s]   Stock mask cached for {len(val_stock_by_serie):,} serie')
+del val_long, val_long_sorted; gc.collect()
 
-    # Recupero ground truth e stock mask per ogni serie
-    val_index = validation.x_to_index(next(iter(val_loader)))
-    # Più semplice: usa l'attributo .decoded_index
-    # Ricostruisco da long_data
-    val_filtered = long_data[(long_data.time_idx > TRAINING_CUTOFF) &
-                              (long_data.time_idx <= VAL_CUTOFF)].copy()
-    # Per ogni (store, product), prendi 119 ore consecutive del val period
-    series_keys = val_filtered.groupby(['store_id','product_id']).size()
-    series_with_full_val = series_keys[series_keys == PRED_LENGTH].index.tolist()
-    # Costruisci array predizioni e ground truth per ogni serie
-    # NOTA: preds è in ordine consistente con val_loader, che è in ordine di TimeSeriesDataSet
-    # Per semplicità, recuperiamo l'ordine via attributo internals
-    val_index_df = validation.x_to_index(next(iter(DataLoader(validation, batch_size=len(validation), num_workers=0))))
+def compute_wape_med_val(model, val_loader):
+    """WAPE_med per-serie su val, in-stock, min_hours=MIN_HOURS_VAL."""
+    res = model.predict(
+        val_loader, return_y=True, return_index=True, mode='prediction',
+        trainer_kwargs={'accelerator':'cpu','devices':1,'logger':False,'enable_progress_bar':False}
+    )
+    preds = np.clip(res.output.cpu().numpy(), 0, None)
+    truths = res.y[0].cpu().numpy()
+    idx_df = res.index
     wapes = []
-    n_preds = preds.shape[0]
-    for i in range(n_preds):
-        sid = val_index_df.iloc[i]['store_id']
-        pid = val_index_df.iloc[i]['product_id']
-        series_data = val_filtered[
-            (val_filtered['store_id']==sid) & (val_filtered['product_id']==pid)
-        ].sort_values('time_idx')
-        if len(series_data) < PRED_LENGTH:
+    for i in range(len(idx_df)):
+        sid = int(idx_df.iloc[i]['store_id'])
+        pid = int(idx_df.iloc[i]['product_id'])
+        if (sid, pid) not in val_stock_by_serie:
             continue
-        y_true = series_data['sales'].values[-PRED_LENGTH:]
-        stock = series_data['stock'].values[-PRED_LENGTH:]
-        in_stock = stock == 0
+        stk = val_stock_by_serie[(sid, pid)]
+        if len(stk) < PRED_LENGTH:
+            continue
+        in_stock = stk == 0
         if in_stock.sum() < MIN_HOURS_VAL:
             continue
-        y_pred = preds[i][-PRED_LENGTH:]
-        y_t, y_p = y_true[in_stock], y_pred[in_stock]
-        denom = max(np.abs(y_t).sum(), 1e-8)
-        wape = np.abs(y_t - y_p).sum() / denom
-        wapes.append(wape)
+        p_in = preds[i][in_stock]
+        t_in = truths[i][in_stock]
+        denom = max(np.abs(t_in).sum(), 1e-8)
+        wapes.append(np.abs(p_in - t_in).sum() / denom)
     return float(np.median(wapes)) if wapes else float('nan')
 
 # =========================================================================
@@ -225,9 +242,12 @@ def objective(trial):
     print(f'\n[Trial {trial.number}] HP: head_dim={head_dim}, heads={n_heads}, hidden={hidden_size}, '
           f'dropout={dropout:.2f}, lr={lr:.1e}, batch={batch_size}, wd={weight_decay:.1e}')
 
-    # DataLoader
-    train_loader = DataLoader(training_sub, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(validation, batch_size=batch_size, shuffle=False, num_workers=0)
+    # DataLoader (usa il custom collate_fn di TimeSeriesDataSet)
+    train_loader = DataLoader(
+        training_sub, batch_size=batch_size, shuffle=True, num_workers=0,
+        collate_fn=training._collate_fn,
+    )
+    val_loader = validation.to_dataloader(train=False, batch_size=batch_size * 2, num_workers=0)
 
     # Model
     tft = TemporalFusionTransformer.from_dataset(
@@ -254,7 +274,7 @@ def objective(trial):
         raise
 
     # Evaluate val WAPE_med
-    val_wape = compute_wape_med_val(tft, val_loader, validation)
+    val_wape = compute_wape_med_val(tft, val_loader)
     elapsed = time.time() - t_trial
     print(f'[Trial {trial.number}] val_WAPE_med={val_wape:.4f}, '
           f'best_epoch~{trainer.current_epoch - PATIENCE}, elapsed={elapsed:.0f}s')

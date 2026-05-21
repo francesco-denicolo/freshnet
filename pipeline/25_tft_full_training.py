@@ -219,7 +219,7 @@ print(f'[{time.time()-T_START:.0f}s]   Compressing dtypes...')
 mem_before = long_data.memory_usage(deep=True).sum() / 1e9
 # Categoricals (riducono memoria per stringhe ripetute)
 for c in ['store_id','product_id','city_id','dow','hour','holiday_flag','activity_flag']:
-    long_data[c] = long_data[c].astype('category')
+    long_data[c] = long_data[c].astype(str).astype('category')
 # Numeric continui — float32
 for c in ['discount','avg_temperature','avg_humidity','precpt','avg_wind_level','sales']:
     long_data[c] = long_data[c].astype('float32')
