@@ -9,7 +9,7 @@ print = functools.partial(print, flush=True)
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
 
-forecasters = ['tft', 'lgb', 'mlp']
+forecasters = ['tft', 'lgb', 'lgb_nolags', 'mlp', 'mlp_nolags']
 rows = []
 for fc in forecasters:
     path = os.path.join(RESULTS_DIR, f'hpo_{fc}_best.json')

@@ -1,6 +1,7 @@
 """
-32_hpo_lgb.py — HPO LGB_M5 (Optuna TPE + MedianPruner)
-=======================================================
+32b_hpo_lgb_nolags.py — HPO LGB_no_lags (Optuna TPE + MedianPruner)
+=====================================================================
+Variant NO LAGS: only base features (12 dim), no lag features.
 HPO su tutte le 50K serie, S_obs RAW (no imputation), MAE loss (regression_l1).
 Train: gg 1-83, val: gg 84-90 in-stock filter, metrica WAPE_med per-serie (min_hours=34).
 30 trial. MedianPruner via callback. SQLite storage.
@@ -24,8 +25,9 @@ HOURS_RANGE = np.arange(H_START, H_END, dtype=np.int32)
 MIN_HOURS_VAL = 34
 N_TRIALS = 30
 NUM_BOOST_ROUND = 1000
-STUDY_NAME = 'hpo_lgb'
-STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_lgb.db'
+USE_LAGS = False  # NO LAGS variant
+STUDY_NAME = 'hpo_lgb_nolags'
+STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_lgb_nolags.db'
 
 # --- Smoke test mode (env: HPO_SMOKE=1) ---
 if os.getenv('HPO_SMOKE') == '1':
@@ -49,13 +51,13 @@ print('=' * 72)
 # =========================================================================
 # 1. Load & build dataset (UNA SOLA VOLTA, cache)
 # =========================================================================
-CACHE_TRAIN_X = os.path.join(RESULTS_DIR, 'hpo_lgb_train_X.parquet')
-CACHE_TRAIN_Y = os.path.join(RESULTS_DIR, 'hpo_lgb_train_y.npy')
-CACHE_VAL_X = os.path.join(RESULTS_DIR, 'hpo_lgb_val_X.parquet')
-CACHE_VAL_Y = os.path.join(RESULTS_DIR, 'hpo_lgb_val_y.npy')
-CACHE_VAL_STOCK = os.path.join(RESULTS_DIR, 'hpo_lgb_val_stock.npy')
-CACHE_VAL_SIDS = os.path.join(RESULTS_DIR, 'hpo_lgb_val_sids.npy')
-CACHE_VAL_PIDS = os.path.join(RESULTS_DIR, 'hpo_lgb_val_pids.npy')
+CACHE_TRAIN_X = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_train_X.parquet')
+CACHE_TRAIN_Y = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_train_y.npy')
+CACHE_VAL_X = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_val_X.parquet')
+CACHE_VAL_Y = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_val_y.npy')
+CACHE_VAL_STOCK = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_val_stock.npy')
+CACHE_VAL_SIDS = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_val_sids.npy')
+CACHE_VAL_PIDS = os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_val_pids.npy')
 
 def compute_lags(sales_arr, dows_arr, dv, K):
     """11 lag features M5-style. sales_arr e dows_arr fino al giorno corrente."""
@@ -115,23 +117,7 @@ def build_dataset_for_split(split, df_full, sales_arr, stock_arr, series_cache):
     for j, c in enumerate(CONT_FEATURES):
         fd[c] = coh[:, j]
 
-    # Lags (UNA volta per ogni (sid, pid, day))
-    la = {n: np.full(nh, np.nan, dtype=np.float32) for n in LAG_NAMES}
-    print(f'    Computing lags for {nd:,} days...')
-    for ri in range(nd):
-        if (ri+1) % 500000 == 0: print(f'      ... {ri+1:,}/{nd:,}')
-        sid, pid, d, dv = sids[ri*N_HOURS], pids[ri*N_HOURS], dnums[ri*N_HOURS], dows[ri*N_HOURS]
-        sc = series_cache[(sid, pid)]
-        ad = d - 1 if split == 'train' else 83
-        am = sc['days'] <= ad
-        K = int(am.sum())
-        hs = ri * N_HOURS
-        if K > 0:
-            lg = compute_lags(sc['sales'][am], sc['dows'][am], dv, K)
-            for n in LAG_NAMES:
-                la[n][hs:hs+N_HOURS] = lg[n]
-    for n in LAG_NAMES:
-        fd[n] = la[n]
+    # NO LAGS variant: skip lag computation
     X = pd.DataFrame(fd)
     for c in CAT_FEATURES:
         X[c] = X[c].astype('category')
@@ -269,11 +255,11 @@ if remaining > 0:
 print(f'\n[{time.time()-T_START:.0f}s] Saving results...')
 best = study.best_trial
 print(f'  Best trial: #{best.number}, val_WAPE_med={best.value:.4f}, params={best.params}')
-with open(os.path.join(RESULTS_DIR, 'hpo_lgb_best.json'), 'w') as f:
+with open(os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_best.json'), 'w') as f:
     json.dump({'best_trial': best.number, 'best_value': best.value,
                'best_params': best.params, 'n_trials': len(study.trials)}, f, indent=2)
-study.trials_dataframe().to_parquet(os.path.join(RESULTS_DIR, 'hpo_lgb_trials.parquet'), index=False)
+study.trials_dataframe().to_parquet(os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_trials.parquet'), index=False)
 import pickle
-with open(os.path.join(RESULTS_DIR, 'hpo_lgb_study.pkl'), 'wb') as f:
+with open(os.path.join(RESULTS_DIR, 'hpo_lgb_nolags_study.pkl'), 'wb') as f:
     pickle.dump(study, f)
 print(f'\n[{time.time()-T_START:.0f}s] DONE in {(time.time()-T_START)/60:.1f} min')

@@ -1,10 +1,10 @@
 """
-33_hpo_mlp.py — HPO MLP_M5 (Optuna TPE + MedianPruner)
-========================================================
+33b_hpo_mlp_nolags.py — HPO MLP_no_lags (Optuna TPE + MedianPruner)
+====================================================================
 Architettura PER-DAY matches production (03_fase_a_mlp.py).
+Variant NO LAGS: only embeddings + continuous features (lag_dim=0).
 Train: gg 1-83, val: gg 84-90, S_obs RAW (no imputation), MAE loss (L1Loss).
-Output 17-dim (1 sample = 1 giorno, 17 ore predette).
-Metrica: WAPE_med per-serie sulle ore in-stock val (min_hours=34).
+Output 17-dim. Metrica: WAPE_med per-serie sulle ore in-stock val (min_hours=34).
 30 trial. SQLite storage.
 """
 import sys, os, gc, time, json, functools, warnings
@@ -37,8 +37,10 @@ CARDINALITIES = {'store_id':898,'product_id':865,'city_id':18,'dow':7}
 MIN_HOURS_VAL = 34
 N_TRIALS = 45
 MAX_EPOCHS = 100; PATIENCE = 10
-STUDY_NAME = 'hpo_mlp'
-STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_mlp.db'
+STUDY_NAME = 'hpo_mlp_nolags'
+STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_mlp_nolags.db'
+USE_LAGS = False  # NO LAGS variant
+LAG_DIM = 0       # no lag features
 
 # --- Smoke test mode (env: HPO_SMOKE=1) ---
 if os.getenv('HPO_SMOKE') == '1':
@@ -51,27 +53,25 @@ if os.getenv('HPO_SMOKE') == '1':
 
 T_START = time.time()
 print('=' * 72)
-print('  HPO MLP_M5 (per-day) — 30 trial, full 50K, MAE loss')
+print('  HPO MLP_no_lags (per-day) — 30 trial, full 50K, MAE loss')
 print('=' * 72)
 
 # =========================================================================
 # 1. Build dataset PER-DAY (cache)
 # =========================================================================
-CACHE_TR_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_cat.npy')
-CACHE_TR_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_cont.npy')
-CACHE_TR_LAG = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_lag.npy')
-CACHE_TR_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_y.npy')
-CACHE_VA_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_cat.npy')
-CACHE_VA_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_cont.npy')
-CACHE_VA_LAG = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_lag.npy')
-CACHE_VA_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_y.npy')
-CACHE_VA_STK = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_stk.npy')
-CACHE_VA_SIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_sids.npy')
-CACHE_VA_PIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_pids.npy')
-CACHE_NORM = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_norm.npz')
+CACHE_TR_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_train_cat.npy')
+CACHE_TR_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_train_cont.npy')
+CACHE_TR_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_train_y.npy')
+CACHE_VA_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_cat.npy')
+CACHE_VA_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_cont.npy')
+CACHE_VA_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_y.npy')
+CACHE_VA_STK = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_stk.npy')
+CACHE_VA_SIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_sids.npy')
+CACHE_VA_PIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_val_pids.npy')
+CACHE_NORM = os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_norm.npz')
 
-ALL_CACHES = [CACHE_TR_CAT, CACHE_TR_CONT, CACHE_TR_LAG, CACHE_TR_Y,
-              CACHE_VA_CAT, CACHE_VA_CONT, CACHE_VA_LAG, CACHE_VA_Y,
+ALL_CACHES = [CACHE_TR_CAT, CACHE_TR_CONT, CACHE_TR_Y,
+              CACHE_VA_CAT, CACHE_VA_CONT, CACHE_VA_Y,
               CACHE_VA_STK, CACHE_VA_SIDS, CACHE_VA_PIDS, CACHE_NORM]
 
 def compute_lags(avail_sales, avail_dows, dow, K):
@@ -101,12 +101,12 @@ def compute_lags(avail_sales, avail_dows, dow, K):
             L['momentum_1d_7d'] = m
     return L
 
-def build_dataset(split, series_cache, cont_mean=None, cont_std=None, lag_mean=None, lag_std=None):
-    """Build per-day dataset (matches 03_fase_a_mlp.py)."""
+def build_dataset(split, series_cache, cont_mean=None, cont_std=None):
+    """Build per-day dataset (matches 03_fase_a_mlp.py) — NO LAGS variant."""
     if split == 'train': d_min, d_max = 2, 83
     elif split == 'val': d_min, d_max = 84, 90
     else: raise ValueError(split)
-    cat_l, cont_l, lag_l, tgt_l, stk_l, sid_l, pid_l = [], [], [], [], [], [], []
+    cat_l, cont_l, tgt_l, stk_l, sid_l, pid_l = [], [], [], [], [], []
     nd = 0
     for (sid, pid), sd in series_cache.items():
         nd += 1
@@ -116,41 +116,21 @@ def build_dataset(split, series_cache, cont_mean=None, cont_std=None, lag_mean=N
         for idx in range(len(days)):
             d = days[idx]
             if d < d_min or d > d_max: continue
-            a_day = d - 1 if split == 'train' else 83  # val: usa solo train days
             cat_l.append([sid, pid, city, dows[idx]])
             cont_l.append(conts[idx])
             tgt_l.append(sales[idx]); stk_l.append(stock[idx])
             sid_l.append(sid); pid_l.append(pid)
-            am = days <= a_day; K = int(am.sum())
-            ld = compute_lags(sales[am], dows[am], dows[idx], K) if K > 0 \
-                else {n: np.full(N_HOURS, np.nan, dtype=np.float32) for n in LAG_NAMES}
-            fa, masks = [], np.zeros(len(LAG_NAMES), dtype=np.float32)
-            for fi, n in enumerate(LAG_NAMES):
-                arr = ld[n]
-                if not np.isnan(arr).all():
-                    masks[fi] = 1.0
-                    fa.append(np.where(np.isnan(arr), 0, arr).astype(np.float32))
-                else:
-                    fa.append(np.zeros(N_HOURS, dtype=np.float32))
-            fa.append(masks)
-            lag_l.append(np.concatenate(fa))
-    # int16 per cat (cardinalità max 898), int64 only when transferred to GPU
     cat_arr = np.array(cat_l, dtype=np.int16)
     cont_arr = np.array(cont_l, dtype=np.float32)
     tgt_arr = np.array(tgt_l, dtype=np.float32)
     stk_arr = np.array(stk_l, dtype=np.int8)
-    lag_arr = np.array(lag_l, dtype=np.float32)
     if cont_mean is None:
         cont_mean = cont_arr.mean(0); cont_std = cont_arr.std(0)
         cont_std[cont_std < 1e-8] = 1.0
     cont_arr = (cont_arr - cont_mean) / cont_std
-    if lag_mean is None:
-        lag_mean = lag_arr.mean(0); lag_std = lag_arr.std(0)
-        lag_std[lag_std < 1e-8] = 1.0
-    lag_arr = (lag_arr - lag_mean) / lag_std
-    return (cat_arr, cont_arr.astype(np.float32), lag_arr.astype(np.float32),
+    return (cat_arr, cont_arr.astype(np.float32),
             tgt_arr, stk_arr, np.array(sid_l, dtype=np.int32), np.array(pid_l, dtype=np.int32),
-            cont_mean, cont_std, lag_mean, lag_std)
+            cont_mean, cont_std)
 
 if not all(os.path.exists(p) for p in ALL_CACHES):
     print(f'[{time.time()-T_START:.0f}s] Building per-day dataset (cache miss)...')
@@ -180,42 +160,43 @@ if not all(os.path.exists(p) for p in ALL_CACHES):
     print(f'[{time.time()-T_START:.0f}s]   {len(series_cache):,} serie')
     del df_train, df_eval, df_full, sales_all, stock_all; gc.collect()
 
-    print(f'[{time.time()-T_START:.0f}s]   Building train dataset...')
-    cat_tr, cont_tr, lag_tr, tgt_tr, _, _, _, cm, cs, lm, ls = build_dataset('train', series_cache)
+    print(f'[{time.time()-T_START:.0f}s]   Building train dataset (NO lags)...')
+    cat_tr, cont_tr, tgt_tr, _, _, _, cm, cs = build_dataset('train', series_cache)
     print(f'[{time.time()-T_START:.0f}s]   Train: {cat_tr.shape[0]:,} day-samples')
     np.save(CACHE_TR_CAT, cat_tr); np.save(CACHE_TR_CONT, cont_tr)
-    np.save(CACHE_TR_LAG, lag_tr); np.save(CACHE_TR_Y, tgt_tr)
-    del cat_tr, cont_tr, lag_tr, tgt_tr; gc.collect()
+    np.save(CACHE_TR_Y, tgt_tr)
+    del cat_tr, cont_tr, tgt_tr; gc.collect()
 
-    print(f'[{time.time()-T_START:.0f}s]   Building val dataset...')
-    cat_va, cont_va, lag_va, tgt_va, stk_va, sids_va, pids_va, _, _, _, _ = build_dataset(
-        'val', series_cache, cm, cs, lm, ls)
+    print(f'[{time.time()-T_START:.0f}s]   Building val dataset (NO lags)...')
+    cat_va, cont_va, tgt_va, stk_va, sids_va, pids_va, _, _ = build_dataset(
+        'val', series_cache, cm, cs)
     print(f'[{time.time()-T_START:.0f}s]   Val: {cat_va.shape[0]:,} day-samples')
     np.save(CACHE_VA_CAT, cat_va); np.save(CACHE_VA_CONT, cont_va)
-    np.save(CACHE_VA_LAG, lag_va); np.save(CACHE_VA_Y, tgt_va)
+    np.save(CACHE_VA_Y, tgt_va)
     np.save(CACHE_VA_STK, stk_va); np.save(CACHE_VA_SIDS, sids_va); np.save(CACHE_VA_PIDS, pids_va)
-    np.savez(CACHE_NORM, cont_mean=cm, cont_std=cs, lag_mean=lm, lag_std=ls)
-    del cat_va, cont_va, lag_va, tgt_va, stk_va, sids_va, pids_va, series_cache; gc.collect()
+    np.savez(CACHE_NORM, cont_mean=cm, cont_std=cs)
+    del cat_va, cont_va, tgt_va, stk_va, sids_va, pids_va, series_cache; gc.collect()
 else:
-    print(f'[{time.time()-T_START:.0f}s] Loading cached per-day dataset...')
+    print(f'[{time.time()-T_START:.0f}s] Loading cached per-day dataset (NO lags)...')
 
 # Load cached
 cat_tr = np.load(CACHE_TR_CAT); cont_tr = np.load(CACHE_TR_CONT)
-lag_tr = np.load(CACHE_TR_LAG); tgt_tr = np.load(CACHE_TR_Y)
+tgt_tr = np.load(CACHE_TR_Y)
 cat_va = np.load(CACHE_VA_CAT); cont_va = np.load(CACHE_VA_CONT)
-lag_va = np.load(CACHE_VA_LAG); tgt_va = np.load(CACHE_VA_Y)
+tgt_va = np.load(CACHE_VA_Y)
 stk_va = np.load(CACHE_VA_STK); sids_va = np.load(CACHE_VA_SIDS); pids_va = np.load(CACHE_VA_PIDS)
-print(f'[{time.time()-T_START:.0f}s] Dataset loaded: train={cat_tr.shape[0]:,}, val={cat_va.shape[0]:,}')
+print(f'[{time.time()-T_START:.0f}s] Dataset loaded: train={cat_tr.shape[0]:,}, val={cat_va.shape[0]:,} (NO lag features)')
 
 # To tensors (cat as int16, cast to long on transfer)
 cat_tr_t = torch.from_numpy(cat_tr)  # int16
 cont_tr_t = torch.from_numpy(cont_tr)
-lag_tr_t = torch.from_numpy(lag_tr)
 tgt_tr_t = torch.from_numpy(tgt_tr)
 cat_va_t = torch.from_numpy(cat_va)
 cont_va_t = torch.from_numpy(cont_va)
-lag_va_t = torch.from_numpy(lag_va)
 tgt_va_t = torch.from_numpy(tgt_va)
+# Placeholder lag tensors (zero-dim) per compatibilità con model forward
+lag_tr_t = torch.zeros(len(cat_tr), 0, dtype=torch.float32)
+lag_va_t = torch.zeros(len(cat_va), 0, dtype=torch.float32)
 
 # =========================================================================
 # 2. Model
@@ -285,11 +266,11 @@ def objective(trial):
           f'emb_dims={emb_dims}')
 
     model = MLPPerDay(hidden_layers, emb_dims, CARDINALITIES,
-                      len(CONT_FEATURES), N_LAG_DIM_M5, dropout).to(DEVICE)
+                      len(CONT_FEATURES), LAG_DIM, dropout).to(DEVICE)  # LAG_DIM=0 for nolags
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     loss_fn = nn.L1Loss()
     n_params = sum(p.numel() for p in model.parameters())
-    print(f'  Model: {n_params:,} params, input_dim={sum(emb_dims.values())+len(CONT_FEATURES)+N_LAG_DIM_M5}')
+    print(f'  Model: {n_params:,} params, input_dim={sum(emb_dims.values())+len(CONT_FEATURES)+LAG_DIM}')
 
     n_train = len(tgt_tr_t)
     best_val = float('inf'); patience_cnt = 0
@@ -363,11 +344,11 @@ if remaining > 0:
 # =========================================================================
 best = study.best_trial
 print(f'\nBest trial: #{best.number}, val_WAPE_med={best.value:.4f}, params={best.params}')
-with open(os.path.join(RESULTS_DIR, 'hpo_mlp_best.json'), 'w') as f:
+with open(os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_best.json'), 'w') as f:
     json.dump({'best_trial': best.number, 'best_value': best.value,
                'best_params': best.params, 'n_trials': len(study.trials)}, f, indent=2)
-study.trials_dataframe().to_parquet(os.path.join(RESULTS_DIR, 'hpo_mlp_trials.parquet'), index=False)
+study.trials_dataframe().to_parquet(os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_trials.parquet'), index=False)
 import pickle
-with open(os.path.join(RESULTS_DIR, 'hpo_mlp_study.pkl'), 'wb') as f:
+with open(os.path.join(RESULTS_DIR, 'hpo_mlp_nolags_study.pkl'), 'wb') as f:
     pickle.dump(study, f)
 print(f'\n[{time.time()-T_START:.0f}s] DONE in {(time.time()-T_START)/60:.1f} min')
