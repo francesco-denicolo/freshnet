@@ -38,7 +38,7 @@ ENCODER_LENGTH = 119; PRED_LENGTH = 119
 TRAINING_CUTOFF = 83 * N_HOURS - 1   # idx 1410
 VAL_CUTOFF = 90 * N_HOURS - 1        # idx 1529
 MIN_HOURS_VAL = 34
-MAX_TRAIN_SAMPLES = 200_000           # subsampling delle finestre training
+MAX_TRAIN_SAMPLES = 100_000           # subsampling delle finestre training
 DEVICE = 'cpu'
 
 # --- HPO config ---
@@ -47,8 +47,8 @@ STUDY_NAME = 'hpo_tft'
 STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_tft.db'
 
 # --- Fixed HP ---
-MAX_EPOCHS = 25
-PATIENCE = 5
+MAX_EPOCHS = 6
+PATIENCE = 2
 
 # --- Smoke test mode (env: HPO_SMOKE=1) ---
 if os.getenv('HPO_SMOKE') == '1':
@@ -236,7 +236,7 @@ def objective(trial):
     hidden_size = head_dim * n_heads
     dropout = trial.suggest_float('dropout', 0.0, 0.3, step=0.05)
     lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
+    batch_size = trial.suggest_categorical('batch_size', [256, 512, 1024])
     weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
 
     print(f'\n[Trial {trial.number}] HP: head_dim={head_dim}, heads={n_heads}, hidden={hidden_size}, '
