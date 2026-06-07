@@ -28,6 +28,21 @@ LAG_NAMES = ['lag_1d','lag_7d','lag_14d','rmean_7d','rmean_14d','rstd_7d',
 BATCH_SIZE=4096; LR=1e-3; MAX_EPOCHS=100; PATIENCE=10; HIDDEN=[128,64]
 EMB_DIMS={'store_id':32,'product_id':32,'city_id':8,'dow':4}
 CARDINALITIES={'store_id':898,'product_id':865,'city_id':18,'dow':7}
+WEIGHT_DECAY=0.0; DROPOUT=0.0
+
+if os.getenv('HPO_VARIANT') == '1':
+    import json
+    with open(os.path.join(RESULTS_DIR, 'hpo_mlp_best.json')) as f:
+        hpo = json.load(f)['best_params']
+    HIDDEN = json.loads(hpo['hidden'])
+    DROPOUT = float(hpo['dropout'])
+    LR = float(hpo['lr'])
+    BATCH_SIZE = int(hpo['batch_size'])
+    WEIGHT_DECAY = float(hpo['weight_decay'])
+    emb_scale = float(hpo['emb_scale'])
+    EMB_DIMS = {k: max(2, int(v * emb_scale)) for k, v in EMB_DIMS.items()}
+    print(f'[HPO] hidden={HIDDEN} dropout={DROPOUT} lr={LR:.3e} bs={BATCH_SIZE} '
+          f'wd={WEIGHT_DECAY:.2e} emb_scale={emb_scale} -> emb_dims={EMB_DIMS}')
 
 IMP_KEY = sys.argv[1]
 IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
@@ -40,7 +55,7 @@ IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
               'saits':'SAITS',
               'itransformer':'iTransformer',
               'timesnet':'TimesNet'}
-cell_key = f'{IMP_KEY}__mlp_m5lags'
+cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
 out_path = os.path.join(RESULTS_DIR, f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path} exists'); sys.exit(0)
 
@@ -182,7 +197,7 @@ ds=DS2(tr['cat'],tr['cont'],tr['lags'],tr['targets'])
 loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True,num_workers=0)
 del tr; gc.collect()
 
-opt=torch.optim.Adam(model.parameters(),lr=LR)
+opt=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
 vi=va['stock']==0
 vc=torch.from_numpy(va['cat']).to(DEVICE)
 vco=torch.from_numpy(va['cont']).to(DEVICE)

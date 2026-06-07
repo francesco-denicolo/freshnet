@@ -27,6 +27,14 @@ LGB_PARAMS={'objective':'regression_l1','metric':'mae','num_leaves':31,'learning
             'feature_fraction':0.8,'bagging_fraction':0.3,'bagging_freq':1,
             'min_child_samples':500,'max_bin':127,'verbose':-1,'num_threads':-1,'seed':SEED}
 
+if os.getenv('HPO_VARIANT') == '1':
+    import json
+    with open(os.path.join(RESULTS_DIR, 'hpo_lgb_best.json')) as f:
+        hpo = json.load(f)['best_params']
+    for k in ['num_leaves','learning_rate','min_child_samples','bagging_fraction','feature_fraction']:
+        LGB_PARAMS[k] = hpo[k]
+    print(f'[HPO] LGB_PARAMS overridden: {hpo}')
+
 IMP_KEY=sys.argv[1]
 IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
             'mediana_cond':'Mediana condizionata','mediana_glob':'Mediana globale',
@@ -38,7 +46,7 @@ IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
             'saits':'SAITS',
             'itransformer':'iTransformer',
             'timesnet':'TimesNet'}
-cell_key=f'{IMP_KEY}__lgb_m5lags'
+cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
 out_path=os.path.join(RESULTS_DIR,f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path}'); sys.exit(0)
 

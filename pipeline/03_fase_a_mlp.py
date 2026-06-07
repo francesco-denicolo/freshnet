@@ -33,6 +33,7 @@ N_LAG_DIM_M5 = len(LAG_NAMES) * N_LAGS_PER_FEAT + len(LAG_NAMES)  # 11*17 + 11 =
 BATCH_SIZE = 4096; LR = 1e-3; MAX_EPOCHS = 100; PATIENCE = 10
 HIDDEN = [128, 64]
 EMB_DIMS = {'store_id':32,'product_id':32,'city_id':8,'dow':4}
+DROPOUT = 0.0; WEIGHT_DECAY = 0.0
 CARDINALITIES = {'store_id':898,'product_id':865,'city_id':18,'dow':7}
 
 print('=' * 72)
@@ -161,7 +162,10 @@ class MLP(nn.Module):
         s.names=['store_id','product_id','city_id','dow']
         inp=sum(EMB_DIMS.values())+n_cont+n_lags
         layers=[]
-        for h in HIDDEN: layers+=[nn.Linear(inp,h),nn.ReLU()]; inp=h
+        for h in HIDDEN:
+            layers+=[nn.Linear(inp,h),nn.ReLU()]
+            if DROPOUT > 0: layers.append(nn.Dropout(DROPOUT))
+            inp=h
         layers+=[nn.Linear(inp,N_HOURS),nn.Softplus()]  # OUTPUT = 17
         s.mlp=nn.Sequential(*layers)
     def forward(s,cat,cont,lags):
@@ -219,7 +223,8 @@ def eval_mlp(preds, data, label):
                      'daily_wape':sd2/aod if aod>0 else np.nan,'daily_wpe':ed/od if od!=0 else np.nan,
                      'n_hours_instock':ni,'n_days_valid':nvd})
     ps=pd.DataFrame(recs)
-    ps.to_parquet(os.path.join(RESULTS_DIR,f'{label}_test_per_series.parquet'),index=False)
+    suffix = '_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
+    ps.to_parquet(os.path.join(RESULTS_DIR,f'{label}{suffix}_test_per_series.parquet'),index=False)
     med={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
     print(f'  {label}: WAPE_h pool={pooled["hourly_wape"]:.4f}, med={med["hourly_wape"]:.4f}, '
           f'WPE_h={pooled["hourly_wpe"]:.4f}')
@@ -234,6 +239,22 @@ for use_lags, label in [(False,'mlp_nolags'),(True,'mlp_m5lags')]:
     print(f'  === MLP ({vl}) ===')
     print(f'{"="*72}')
     t0=time.time()
+
+    if os.getenv('HPO_VARIANT') == '1':
+        import json
+        hpo_file = 'hpo_mlp_best.json' if use_lags else 'hpo_mlp_nolags_best.json'
+        with open(os.path.join(RESULTS_DIR, hpo_file)) as f:
+            hpo = json.load(f)['best_params']
+        HIDDEN = json.loads(hpo['hidden'])
+        DROPOUT = float(hpo['dropout'])
+        LR = float(hpo['lr'])
+        BATCH_SIZE = int(hpo['batch_size'])
+        WEIGHT_DECAY = float(hpo['weight_decay'])
+        emb_scale = float(hpo['emb_scale'])
+        EMB_DIMS = {'store_id':max(2,int(32*emb_scale)),'product_id':max(2,int(32*emb_scale)),
+                    'city_id':max(2,int(8*emb_scale)),'dow':max(2,int(4*emb_scale))}
+        print(f'  [HPO] hidden={HIDDEN} dropout={DROPOUT} lr={LR:.3e} bs={BATCH_SIZE} '
+              f'wd={WEIGHT_DECAY:.2e} emb_scale={emb_scale} -> emb_dims={EMB_DIMS}')
 
     print('  Building train...')
     tr=build_dataset('train',use_lags)
@@ -257,7 +278,7 @@ for use_lags, label in [(False,'mlp_nolags'),(True,'mlp_m5lags')]:
     loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True,num_workers=0)
     del tr; gc.collect()
 
-    optimizer=torch.optim.Adam(model.parameters(),lr=LR)
+    optimizer=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
     val_instock=va['stock']==0
     vc=torch.from_numpy(va['cat']).to(DEVICE)
     vco=torch.from_numpy(va['cont']).to(DEVICE)

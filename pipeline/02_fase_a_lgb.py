@@ -167,7 +167,8 @@ def eval_lgb(preds, y, stk, sids, pids, label):
                      'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan,
                      'n_hours_instock':int(ins.sum()),'n_days_valid':nv})
     ps=pd.DataFrame(recs)
-    ps.to_parquet(os.path.join(RESULTS_DIR,f'{label}_test_per_series.parquet'),index=False)
+    suffix = '_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
+    ps.to_parquet(os.path.join(RESULTS_DIR,f'{label}{suffix}_test_per_series.parquet'),index=False)
     med={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
     print(f'    {label}: WAPE_h pool={pooled["hourly_wape"]:.4f}, med={med["hourly_wape"]:.4f}, '
           f'WPE_h={pooled["hourly_wpe"]:.4f}')
@@ -182,6 +183,15 @@ for use_lags, label in [(False, 'lgb_nolags'), (True, 'lgb_m5lags')]:
     vl = 'M5 lags' if use_lags else 'no lags'
     print(f'\n  === LGB ({vl}) ===')
     t0 = time.time()
+
+    if os.getenv('HPO_VARIANT') == '1':
+        import json
+        hpo_file = 'hpo_lgb_best.json' if use_lags else 'hpo_lgb_nolags_best.json'
+        with open(os.path.join(RESULTS_DIR, hpo_file)) as f:
+            hpo = json.load(f)['best_params']
+        for k in ['num_leaves','learning_rate','min_child_samples','bagging_fraction','feature_fraction']:
+            LGB_PARAMS[k] = hpo[k]
+        print(f'    [HPO] LGB_PARAMS: {hpo}')
 
     print('    Building train...')
     Xtr, ytr, _, _, _ = build_lgb_dataset('train', use_lags)

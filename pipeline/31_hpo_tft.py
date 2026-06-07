@@ -239,6 +239,11 @@ def objective(trial):
     batch_size = trial.suggest_categorical('batch_size', [256, 512, 1024])
     weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
 
+    # Early prune: hidden_size > 32 OOMs on 16 GB RAM (attention scores scale O(hidden^2))
+    if hidden_size > 32:
+        print(f'\n[Trial {trial.number}] SKIPPED: hidden_size={hidden_size} > 32 (OOM risk)')
+        raise optuna.TrialPruned()
+
     print(f'\n[Trial {trial.number}] HP: head_dim={head_dim}, heads={n_heads}, hidden={hidden_size}, '
           f'dropout={dropout:.2f}, lr={lr:.1e}, batch={batch_size}, wd={weight_decay:.1e}')
 

@@ -87,6 +87,22 @@ MAX_EPOCHS = 10
 PATIENCE = 3
 MAX_TRAIN_SAMPLES = 200000
 LR = 0.03
+DROPOUT = 0.1
+WEIGHT_DECAY = 0.0
+
+if os.getenv('HPO_VARIANT') == '1':
+    import json
+    with open(os.path.join(RESULTS_DIR, 'hpo_tft_best.json')) as f:
+        hpo = json.load(f)['best_params']
+    head_dim = int(hpo['head_dim'])
+    ATTENTION_HEADS = int(hpo['attention_heads'])
+    HIDDEN_SIZE = head_dim * ATTENTION_HEADS
+    DROPOUT = float(hpo['dropout'])
+    LR = float(hpo['lr'])
+    BATCH_SIZE = int(hpo['batch_size'])
+    WEIGHT_DECAY = float(hpo['weight_decay'])
+    print(f'[HPO] head_dim={head_dim} heads={ATTENTION_HEADS} hidden={HIDDEN_SIZE} '
+          f'dropout={DROPOUT} lr={LR:.3e} bs={BATCH_SIZE} wd={WEIGHT_DECAY:.2e}')
 
 DEVICE = 'cpu'  # MPS instabile con TFT
 
@@ -112,7 +128,8 @@ IMP_LABELS = {
 }
 assert IMP_KEY in IMP_LABELS, f'Unknown imputer: {IMP_KEY}'
 
-OUT_PATH = os.path.join(RESULTS_DIR, f'{IMP_KEY}__tft_test_per_series.parquet')
+_suffix = '_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
+OUT_PATH = os.path.join(RESULTS_DIR, f'{IMP_KEY}__tft{_suffix}_test_per_series.parquet')
 if os.path.exists(OUT_PATH):
     print(f'SKIP: {OUT_PATH} already exists')
     sys.exit(0)
@@ -302,7 +319,7 @@ tft = TemporalFusionTransformer.from_dataset(
     learning_rate=LR,
     hidden_size=HIDDEN_SIZE,
     attention_head_size=ATTENTION_HEADS,
-    dropout=0.1,
+    dropout=DROPOUT,
     hidden_continuous_size=HIDDEN_SIZE // 2,
     output_size=1,
     loss=MAE(),
