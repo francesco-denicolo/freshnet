@@ -953,6 +953,60 @@ Salvato in `pipeline/results/ranked_combinations_MAE_uniform.parquet` e `ranked_
 
 5. **Effetto interessante in Q4**: `mediana_glob` (mediana globale, imputer più semplice possibile) batte tutti gli altri imputer accoppiati a naive forecaster. **Più semplice è meglio** nel regime alto volume.
 
+## HPO + re-train (data: 2026-06-08)
+
+### HPO Optuna completato per 5 forecaster (TPE + MedianPruner)
+
+Storage SQLite, load_if_exists per crash recovery. Metrica: val_WAPE_med per-serie in-stock (min_hours=34). Loss: MAE training, valutazione val days 84-90.
+
+**Spazio HP esplorato**:
+
+| Forecaster | N trials | Best val_WAPE_med | HP chiave |
+|---|---|---|---|
+| LGB_no_lags | 30 | **0.9788** | num_leaves=63, lr=0.107, min_child=451, bagging=0.2, feature=0.5 |
+| LGB_M5 | 30 | **0.9854** | num_leaves=110, lr=0.184, min_child=166, bagging=0.2, feature=0.6 |
+| MLP_no_lags | 45 | **0.9781** | `[256,128]` dropout=0.10 lr=8.17e-4 bs=1024 emb_scale=1.5 wd=1.38e-6 |
+| **MLP_M5** | 45 | **0.9724** ★ | `[128,64]` dropout=0.0 lr=3.51e-3 bs=1024 emb_scale=2.0 wd=1.59e-6 |
+| TFT | 30 | **0.9891** | head_dim=8, heads=4, hidden=32, bs=256, lr=2.47e-3 |
+
+**MLP_M5 = best globale val (0.9724)**. Spazio MLP esteso post-HPO con single-layer architectures `[64]`, `[128]`, `[256]` (TPE le ha esplorate ma multi-layer vince).
+
+**Constraint OOM TFT**: spazio HP ammette combinazioni `head_dim × heads` fino a 256, ma su 16 GB RAM (single-machine, CPU-only) hidden > 32 crashava (SIGKILL durante Trial 1). Soluzione: early `optuna.TrialPruned()` per hidden_size > 32 → 21/30 trial pruned, 8 completati su 3 combinazioni valide.
+
+**Accelerazioni TFT applicate post-Trial 0** (Trial 0 ~88 min, poi degradò):
+- `MAX_EPOCHS`: 25 → 6
+- `PATIENCE`: 5 → 2
+- `MAX_TRAIN_SAMPLES`: 200K → 100K (window subsample)
+- `batch_size`: [32,64,128,256] → [256,512,1024]
+
+### Re-train celle con HPO HPs (env var `HPO_VARIANT=1`)
+
+Modificati 5 script per leggere HP da `pipeline/results/hpo_*_best.json` e salvare output con suffisso `_hpo`:
+- `02_fase_a_lgb.py`, `03_fase_a_mlp.py` (Fase A no_imp baselines)
+- `07_fase_b2_forecast_lgb.py`, `08_fase_b2_forecast_mlp.py` (M5 imputer cells)
+- `25_tft_full_training.py` (TFT imputer cells)
+
+Wrapper batch: `pipeline/run_retrain_hpo.sh` + `pipeline/run_retrain_tft_hpo.sh`.
+
+**Risultati (34 celle ri-trainate, 30/34 migliorano)**:
+
+| Forecaster | Celle | Migliorate | Δ medio hourly_wape_med |
+|---|---|---|---|
+| LGB_M5 × 10 imputer | 10 | **10/10** | -0.62% |
+| MLP_M5 × 10 imputer | 10 | 9/10 | -0.50% (`media_cond` +0.43%) |
+| Fase A no_imp (LGB×2 + MLP×2) | 4 | **4/4** | -0.63% |
+| TFT × 10 imputer | 10 | 7/10 | -1.55% (sui 7); regressioni `no_imp` +0.46%, `saits` +0.66%, `seasonal_naive` +0.48% |
+
+**Sanity check pre-rollout** (saits + MLP_M5): val→test consistent, no overfitting. WAPE_h med 0.9882 → 0.9790 (-0.93%), WPE bias ridotto -0.91 → -0.88.
+
+**Compute totale**: ~50h. LGB cells ~25min, MLP cells ~20min, TFT cells ~99min medio (variabilità 60-243 min per cella, anche per PC sospensioni).
+
+### Implicazioni per il paper
+
+1. **HPO migliora consistentemente** (88% delle celle) ma effetto **piccolo** (-0.6% medio) — coerente con finding del paper: con MAE training loss la scelta degli iperparametri è quasi irrilevante per il ranking imputer.
+2. **TFT non recupera competitività** con HPO: val WAPE 0.989 vs MLP_M5 0.972. Il bottleneck è architetturale (modello sequenziale su 50K serie eterogenee), non HP.
+3. **Spread imputer ancora più compresso post-HPO**: la pulizia HPs uniforma le performance → l'imputer effect domina su tutto tranne forse Q4 (alta concentrazione di volume).
+
 ## Riferimento bibliografico chiave
 
 - **Liu et al. (2025)** — FreshRetailNet-50K: Latent Demand from 50,000 Stores for World-scale Stockout Prediction in Fresh Retail. arXiv:2505.16319.
