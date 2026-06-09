@@ -27,19 +27,18 @@ SEED = 42; np.random.seed(SEED); torch.manual_seed(SEED)
 H_START, H_END = 6, 23; N_HOURS = H_END - H_START
 WINDOW_DAYS = 30; N_WINDOWS = 3; N_STEPS = WINDOW_DAYS * N_HOURS
 
-DEVICE = 'mps' if torch.backends.mps.is_available() else (
-    'cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = 'cpu'  # MPS produces NaN with TimesNet (PyPOTS bug); CPU is stable
 
 # TimesNet hyperparameters (small per coerenza con SAITS)
-D_MODEL = 32
-N_LAYERS = 2
-D_FFN = 64
-TOP_K = 3        # periodicità da considerare nel decomposition
-N_KERNELS = 6    # kernel inception per TimesBlock
+D_MODEL = 16
+N_LAYERS = 1
+D_FFN = 32
+TOP_K = 2        # periodicità da considerare nel decomposition
+N_KERNELS = 3    # kernel inception per TimesBlock
 DROPOUT = 0.1
-BATCH_SIZE = 16
-MAX_EPOCHS = 30
-PATIENCE = 5
+BATCH_SIZE = 64
+MAX_EPOCHS = 10
+PATIENCE = 3
 LR = 1e-3
 
 print('=' * 72)
