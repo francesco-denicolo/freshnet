@@ -223,4 +223,96 @@ for q in ['Q1','Q2','Q3','Q4']:
     bp = best_per_q[q]
     print(f'   {q}: {bp.cell} (WAPE={bp.wape_h_med:.4f})')
 
+# ============================================================================
+# 7. Pareto frontier per quartile
+# ============================================================================
+print('\n7. Pareto frontier per quartile...')
+
+def pareto_mask(x, y):
+    n = len(x)
+    is_par = np.ones(n, dtype=bool)
+    for i in range(n):
+        for j in range(n):
+            if i==j: continue
+            if x[j]<=x[i] and y[j]<=y[i] and (x[j]<x[i] or y[j]<y[i]):
+                is_par[i] = False; break
+    return is_par
+
+# Forecaster colors/markers (same as Pareto plot)
+FC_COLORS = {'lgb_nolags':'#fdae61','lgb_m5lags':'#f46d43',
+             'mlp_nolags':'#74add1','mlp_m5lags':'#4575b4',
+             'tft':'#7b3294','chronos_bolt':'#d73027',
+             'global_mean':'#2ca02c','dow_mean':'#bcbd22','ma_k21':'#17becf'}
+FC_MK = {'lgb_nolags':'^','lgb_m5lags':'^','mlp_nolags':'D','mlp_m5lags':'D',
+         'tft':'o','chronos_bolt':'P','global_mean':'s','dow_mean':'X','ma_k21':'v'}
+FC_LB = {'lgb_nolags':'LGB_nolags','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nolags','mlp_m5lags':'MLP_M5',
+         'tft':'TFT','chronos_bolt':'Chronos-bolt','global_mean':'Global Mean','dow_mean':'DoW Mean','ma_k21':'MA (K=21)'}
+
+import matplotlib.lines as mlines
+
+# Compute Pareto for each quartile
+fig, axes = plt.subplots(2, 2, figsize=(20, 14))
+chronos_pareto_per_q = {}
+for ax, q in zip(axes.flat, ['Q1','Q2','Q3','Q4']):
+    sub = strat[strat.quartile == q].copy()
+    sub['pareto'] = pareto_mask(sub.wape_h_med.values, sub.abs_wpe_med.values)
+    # Dominated points (colored by forecaster, alpha)
+    dom = sub[~sub.pareto]
+    for _, r in dom.iterrows():
+        ax.scatter([r.wape_h_med],[r.abs_wpe_med],
+                   c=FC_COLORS.get(r.forecaster,'#ccc'), marker=FC_MK.get(r.forecaster,'o'),
+                   s=60, alpha=0.45, edgecolor='gray', linewidth=0.3, zorder=2)
+    par = sub[sub.pareto].sort_values('wape_h_med')
+    for _, r in par.iterrows():
+        ax.scatter([r.wape_h_med],[r.abs_wpe_med],
+                   c=FC_COLORS.get(r.forecaster,'#000'), marker=FC_MK.get(r.forecaster,'o'),
+                   s=180, edgecolor='black', linewidth=1.6, zorder=4)
+    ax.plot(par.wape_h_med, par.abs_wpe_med, '-', c='black', lw=1.2, alpha=0.5, zorder=3)
+    # Highlight best
+    bp = best_per_q[q]
+    ax.scatter([bp.wape_h_med],[bp.abs_wpe_med], marker='*', s=420,
+               c='gold', edgecolor='black', linewidth=1.6, zorder=5)
+    # Min |WPE| in this quartile
+    mw = par.sort_values('abs_wpe_med').iloc[0]
+    ax.scatter([mw.wape_h_med],[mw.abs_wpe_med], marker='o', s=350,
+               facecolors='none', edgecolor='#1f77b4', linewidth=2.5, zorder=6)
+    # Chronos cells on Pareto in this quartile
+    chr_par = par[par.forecaster == 'chronos_bolt']
+    chronos_pareto_per_q[q] = chr_par['cell'].tolist()
+
+    n_pareto = sub.pareto.sum()
+    vol_min, vol_max = vol[vol.quartile==q].volume.min(), vol[vol.quartile==q].volume.max()
+    ax.set_title(f'{q}: vol ∈ [{vol_min:.0f}, {vol_max:.0f}]   |   {n_pareto} Pareto-optimal cells',
+                 fontsize=14, pad=10)
+    ax.set_xlabel('WAPE_h median', fontsize=12)
+    ax.set_ylabel('|WPE_h median|', fontsize=12)
+    ax.tick_params(axis='both', labelsize=11)
+    ax.grid(True, alpha=0.25, linestyle='--')
+
+# Common legend
+handles = []
+for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
+           'chronos_bolt','global_mean','dow_mean','ma_k21']:
+    if fc in strat.forecaster.unique():
+        handles.append(mlines.Line2D([],[],color=FC_COLORS[fc],marker=FC_MK[fc],linestyle='None',
+                       markeredgecolor='black',markersize=10,label=FC_LB[fc]))
+handles += [
+    mlines.Line2D([],[],color='gold',marker='*',linestyle='None',
+                  markeredgecolor='black',markersize=15,label='★ Best WAPE per quartile'),
+    mlines.Line2D([],[],color='#1f77b4',marker='o',linestyle='None',markerfacecolor='none',
+                  markeredgewidth=2.5,markersize=12,label='● Min |WPE| per quartile'),
+]
+fig.legend(handles=handles, loc='center right', bbox_to_anchor=(1.10, 0.5), fontsize=12, framealpha=0.95)
+fig.suptitle('Pareto frontier WAPE × |WPE| per volume quartile',
+             fontsize=16, y=1.005)
+plt.tight_layout()
+out_fig = f'{FIG_DIR}/fig_pareto_per_quartile.png'
+plt.savefig(out_fig, dpi=150, bbox_inches='tight')
+print(f'   Saved: {out_fig}')
+
+print('\n   Chronos cells on Pareto per quartile:')
+for q in ['Q1','Q2','Q3','Q4']:
+    cells = chronos_pareto_per_q[q]
+    print(f'     {q}: {cells if cells else "none"}')
+
 print('\nDONE')
