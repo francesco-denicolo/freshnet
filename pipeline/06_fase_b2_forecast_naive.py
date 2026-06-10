@@ -15,7 +15,13 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 21
 IMPUTERS = {'media_cond':'Media condizionata','media_glob':'Media globale',
-            'mediana_cond':'Mediana condizionata','lgb':'LGB imputer'}
+            'mediana_cond':'Mediana condizionata','lgb':'LGB imputer',
+            'itransformer':'iTransformer','timesnet':'TimesNet',
+            'imputeformer':'ImputeFormer'}
+# Skip cells already computed (parquet exists)
+import glob
+existing_cells = {os.path.basename(p).replace('_test_per_series.parquet','')
+                  for p in glob.glob(os.path.join(RESULTS_DIR, '*_test_per_series.parquet'))}
 
 print('=' * 72)
 print('  FASE B2 — NAIVE su completed_sales (ore 6-22)')
@@ -92,6 +98,11 @@ for imp_key, imp_label in IMPUTERS.items():
     del df_cs, cs_sales, km
 
     for fc in FORECASTERS:
+        fc_safe_skip = fc.lower().replace(' ','_').replace('(','').replace(')','').replace('=','')
+        ck_skip = f'{imp_key}__{fc_safe_skip}'
+        if ck_skip in existing_cells:
+            print(f'    SKIP {imp_label} × {fc}: {ck_skip} exists')
+            continue
         pooled = {k:0. for k in ['sae_h','sao_h','se_h','so_h','sae_d','sao_d','se_d','so_d']}
         ps_recs = []
         for si, ser in enumerate(series_list):

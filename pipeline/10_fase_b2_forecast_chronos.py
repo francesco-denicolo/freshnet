@@ -44,6 +44,7 @@ IMP_LABELS = {
     'saits': 'SAITS',
     'itransformer': 'iTransformer',
     'timesnet': 'TimesNet',
+    'imputeformer': 'ImputeFormer',
 }
 assert IMP_KEY in IMP_LABELS, f'Unknown imputer: {IMP_KEY}'
 
