@@ -1055,6 +1055,107 @@ Bottom 5: tutti TFT cells (1.00-1.02 WAPE_med)
 - **Imputer slim non comparabili al paper baseline**: HPs ridotti per esigenze CPU (TimesNet 36K params vs originali 2.3M).
 - **Sample size training imputer**: 80/20 split per-serie su 50K. PyPOTS overhead alto.
 
+## Risposte alle Research Questions (data: 2026-06-11)
+
+Matrice finale: **99 cell** (15 imputer × 9 forecaster con buchi nel design). CSDI escluso. Pareto frontier: 25 cells.
+
+### RQ1 — Imputare migliora il forecasting? (script 41)
+
+Per ogni forecaster, Cliff's δ tra `no_imp` (baseline) e ogni cella `imputer × forecaster`. δ positivo = imputer migliora.
+
+| Forecaster | Mean Cliff δ | % migliora | % negligible | Conclusione |
+|---|---:|---:|---:|---|
+| **LGB_M5** | **−0.015** | 46% | **100%** | imputer irrelevante |
+| **MLP_M5** | **−0.018** | 54% | **92%** | imputer irrelevante |
+| TFT | −0.327 | 8% | 25% | imputer **peggiora** |
+| Chronos-bolt | −0.373 | 8% | 0% | imputer peggiora |
+| Naive (GM/DoW/MA) | ~−0.30 | 23-31% | 15-23% | imputer mixed |
+
+**Finding contrarian**: per i forecaster ML con lag features (LGB_M5, MLP_M5), l'imputation **non migliora** rispetto a no_imp. Per TFT/Chronos/naive **peggiora**. La letteratura che assume "imputer matters" è basata su forecaster MSE-trained.
+
+### RQ2 — Recovery quality predice forecasting? (script 42 + 42b)
+
+Spearman ρ tra WAPE_recovery (Traccia A) e WAPE_forecasting_med (Traccia B), 9 imputer.
+
+| Forecaster | ρ (n=9 median) | median ρ (per-series N=50K) | Cliff δ vs 0 | Conclusione |
+|---|---:|---:|---:|---|
+| MLP_M5 | −0.37 | +0.10 | +0.18 (small) | Effetto negligible |
+| LGB_M5 | −0.02 | +0.10 | +0.14 (**negligible**) | Recovery irrelevante |
+| TFT | +0.19 | −0.14 | −0.24 (small) | Effetto piccolo, segno instabile |
+| **Chronos-bolt** | **+0.77** (p=0.016) | **+0.37** | **+0.47 (medium)** | Recovery PREDICE significativamente |
+
+**Finding**: per ML/DL forecaster la recovery NON predice il forecasting. **Solo Chronos** (foundation, no lag features) è sensibile alla qualità dell'imputation. **TimesNet** (worst recovery 1.04) genera la migliore cell forecasting per MLP_M5 (0.973) → conferma decoupling.
+
+### RQ3 — Crossover per regime di volume (script 36, 39)
+
+Stratificazione per quartile di volume (Q1-Q4 sulle 50K serie, ~12.500 per Q).
+
+| Quartile | Range vol | Best cell | WAPE |
+|---|---|---|---:|
+| Q1 (basso) | [11, 40] | mediana_cond + LGB_M5 | 1.000 |
+| Q2 | (40, 54] | mediana_cond + LGB_M5 | 0.995 |
+| Q3 | (54, 86] | lgb + MLP_M5 | 0.958 |
+| Q4 (alto) | (86, 5326] | **iTransformer + MLP_M5** | **0.757** |
+
+**Crossover visibile**: in Q1 ML cells ≈1.00 vs naive ≈1.25 (gap 25%). In Q4 ML ≈ naive ≈ 0.77 (gap chiude). **Chronos** stabile ~1.00 → perde competitività relativa.
+
+Decision tree practitioner:
+- **Q1-Q2**: simple wins (mediana_cond + LGB_M5)
+- **Q3-Q4**: ML scala (lgb / iTransformer + MLP_M5)
+
+### RQ4 — Equivalence set (script 35, 36, 41) + RQ4-bis TOST (script 43)
+
+**Soglia operativa**: |Cliff δ| < 0.147 (Romano "negligible"). **Test formale**: TOST con 95% bootstrap CI ⊂ [−0.147, +0.147].
+
+**Globale** (best = `timesnet × MLP_M5`):
+- **12 cells** TOST-equivalent (threshold concorda al 100% qui)
+- Tutte MLP_M5 con imputer diversi → forecaster matter, **imputer irrelevante**
+
+**Per quartile** (TOST):
+- Q1: 18 cells equivalent, 5 INCONCLUSIVE, 75 NOT_EQUIV
+- Q2: 18 equivalent, 2 INCONCLUSIVE
+- Q3: 12 equivalent, 0 INCONCLUSIVE
+- Q4: **4 equivalent**, 3 INCONCLUSIVE, 91 NOT_EQUIV ← regime più discriminante
+
+**Per forecaster** (script 41):
+- MLP_M5: 13/14 imputer equivalent (choice irrelevant)
+- LGB_M5: 12/14 equivalent
+- TFT: 3/13 equivalent
+- Chronos/naive: 1/14 → imputer critico (solo `imputeformer` distintivamente meglio)
+
+**Concordanza threshold vs TOST**: 64 confronti agree EQUIV; 5 confronti threshold-equiv ma TOST-INCONCLUSIVE; 0 TOST-equiv dove threshold rigetta → TOST è **leggermente più conservativo**.
+
+### RQ5 — Loss alignment MAE vs MSE (script 38)
+
+24 cell ri-trainate con MSE e MAE (LGB_M5, LGB_nolags, MLP_M5, MLP_nolags × 10 imputer). Confronto WAPE_h_med.
+
+- **MAE migliora WAPE del 8-13% per cell** (effetto deterministico):
+  - LGB_M5: -0.128 medio
+  - MLP_M5: -0.099 medio
+- **Spread cross-imputer entro un forecaster**: MSE ~0.01-0.02, MAE ~0.008-0.024 → **già piccolo in entrambi i regimi** (cambia poco)
+- **Spread cross-forecaster** (LGB_M5 cells vs MLP_M5 cells): MSE 0.05, MAE 0.024 → compressione ~50%
+
+**Take-away**: cambiare loss da MSE a MAE = **10% accuracy gratis** + collassa il vantaggio di LGB su MLP. Il finding "imputer don't matter" rimane stabile sotto entrambi i regimi → **NON è artefatto di loss non-allineata**.
+
+### RQ6 — Foundation models per retail (in corso)
+
+- **Chronos-bolt** × no_imp: WAPE_h_med = 1.007 → competitivo, Pareto solo a Q2 con `forward_fill`
+- **TimesFM 2.5-200M** × no_imp: WAPE_h_med = 1.192 → peggio di Chronos del 19% (CPU only, 5x più lento)
+- TimesFM × 3 imputer chiave (imputeformer, mediana_glob, timesnet) **in corso** per testare recovery-sensitivity à la Chronos
+
+Aspettativa: TimesFM dominato da MLP_M5 + qualsiasi imputer sulla matrice principale, eventualmente utile come fallback no-HPO.
+
+## Sintesi findings per il paper
+
+1. **Imputer impact piccolo su ML forecaster** (Cliff δ ≈ 0 per MLP_M5/LGB_M5)
+2. **Imputer impact NEGATIVO su TFT/Chronos/naive** (imputation degrada il forecasting)
+3. **Recovery quality predice forecasting solo per Chronos** (zero-shot foundation), non per ML
+4. **Best cell cambia per regime di volume**: simple wins in Q1-Q2, ML in Q3-Q4
+5. **Equivalence set TOST-confirmed**: 12 cells globalmente, tutte MLP_M5
+6. **MAE training >> MSE**: +10% accuracy gratuita, compressione spread inter-forecaster del 50%
+
+→ Messaggio scientifico chiave: "**il dibattito imputer è marginale rispetto alla scelta forecaster + loss**".
+
 ## Riferimento bibliografico chiave
 
 - **Liu et al. (2025)** — FreshRetailNet-50K: Latent Demand from 50,000 Stores for World-scale Stockout Prediction in Fresh Retail. arXiv:2505.16319.

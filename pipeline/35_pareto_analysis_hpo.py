@@ -181,12 +181,24 @@ wilcoxon_df = pd.DataFrame(wilcoxon_results).sort_values('cliffs_delta', ascendi
 print(f'\n   Top 10 most-different from best (largest Cliff\'s δ):')
 print(wilcoxon_df.head(10).to_string(index=False))
 
-# Equivalence set: |Cliff δ| < 0.147 (negligible per Cliff threshold)
+# Equivalence set: prefer TOST results if available (formal evidence of equivalence),
+# fall back to threshold |Cliff δ| < 0.147 otherwise
 EQUIV_THRESHOLD = 0.147
-equiv_cells = set(wilcoxon_df[wilcoxon_df.cliffs_delta.abs() < EQUIV_THRESHOLD]['cell'])
-equiv_cells.add(best_row.cell)  # best is trivially equivalent to itself
-mat['equiv_to_best'] = mat['cell'].isin(equiv_cells)
-print(f'\n   Equivalence set (|Cliff δ| < {EQUIV_THRESHOLD}): {len(equiv_cells)} cells')
+tost_path = f'{RESULTS_DIR}/tost_equivalence.parquet'
+if os.path.exists(tost_path):
+    tost = pd.read_parquet(tost_path)
+    tost_global = tost[tost.level == 'global']
+    tost_equiv = set(tost_global[tost_global.tost_decision == 'EQUIVALENT']['other_cell'])
+    tost_equiv.add(best_row.cell)  # best is trivially equivalent to itself
+    mat['equiv_to_best'] = mat['cell'].isin(tost_equiv)
+    equiv_source = 'TOST (95% bootstrap CI ⊂ [-0.147, +0.147])'
+    equiv_cells = tost_equiv
+else:
+    equiv_cells = set(wilcoxon_df[wilcoxon_df.cliffs_delta.abs() < EQUIV_THRESHOLD]['cell'])
+    equiv_cells.add(best_row.cell)
+    mat['equiv_to_best'] = mat['cell'].isin(equiv_cells)
+    equiv_source = f'threshold |Cliff δ| < {EQUIV_THRESHOLD}'
+print(f'\n   Equivalence set ({equiv_source}): {len(equiv_cells)} cells')
 for c in mat[mat.equiv_to_best].sort_values('wape_h_med')['cell']:
     print(f'     - {c}')
 
@@ -333,8 +345,9 @@ ax2.set_xticks(range(len(FC_ORDER)))
 ax2.set_xticklabels([FC_SHORT[c] for c in FC_ORDER], fontsize=12, rotation=15)
 ax2.set_yticks(range(len(IMP_ORDER)))
 ax2.set_yticklabels(IMP_ORDER, fontsize=12)
+tost_used = 'TOST-confirmed (95% bootstrap CI)' if os.path.exists(tost_path) else f'|Cliff δ|<{EQUIV_THRESHOLD}'
 ax2.set_title(f'General heatmap WAPE_h_med — blue=best ({best_row.cell}), '
-              f'orange dashed=equivalence set (|Cliff δ|<0.147, n={len(eq_cells)})',
+              f'orange dashed=equivalence set ({tost_used}, n={len(eq_cells)})',
               fontsize=13, pad=14)
 ax2.set_xlabel('Forecaster', fontsize=13)
 ax2.set_ylabel('Imputer', fontsize=13)
