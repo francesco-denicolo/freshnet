@@ -83,7 +83,17 @@ for f in non_hpo_files:
     name = fn.replace('_test_per_series.parquet', '')
     if name in seen_cells:
         continue
-    imp, fc = parse_name(name)
+    # Map naive_<fc> (no imputer) -> no_imp__<fc>
+    if name.startswith('naive_'):
+        base = name.replace('naive_', '', 1)
+        if base in NON_HPO_FC:
+            imp, fc = 'no_imp', base
+            name = f'no_imp__{base}'
+            if name in seen_cells: continue
+        else:
+            continue
+    else:
+        imp, fc = parse_name(name)
     if fc not in NON_HPO_FC:
         continue
     df = pd.read_parquet(f)
@@ -171,6 +181,15 @@ wilcoxon_df = pd.DataFrame(wilcoxon_results).sort_values('cliffs_delta', ascendi
 print(f'\n   Top 10 most-different from best (largest Cliff\'s δ):')
 print(wilcoxon_df.head(10).to_string(index=False))
 
+# Equivalence set: |Cliff δ| < 0.147 (negligible per Cliff threshold)
+EQUIV_THRESHOLD = 0.147
+equiv_cells = set(wilcoxon_df[wilcoxon_df.cliffs_delta.abs() < EQUIV_THRESHOLD]['cell'])
+equiv_cells.add(best_row.cell)  # best is trivially equivalent to itself
+mat['equiv_to_best'] = mat['cell'].isin(equiv_cells)
+print(f'\n   Equivalence set (|Cliff δ| < {EQUIV_THRESHOLD}): {len(equiv_cells)} cells')
+for c in mat[mat.equiv_to_best].sort_values('wape_h_med')['cell']:
+    print(f'     - {c}')
+
 # Save
 wilcoxon_df.to_parquet(f'{RESULTS_DIR}/hpo_wilcoxon_vs_best.parquet', index=False)
 mat.to_parquet(f'{RESULTS_DIR}/hpo_matrix_pareto.parquet', index=False)
@@ -208,6 +227,7 @@ def draw_panel(ax, mat_full, par, best, knee, min_wpe,
                    c=FC_COLORS.get(r.forecaster, '#000000'),
                    marker=FC_MARKERS.get(r.forecaster, 'o'),
                    s=200, edgecolor='black', linewidth=1.8, zorder=4)
+    # (Equivalence rings omitted on Pareto plot to avoid clutter — see heatmap instead)
     # Frontier line
     ax.plot(par.wape_h_med, par.abs_wpe_med, '-', c='black', lw=1.5, alpha=0.5, zorder=3)
     # Highlights: gold star (best WAPE), green ring (knee), blue ring (min |WPE|)
@@ -218,13 +238,13 @@ def draw_panel(ax, mat_full, par, best, knee, min_wpe,
     ax.scatter([min_wpe.wape_h_med], [min_wpe.abs_wpe_med], marker='o',
                s=380, facecolors='none', edgecolor='#1f77b4', linewidth=3, zorder=6)
     # (Labels removed — highlights identified via legend)
-    ax.set_xlabel('WAPE_h median (lower = better accuracy)', fontsize=11)
-    ax.set_ylabel('|WPE_h median| (lower = less bias)', fontsize=11)
-    ax.set_title(title, fontsize=12)
+    ax.set_xlabel('WAPE_h median (lower = better accuracy)', fontsize=15)
+    ax.set_ylabel('|WPE_h median| (lower = less bias)', fontsize=15)
+    ax.set_title(title, fontsize=16, pad=14)
     ax.grid(True, alpha=0.25, linestyle='--')
 
 # --- Build figure: large single panel ---
-fig, ax = plt.subplots(figsize=(16, 10))
+fig, ax = plt.subplots(figsize=(20, 12))
 
 xmin, xmax = mat.wape_h_med.min()-0.005, mat.wape_h_med.max()+0.012
 ymin, ymax = mat.abs_wpe_med.min()-0.03, mat.abs_wpe_med.max()+0.03
@@ -246,10 +266,14 @@ for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
                           label=FC_LABELS[fc])
         )
 # Highlights
+n_equiv = mat.equiv_to_best.sum() if 'equiv_to_best' in mat.columns else 0
 legend_handles += [
     mlines.Line2D([], [], color='gold', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=15,
                   label=f'★ Best WAPE: {best_row.imputer}__{FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
+    mlines.Line2D([], [], color='#ff7f0e', marker='o', linestyle='--', markerfacecolor='none',
+                  markeredgewidth=2.5, markersize=12,
+                  label=f'⊙ Equivalent to best (|Cliff δ|<0.147, n={n_equiv})'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
                   label=f'● Knee: {knee_row.imputer}__{FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
@@ -258,9 +282,8 @@ legend_handles += [
                   label=f'● Min |WPE|: {min_wpe_row.imputer}__{FC_LABELS.get(min_wpe_row.forecaster, min_wpe_row.forecaster)}'),
 ]
 ax.legend(handles=legend_handles, loc='center left',
-          bbox_to_anchor=(1.02, 0.5), fontsize=11, framealpha=0.95)
-# Make tick labels larger and improve grid for clarity
-ax.tick_params(axis='both', labelsize=11)
+          bbox_to_anchor=(1.02, 0.5), fontsize=13, framealpha=0.95)
+ax.tick_params(axis='both', labelsize=13)
 for spine in ax.spines.values():
     spine.set_linewidth(1.2)
 
@@ -268,6 +291,58 @@ plt.tight_layout()
 out_fig = f'{FIG_DIR}/fig_pareto_hpo.png'
 plt.savefig(out_fig, dpi=150, bbox_inches='tight')
 print(f'   Saved: {out_fig}')
+
+# ============================================================================
+# 4b. General heatmap WAPE_h_med (matching stratified style)
+# ============================================================================
+print('\n4b. Generating general heatmap...')
+IMP_ORDER = ['no_imp','media_glob','media_cond','mediana_glob','mediana_cond',
+             'forward_fill','seasonal_naive','linear_interp','lgb',
+             'dlinear','saits','itransformer','timesnet','imputeformer']
+FC_ORDER = ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
+            'chronos_bolt','global_mean','dow_mean','ma_k21']
+FC_SHORT = {'lgb_nolags':'LGB_nl','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nl','mlp_m5lags':'MLP_M5',
+            'tft':'TFT','chronos_bolt':'Chron','global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+
+fig2, ax2 = plt.subplots(figsize=(13, 10))
+pivot = mat.pivot(index='imputer', columns='forecaster', values='wape_h_med')
+pivot = pivot.reindex(index=IMP_ORDER, columns=FC_ORDER)
+eq_mat = mat[mat.equiv_to_best] if 'equiv_to_best' in mat.columns else pd.DataFrame(columns=mat.columns)
+eq_cells = set(eq_mat.cell)
+
+im = ax2.imshow(pivot.values, cmap='RdYlGn_r', aspect='auto', vmin=0.95, vmax=1.20)
+for i, imp in enumerate(IMP_ORDER):
+    for j, fc in enumerate(FC_ORDER):
+        v = pivot.iloc[i, j]
+        if np.isnan(v): continue
+        cell = f'{imp}__{fc}'
+        is_best = (cell == best_row.cell)
+        is_equiv = cell in eq_cells
+        text = f'{v:.3f}'
+        color = 'white' if v > 1.10 or v < 0.98 else 'black'
+        ax2.text(j, i, text, ha='center', va='center', fontsize=11,
+                color=color, fontweight='bold' if (is_best or is_equiv) else 'normal')
+        if is_best:
+            ax2.add_patch(plt.Rectangle((j-0.5, i-0.5), 1, 1, fill=False,
+                                        edgecolor='blue', lw=3.5, zorder=3))
+        elif is_equiv:
+            ax2.add_patch(plt.Rectangle((j-0.5, i-0.5), 1, 1, fill=False,
+                                        edgecolor='orange', lw=2.2, linestyle='--', zorder=2))
+
+ax2.set_xticks(range(len(FC_ORDER)))
+ax2.set_xticklabels([FC_SHORT[c] for c in FC_ORDER], fontsize=12, rotation=15)
+ax2.set_yticks(range(len(IMP_ORDER)))
+ax2.set_yticklabels(IMP_ORDER, fontsize=12)
+ax2.set_title(f'General heatmap WAPE_h_med — blue=best ({best_row.cell}), '
+              f'orange dashed=equivalence set (|Cliff δ|<0.147, n={len(eq_cells)})',
+              fontsize=13, pad=14)
+ax2.set_xlabel('Forecaster', fontsize=13)
+ax2.set_ylabel('Imputer', fontsize=13)
+plt.colorbar(im, ax=ax2, label='WAPE_h_med')
+plt.tight_layout()
+out_fig2 = f'{FIG_DIR}/fig_heatmap_general.png'
+plt.savefig(out_fig2, dpi=150, bbox_inches='tight')
+print(f'   Saved: {out_fig2}')
 
 # ============================================================================
 # 5. Summary
