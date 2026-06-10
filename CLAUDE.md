@@ -1007,6 +1007,54 @@ Wrapper batch: `pipeline/run_retrain_hpo.sh` + `pipeline/run_retrain_tft_hpo.sh`
 2. **TFT non recupera competitività** con HPO: val WAPE 0.989 vs MLP_M5 0.972. Il bottleneck è architetturale (modello sequenziale su 50K serie eterogenee), non HP.
 3. **Spread imputer ancora più compresso post-HPO**: la pulizia HPs uniforma le performance → l'imputer effect domina su tutto tranne forse Q4 (alta concentrazione di volume).
 
+## FASE 1 + FASE 2: Nuovi imputer (data: 2026-06-10)
+
+Aggiunti 4 imputer dal paper baseline (Liu et al. 2025): iTransformer, TimesNet, ImputeFormer, CSDI. Tutti via PyPOTS, con HPs slim per accelerare su CPU (MPS instabile per alcuni modelli — NaN errors su TimesNet).
+
+### Imputer training
+
+| Imputer | WAPE_recovery | WPE_recovery | Params | Note |
+|---|:---:|:---:|:---:|---|
+| ImputeFormer | **0.8666** ★ | -0.7415 | slim | Best recovery |
+| iTransformer | 0.9302 | -0.4501 | medium | |
+| TimesNet | 1.0405 | -0.8650 | 36K | CPU only (MPS NaN); slim model |
+| CSDI | 1.3951 | +0.0794 | 3.7K | Ultra-slim diffusion; over-imputes; bassissimo bias |
+
+CSDI ha bias quasi-zero (WPE_recovery +0.08) ma alto WAPE (1.39) — sovra-stima ovunque, compensando l'under-bias degli altri. Pattern interessante per ensembling.
+
+### Forecaster cells (4 imputer × 3 forecaster = 12 cell pianificate, 10 ottenute)
+
+- **FASE 1 OK**: iTransformer + TimesNet × {LGB_M5, MLP_M5, TFT} = 6 cell ✓
+- **FASE 2 parziale**: CSDI + ImputeFormer × {LGB_M5, MLP_M5} = 4 cell ✓
+- **FASE 2 KO**: CSDI/ImputeFormer × TFT = 2 cell **OOM-killed** (memoria sistema sotto pressione dopo CSDI training; long_data ~15GB su 16GB Mac, kill esterno macOS memory pressure)
+
+Le 4 cell TFT mancanti sono **escluse dalla matrice finale**. Decisione: CSDI ha solo LGB+MLP cells (non TFT) ma viene incluso comunque — alternativa "drop CSDI" considerata e scartata perché 2/3 cell sono comunque informative.
+
+### Matrice finale: 45 cell HPO totali
+
+```
+Top 5 (WAPE_h median, lower = better):
+1. TimesNet + MLP_M5     = 0.9731  ★ BEST GLOBALE
+2. LGB imputer + MLP_M5  = 0.9759
+3. forward_fill + MLP_M5 = 0.9764
+4. mediana_cond + MLP_M5 = 0.9773
+5. CSDI + MLP_M5         = 0.9776
+
+Bottom 5: tutti TFT cells (1.00-1.02 WAPE_med)
+```
+
+**Pattern emergenti**:
+1. **MLP_M5 domina la testa**: top 6 sono tutti MLP_M5 con imputer diversi. Lo spread (0.9731-0.9793) è solo **0.6%** — coerente con finding: scelta dell'imputer è secondaria con loss MAE allineata.
+2. **TFT è worst**: con HPO+MAE TFT non recupera competitività. Con MSE era rank 1 (val=0.989 era best pre-HPO), ma su test con WAPE_med non riesce a superare MLP_M5 lite. La causa è strutturale (TFT su 50K serie eterogenee+CPU).
+3. **TimesNet (peggior recovery) → miglior forecasting**: la cella TimesNet+MLP_M5 batte tutte. Conferma che la qualità dell'imputation NON è proxy della qualità del forecasting downstream — finding metodologico rilevante.
+4. **CSDI (over-imputer) competitivo**: rank 5 con MLP_M5, bias quasi-zero (WPE -0.90 vs altri -0.89). Differenza minima ma supporta tesi che over-imputation è meno deleteria di under-imputation.
+
+### Limitazioni residue
+
+- **TFT × CSDI/ImputeFormer mancano**: incompletezza nella matrice. Re-run richiede liberazione RAM (riavvio PC).
+- **Imputer slim non comparabili al paper baseline**: HPs ridotti per esigenze CPU (TimesNet 36K params vs originali 2.3M).
+- **Sample size training imputer**: 80/20 split per-serie su 50K. PyPOTS overhead alto.
+
 ## Riferimento bibliografico chiave
 
 - **Liu et al. (2025)** — FreshRetailNet-50K: Latent Demand from 50,000 Stores for World-scale Stockout Prediction in Fresh Retail. arXiv:2505.16319.

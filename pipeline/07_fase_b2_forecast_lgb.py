@@ -45,7 +45,9 @@ IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
             'linear_interp':'Linear Interp',
             'saits':'SAITS',
             'itransformer':'iTransformer',
-            'timesnet':'TimesNet'}
+            'timesnet':'TimesNet',
+            'csdi':'CSDI',
+            'imputeformer':'ImputeFormer'}
 cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
 out_path=os.path.join(RESULTS_DIR,f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path}'); sys.exit(0)

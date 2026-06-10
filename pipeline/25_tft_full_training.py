@@ -125,6 +125,8 @@ IMP_LABELS = {
     'lgb': 'LGB imputer',
     'itransformer': 'iTransformer',
     'timesnet': 'TimesNet',
+    'csdi': 'CSDI',
+    'imputeformer': 'ImputeFormer',
 }
 assert IMP_KEY in IMP_LABELS, f'Unknown imputer: {IMP_KEY}'
 
