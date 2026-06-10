@@ -361,9 +361,13 @@ trainer = pl.Trainer(
 
 trainer.fit(tft, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
 training_time = time.time() - t_train
-best_val = trainer.callback_metrics.get("val_loss", float('nan'))
+last_val = trainer.callback_metrics.get("val_loss", float('nan'))
+# Fix: EarlyStopping con mode='min' traccia best_score = min val_loss
+# (callback_metrics dava il valore ultimo, non il minimo). Tensor → float.
+best_score = getattr(early_stop, 'best_score', None)
+best_val = float(best_score) if best_score is not None else float('nan')
 print(f'\n[{time.time()-T_START:.0f}s]   Training completed in {training_time:.0f}s ({training_time/60:.1f} min)')
-print(f'[{time.time()-T_START:.0f}s]   Best val_loss: {best_val:.4f}')
+print(f'[{time.time()-T_START:.0f}s]   Best val_loss: {best_val:.4f} (last: {last_val:.4f})')
 print(f'[{time.time()-T_START:.0f}s]   Stopped at epoch: {trainer.current_epoch}')
 
 # ===========================================================================
