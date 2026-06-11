@@ -54,7 +54,7 @@ for k, v in sorted(recovery.items(), key=lambda x: x[1]):
 # 2. Compute WAPE_forecasting median per (imputer, forecaster)
 # ---------------------------------------------------------------------
 print('\n2. Loading forecasting cells...')
-NON_HPO_FC = {'chronos_bolt','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
 
 def parse_name(name):
     if '__' in name: return name.split('__', 1)
@@ -84,10 +84,11 @@ print(f'   {len(forecasting)} forecasting cells loaded')
 # 3. Scatter plots: 4 panels (MLP_M5, LGB_M5, TFT, Chronos)
 # ---------------------------------------------------------------------
 print('\n3. Building scatter plots...')
-panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt']
-panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT','chronos_bolt':'Chronos-bolt'}
+panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm']
+panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT',
+                'chronos_bolt':'Chronos-bolt','timesfm':'TimesFM'}
 
-fig, axes = plt.subplots(2, 2, figsize=(15, 11))
+fig, axes = plt.subplots(2, 3, figsize=(22, 11))
 spearman_results = {}
 for ax, fc in zip(axes.flat, panels):
     xs, ys, labels = [], [], []
@@ -122,6 +123,10 @@ for ax, fc in zip(axes.flat, panels):
     ax.set_title(f'{panel_titles[fc]}   |   Spearman ρ = {rho:+.3f}, p = {pval:.3f}',
                  fontsize=13, pad=8)
     ax.grid(True, alpha=0.3, linestyle='--')
+
+# Hide unused axes (last cell of 2x3 grid)
+for i in range(len(panels), len(axes.flat)):
+    axes.flat[i].axis('off')
 
 fig.suptitle('RQ2 — Imputer recovery quality vs downstream forecasting quality\n'
              '(if recovery predicts forecasting, ρ would be strongly positive)',

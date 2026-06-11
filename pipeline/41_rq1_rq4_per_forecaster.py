@@ -30,7 +30,7 @@ EQUIV_TH = 0.147
 # ---------------------------------------------------------------------
 # Load all cells (paired per-series WAPE)
 # ---------------------------------------------------------------------
-NON_HPO_FC = {'chronos_bolt','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
 
 def parse_name(name):
     if '__' in name: return name.split('__', 1)

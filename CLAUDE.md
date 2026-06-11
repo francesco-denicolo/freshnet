@@ -811,6 +811,10 @@ Ordinati per WAPE mediana ascendente:
 
 ### Modelli statisticamente equivalenti al best (|Cliff's δ| < 0.147 = negligible)
 
+> **⚠ SUPERATO** — Sezione storica basata su Cliff δ + soglia Romano applicata come decision rule
+> (vecchia metodologia, pre-HPO, pre-MAE re-train, pre-Friedman). Il framework attuale del paper
+> è Friedman + Kendall W + Nemenyi CD — vedere sezione "RQ4 — Best cell + equivalence set" più sotto.
+
 **Globalmente** (best = saits + TFT, WAPE_med = 0.9850) — **1 cella equivalente**:
 - no_imp + TFT (δ = +0.093)
 - Già seasonal_naive + TFT (δ = +0.255 small) → equivalenza solo con no_imp+TFT.
@@ -1059,32 +1063,57 @@ Bottom 5: tutti TFT cells (1.00-1.02 WAPE_med)
 
 Matrice finale: **99 cell** (15 imputer × 9 forecaster con buchi nel design). CSDI escluso. Pareto frontier: 25 cells.
 
-### RQ1 — Imputare migliora il forecasting? (script 41)
+### RQ1 — Imputare migliora il forecasting? (script 48, 49)
 
-Per ogni forecaster, Cliff's δ tra `no_imp` (baseline) e ogni cella `imputer × forecaster`. δ positivo = imputer migliora.
+**Riformulazione Friedman+Nemenyi+Kendall W** (vecchia versione pairwise Cliff δ in script 41 è supplementary).
 
-| Forecaster | Mean Cliff δ | % migliora | % negligible | Conclusione |
-|---|---:|---:|---:|---|
-| **LGB_M5** | **−0.015** | 46% | **100%** | imputer irrelevante |
-| **MLP_M5** | **−0.018** | 54% | **92%** | imputer irrelevante |
-| TFT | −0.327 | 8% | 25% | imputer **peggiora** |
-| Chronos-bolt | −0.373 | 8% | 0% | imputer peggiora |
-| Naive (GM/DoW/MA) | ~−0.30 | 23-31% | 15-23% | imputer mixed |
+Per ogni forecaster, Friedman su tutti i k imputer (incluso `no_imp`).
+Domanda RQ1: **`no_imp` è CD-indistinguishable dal Friedman best?**
+- **SÌ** → nessun imputer batte significativamente `no_imp` → imputer non aiuta
+- **NO** → almeno un imputer batte `no_imp` → imputer aiuta (con Kendall W che dice se l'effetto è generalizzabile)
 
-**Finding contrarian**: per i forecaster ML con lag features (LGB_M5, MLP_M5), l'imputation **non migliora** rispetto a no_imp. Per TFT/Chronos/naive **peggiora**. La letteratura che assume "imputer matters" è basata su forecaster MSE-trained.
+#### Tabella globale (k=14 imputer × forecaster, N=49,939)
+
+| Forecaster | Friedman best | no_imp pos. | Δrank no_imp − best | Kendall W | Categoria | Imputer aiuta? |
+|---|---|:---:|:---:|:---:|---|---|
+| Chronos-bolt | imputeformer | 2°/14 | +1.339 | 0.222 | small | **SÌ (generalizzabile)** |
+| DoW Mean | mediana_glob | 5°/14 | +1.973 | 0.445 | moderate | **SÌ (generalizzabile)** |
+| Global Mean | mediana_glob | 6°/14 | +2.444 | 0.469 | moderate | **SÌ (generalizzabile)** |
+| MA_K21 | mediana_glob | 4°/14 | +1.216 | 0.464 | moderate | **SÌ (generalizzabile)** |
+| TFT | dlinear | 2°/13 | +0.459 | 0.220 | small | **SÌ (generalizzabile)** |
+| **TimesFM** (k=10) | imputeformer | 2°/10 | +0.154 | **0.229** | **small** | **SÌ (generalizzabile)** |
+| **LGB_M5** | mediana_glob | **8°/14** | +0.401 | **0.009** | **negligible** | statisticamente sì, **non generalizzabile** |
+| **MLP_M5** | itransformer | **9°/14** | +0.592 | **0.029** | **negligible** | statisticamente sì, **non generalizzabile** |
+
+#### Pattern per quartile (no_imp CD-equiv al best ⇒ imputer NON aiuta)
+
+| Quartile | Imputer non aiuta (no_imp CD-equiv) | Imputer aiuta |
+|---|---|---|
+| Q1 (basso vol) | **LGB_M5** (Δ=+0.10), **MLP_M5** (Δ=+0.03), TimesFM (Δ=+0.03) | Chronos, TFT, naive (Δ ≥ +1.2) |
+| Q2 | **LGB_M5** (Δ=+0.18), **MLP_M5** (Δ=+0.15) | Chronos, TFT, naive, TimesFM (Δ ≥ +0.4) |
+| Q3 (medio-alto) | nessuno | tutti (Δ ≥ +0.5) |
+| Q4 (alto vol) | nessuno | tutti (Δ ≥ +0.5) |
+
+#### Finding strutturato in 2 regimi
+
+1. **Imputer-sensitive forecaster** (Chronos, TFT, naive aggregati): l'imputer **aiuta sempre**, l'effetto è generalizzabile (Kendall W small-moderate). Best imputer coerente: **imputeformer** (Chronos), **dlinear** (TFT), **mediana_glob** (naive).
+2. **Imputer-irrelevant forecaster** (MLP_M5, LGB_M5, TimesFM): l'effetto dell'imputer è **piccolo e non generalizzabile** (W ≈ 0). In basso volume (Q1-Q2) `no_imp` è **CD-equivalent al best** → l'imputer non aiuta neppure statisticamente. In alto volume aiuta solo per il "trappolone N=50K" (Nemenyi-significativo ma praticamente trascurabile).
+
+**Finding chiave**: la dicotomia ML-con-lag (irrelevant) vs foundation/naive (sensitive) **persiste** sotto la nuova metodologia rigorosa. Kendall W è la metrica che meglio separa i due regimi.
 
 ### RQ2 — Recovery quality predice forecasting? (script 42 + 42b)
 
-Spearman ρ tra WAPE_recovery (Traccia A) e WAPE_forecasting_med (Traccia B), 9 imputer.
+Per ogni serie i (i=1..50K), Spearman ρ_i tra WAPE_recovery (9 imputer) e WAPE_forecasting_per_serie. Distribuzione dei ρ_i sintetizzata con Cliff δ vs 0 + CI bootstrap 95%.
 
-| Forecaster | ρ (n=9 median) | median ρ (per-series N=50K) | Cliff δ vs 0 | Conclusione |
-|---|---:|---:|---:|---|
-| MLP_M5 | −0.37 | +0.10 | +0.18 (small) | Effetto negligible |
-| LGB_M5 | −0.02 | +0.10 | +0.14 (**negligible**) | Recovery irrelevante |
-| TFT | +0.19 | −0.14 | −0.24 (small) | Effetto piccolo, segno instabile |
-| **Chronos-bolt** | **+0.77** (p=0.016) | **+0.37** | **+0.47 (medium)** | Recovery PREDICE significativamente |
+| Forecaster | median ρ | Cliff δ vs 0 | CI 95% bootstrap | Categoria Romano | Conclusione |
+|---|:---:|:---:|:---:|---|---|
+| **TimesFM** ★ | +0.333 | **+0.556** | [+0.549, +0.563] | **LARGE** | Recovery predice fortemente |
+| **Chronos-bolt** | +0.367 | **+0.472** | [+0.464, +0.479] | **medium** | Recovery predice significativamente |
+| MLP_M5 | +0.100 | +0.183 | [+0.174, +0.191] | small | Effetto piccolo |
+| LGB_M5 | +0.100 | +0.142 | [+0.134, +0.151] | borderline negligible/small | Recovery quasi irrilevante |
+| TFT | −0.143 | −0.239 | [−0.247, −0.230] | small (inverso) | Effetto piccolo, segno instabile |
 
-**Finding**: per ML/DL forecaster la recovery NON predice il forecasting. **Solo Chronos** (foundation, no lag features) è sensibile alla qualità dell'imputation. **TimesNet** (worst recovery 1.04) genera la migliore cell forecasting per MLP_M5 (0.973) → conferma decoupling.
+**Finding**: per i foundation models (TimesFM, Chronos) la recovery quality **predice fortemente** il forecasting (TimesFM δ=+0.556 LARGE, Chronos δ=+0.472 medium). Per ML/DL con lag features l'effetto è piccolo/negligible. **TimesNet** (worst recovery 1.04) genera la migliore cell forecasting per MLP_M5 (0.973) → conferma decoupling per ML.
 
 ### RQ3 — Crossover per regime di volume (script 36, 39)
 
@@ -1103,27 +1132,50 @@ Decision tree practitioner:
 - **Q1-Q2**: simple wins (mediana_cond + LGB_M5)
 - **Q3-Q4**: ML scala (lgb / iTransformer + MLP_M5)
 
-### RQ4 — Equivalence set (script 35, 36, 41) + RQ4-bis TOST (script 43)
+### RQ4 — Best cell + equivalence set (script 45, 46, 48)
 
-**Soglia operativa**: |Cliff δ| < 0.147 (Romano "negligible"). **Test formale**: TOST con 95% bootstrap CI ⊂ [−0.147, +0.147].
+**Framework metodologico unico (Demšar 2006, JMLR)**:
+- **Friedman χ²**: test rejection H0 "tutte le k celle hanno distribuzione di rank uguale"
+- **Kendall's W** = χ² / [N · (k−1)] ∈ [0,1]: effect size globale (concordanza ranking cross-serie)
+  - W < 0.1 = negligible · 0.1–0.3 = small · 0.3–0.5 = moderate · ≥0.5 = large
+- **Nemenyi CD** post-hoc: due celle indistinguibili sse |Δ mean_rank| ≤ CD
+  - CD = q_α(k,∞)/√2 · √(k(k+1)/(6N)) con α=0.05
 
-**Globale** (best = `timesnet × MLP_M5`):
-- **12 cells** TOST-equivalent (threshold concorda al 100% qui)
-- Tutte MLP_M5 con imputer diversi → forecaster matter, **imputer irrelevante**
+**Niente TOST**, niente soglia Cliff δ < 0.147 come decision rule (scripts 43, 44, 47 → supplementary).
+Cliff δ rimane usato come effect size descrittivo in RQ1, RQ2, RQ5 (mai come decision rule).
 
-**Per quartile** (TOST):
-- Q1: 18 cells equivalent, 5 INCONCLUSIVE, 75 NOT_EQUIV
-- Q2: 18 equivalent, 2 INCONCLUSIVE
-- Q3: 12 equivalent, 0 INCONCLUSIVE
-- Q4: **4 equivalent**, 3 INCONCLUSIVE, 91 NOT_EQUIV ← regime più discriminante
+#### Risultati matrice 109 celle (script 45/46) — TimesFM completo (k=10 imputer)
 
-**Per forecaster** (script 41):
-- MLP_M5: 13/14 imputer equivalent (choice irrelevant)
-- LGB_M5: 12/14 equivalent
-- TFT: 3/13 equivalent
-- Chronos/naive: 1/14 → imputer critico (solo `imputeformer` distintivamente meglio)
+| Livello | k | N | **Kendall W** | CD | Best cell | # CD-equiv |
+|---|:---:|:---:|:---:|:---:|---|:---:|
+| **Globale** | 109 | 49,939 | **0.430 (moderate)** | 0.868 | **itransformer__MLP_M5** | 2 |
+| Q1 (basso vol) | 109 | 12,507 | **0.633 (large)** | 1.735 | lgb__MLP_M5 | 12 |
+| Q2 | 109 | 12,491 | 0.567 (large) | 1.736 | lgb__MLP_M5 | 12 |
+| Q3 (medio-alto) | 109 | 12,475 | 0.396 (moderate) | 1.737 | itransformer__MLP_M5 | 4 |
+| Q4 (alto vol) | 109 | 12,466 | 0.376 (moderate) | 1.738 | itransformer__MLP_M5 | 2 |
 
-**Concordanza threshold vs TOST**: 64 confronti agree EQUIV; 5 confronti threshold-equiv ma TOST-INCONCLUSIVE; 0 TOST-equiv dove threshold rigetta → TOST è **leggermente più conservativo**.
+**Note**: il Friedman best (mean rank lowest) **differisce dal median-WAPE best** (`timesnet__MLP_M5`). Friedman premia la cella che vince in più serie paired, non quella con mediana più bassa.
+
+#### Risultati best imputer per forecaster (script 48)
+
+Globale, ordinato per Kendall W:
+
+| Forecaster | Best imputer | Kendall W | Categoria | Interpretazione |
+|---|---|:---:|---|---|
+| Global Mean | mediana_glob | 0.469 | moderate | imputer conta |
+| MA_K21 | mediana_glob | 0.464 | moderate | imputer conta |
+| DoW Mean | mediana_glob | 0.445 | moderate | imputer conta |
+| **TimesFM** (k=10) | imputeformer | **0.229** | **small** | **imputer conta (foundation pattern)** |
+| **Chronos-bolt** | imputeformer | **0.222** | **small** | imputer conta |
+| **TFT** | dlinear | **0.220** | **small** | imputer conta |
+| **MLP_M5** | itransformer | **0.029** | **negligible** | **imputer IRRILEVANTE** |
+| **LGB_M5** | mediana_glob | **0.009** | **negligible** | **imputer IRRILEVANTE** |
+
+**Finding chiave (rivisto post-TimesFM completo)**: Kendall W spiega il pattern in modo più pulito del precedente "Cliff δ < 0.147":
+- **MLP_M5 / LGB_M5**: ranking di imputer praticamente random cross-serie (W < 0.03) → imputer **davvero irrilevante** (non c'è un "best imputer" generalizzabile).
+- **TimesFM / Chronos / TFT / naive aggregati**: ranking concorde (W ≥ 0.22) → imputer best è coerentemente identificato (**imputeformer** per foundation models e Chronos, **mediana_glob** per naive, **dlinear** per TFT).
+
+**Pattern volume-dipendente**: per Chronos, TimesFM e naive, **W cresce in basso volume** (Chronos Q1: W=0.501 large; TimesFM Q1: W=0.462 moderate) → imputer matter di più in regime sparso.
 
 ### RQ5 — Loss alignment MAE vs MSE (script 38)
 
@@ -1145,16 +1197,28 @@ Decision tree practitioner:
 
 Aspettativa: TimesFM dominato da MLP_M5 + qualsiasi imputer sulla matrice principale, eventualmente utile come fallback no-HPO.
 
-## Sintesi findings per il paper
+## Sintesi findings per il paper (post pulizia metodologica)
 
-1. **Imputer impact piccolo su ML forecaster** (Cliff δ ≈ 0 per MLP_M5/LGB_M5)
-2. **Imputer impact NEGATIVO su TFT/Chronos/naive** (imputation degrada il forecasting)
-3. **Recovery quality predice forecasting solo per Chronos** (zero-shot foundation), non per ML
-4. **Best cell cambia per regime di volume**: simple wins in Q1-Q2, ML in Q3-Q4
-5. **Equivalence set TOST-confirmed**: 12 cells globalmente, tutte MLP_M5
+1. **Imputer impact piccolo su ML forecaster** (Kendall W ≈ 0.01-0.03 per MLP_M5/LGB_M5 → ranking di imputer praticamente random cross-serie)
+2. **Imputer impact rilevante per Chronos/TFT/naive** (Kendall W ≥ 0.22 → ranking concorde, imputer best identificabile)
+3. **Recovery quality predice forecasting solo per Chronos/TimesFM** (foundation), non per ML
+4. **Best cell cambia per regime di volume**: lgb__MLP_M5 in Q1/Q2, itransformer__MLP_M5 in Q3/Q4
+5. **Equivalence set (Friedman+Nemenyi CD)**: globale 2 cells (entrambe MLP_M5), Q1 fino a 12 cells, Q4 solo 1 cell (regime discriminante)
 6. **MAE training >> MSE**: +10% accuracy gratuita, compressione spread inter-forecaster del 50%
 
-→ Messaggio scientifico chiave: "**il dibattito imputer è marginale rispetto alla scelta forecaster + loss**".
+→ Messaggio scientifico chiave: "**la famiglia MLP_M5 domina il benchmark; dentro MLP_M5 la scelta dell'imputer è praticamente irrilevante (W≈0). L'imputer conta solo per foundation models e naive aggregati**".
+
+## Framework statistico del paper (riferimento unico)
+
+| Domanda | Test | Effect size | Script |
+|---|---|---|---|
+| Ranking di k > 2 metodi (RQ4 best) | Friedman χ² | Kendall's W | 45, 46, 48 |
+| Post-hoc su quel ranking | Nemenyi (CD) | Δ mean rank | 45, 46, 48 |
+| Confronto pairwise A vs B (RQ1, RQ5) | Wilcoxon paired | Cliff δ | 38, 41 |
+| Correlazione monotonica (RQ2/F3) | Wilcoxon vs 0 | Cliff δ vs 0 (cat. Romano) | 42, 42b |
+
+**Niente TOST. Niente soglia Cliff δ come decision rule per "equivalence" tra k metodi.**
+Script TOST/threshold-based (43, 44, 47) restano come **supplementary** ma non sono citati nel paper.
 
 ## Riferimento bibliografico chiave
 

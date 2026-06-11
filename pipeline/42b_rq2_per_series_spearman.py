@@ -47,8 +47,9 @@ def find_parquet(imp, fc):
 # ---------------------------------------------------------------------
 # Per-series Spearman per forecaster
 # ---------------------------------------------------------------------
-panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt']
-panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT','chronos_bolt':'Chronos-bolt'}
+panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm']
+panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT',
+                'chronos_bolt':'Chronos-bolt','timesfm':'TimesFM'}
 
 results_per_fc = {}
 for fc in panels:
@@ -111,6 +112,16 @@ for fc in panels:
     w_stat, w_pval = stats.wilcoxon(rho_valid - 0.0, alternative='two-sided')
     # Cliff's δ vs 0: P(ρ > 0) - P(ρ < 0)
     cliff_d = ((rho_valid > 0).sum() - (rho_valid < 0).sum()) / len(rho_valid)
+    # Bootstrap CI 95% for Cliff δ vs 0 (resample the rho_valid with replacement)
+    N_BOOT = 1000
+    rng = np.random.default_rng(42)
+    n_v = len(rho_valid)
+    boot_d = np.empty(N_BOOT)
+    for b in range(N_BOOT):
+        idx = rng.integers(0, n_v, n_v)
+        s = rho_valid[idx]
+        boot_d[b] = ((s > 0).sum() - (s < 0).sum()) / n_v
+    cliff_ci_lo, cliff_ci_hi = np.percentile(boot_d, [2.5, 97.5])
     # Compare with median-based Spearman (the original n=9 analysis)
     median_wape = np.array([np.nanmedian(M[:, j]) for j in range(len(avail))])
     rho_median, p_median = stats.spearmanr(rec_avail, median_wape)
@@ -118,11 +129,12 @@ for fc in panels:
         'rho_dist': rho_valid,
         'median_rho': med, 'q25': q25, 'q75': q75,
         'wilcoxon_p': w_pval, 'cliffs_delta': cliff_d,
+        'cliff_ci_lo': cliff_ci_lo, 'cliff_ci_hi': cliff_ci_hi,
         'n_series': len(rho_valid),
         'rho_median_n9': rho_median,  # confronto con n=9 approach
     }
     print(f'  median ρ = {med:+.4f} (IQR [{q25:+.4f}, {q75:+.4f}])')
-    print(f'  Cliff δ vs 0: {cliff_d:+.4f}  Wilcoxon p={w_pval:.2e}')
+    print(f'  Cliff δ vs 0: {cliff_d:+.4f}  CI95 [{cliff_ci_lo:+.4f}, {cliff_ci_hi:+.4f}]  Wilcoxon p={w_pval:.2e}')
     print(f'  Recovery → forecasting at median ranking (n=9): ρ = {rho_median:+.4f}')
 
 # ---------------------------------------------------------------------
@@ -141,7 +153,7 @@ positions = np.arange(len(data)) + 1
 parts = ax.violinplot(data, positions=positions, widths=0.7, showmeans=False,
                       showmedians=True, showextrema=False)
 # Color violins
-colors = ['#4575b4','#f46d43','#7b3294','#d73027']
+colors = ['#4575b4','#f46d43','#7b3294','#d73027','#b15928']
 for i, pc in enumerate(parts['bodies']):
     pc.set_facecolor(colors[i])
     pc.set_alpha(0.6)
@@ -187,6 +199,8 @@ summary = pd.DataFrame([
      'q25_rho': results_per_fc[fc]['q25'],
      'q75_rho': results_per_fc[fc]['q75'],
      'cliffs_delta_vs_zero': results_per_fc[fc]['cliffs_delta'],
+     'cliff_ci_lo': results_per_fc[fc]['cliff_ci_lo'],
+     'cliff_ci_hi': results_per_fc[fc]['cliff_ci_hi'],
      'wilcoxon_p': results_per_fc[fc]['wilcoxon_p'],
      'rho_n9_median_approach': results_per_fc[fc]['rho_median_n9']}
     for fc in panels if fc in results_per_fc

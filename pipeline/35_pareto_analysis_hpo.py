@@ -19,12 +19,13 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# Forecaster colors / markers (all 9 forecasters)
+# Forecaster colors / markers (all 10 forecasters)
 FC_COLORS = {
     'lgb_nolags':'#fdae61', 'lgb_m5lags':'#f46d43',
     'mlp_nolags':'#74add1', 'mlp_m5lags':'#4575b4',
     'tft':'#7b3294',
     'chronos_bolt':'#d73027',
+    'timesfm':'#b15928',
     'global_mean':'#2ca02c', 'dow_mean':'#bcbd22', 'ma_k21':'#17becf',
 }
 FC_MARKERS = {
@@ -32,6 +33,7 @@ FC_MARKERS = {
     'mlp_nolags':'D', 'mlp_m5lags':'D',
     'tft':'o',
     'chronos_bolt':'P',
+    'timesfm':'*',
     'global_mean':'s', 'dow_mean':'X', 'ma_k21':'v',
 }
 FC_LABELS = {
@@ -39,10 +41,11 @@ FC_LABELS = {
     'mlp_nolags':'MLP_nolags', 'mlp_m5lags':'MLP_M5',
     'tft':'TFT',
     'chronos_bolt':'Chronos-bolt',
+    'timesfm':'TimesFM',
     'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k21':'MA (K=21)',
 }
 # Non-HPO forecasters (use _test_per_series.parquet, not _hpo)
-NON_HPO_FC = {'chronos_bolt','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
 
 # ============================================================================
 # 1. Load all cells: HPO for tunable forecasters, baseline for non-HPO
@@ -181,23 +184,27 @@ wilcoxon_df = pd.DataFrame(wilcoxon_results).sort_values('cliffs_delta', ascendi
 print(f'\n   Top 10 most-different from best (largest Cliff\'s δ):')
 print(wilcoxon_df.head(10).to_string(index=False))
 
-# Equivalence set: prefer TOST results if available (formal evidence of equivalence),
-# fall back to threshold |Cliff δ| < 0.147 otherwise
-EQUIV_THRESHOLD = 0.147
-tost_path = f'{RESULTS_DIR}/tost_equivalence.parquet'
-if os.path.exists(tost_path):
-    tost = pd.read_parquet(tost_path)
-    tost_global = tost[tost.level == 'global']
-    tost_equiv = set(tost_global[tost_global.tost_decision == 'EQUIVALENT']['other_cell'])
-    tost_equiv.add(best_row.cell)  # best is trivially equivalent to itself
-    mat['equiv_to_best'] = mat['cell'].isin(tost_equiv)
-    equiv_source = 'TOST (95% bootstrap CI ⊂ [-0.147, +0.147])'
-    equiv_cells = tost_equiv
+# Equivalence set: Friedman+Nemenyi CD (Demšar 2006 standard).
+# Two cells are statistically indistinguishable if |Δ mean_rank| ≤ CD.
+# Note: best cell here is by lowest WAPE_h_med, but the equivalence set is
+# defined from Friedman ranking (script 45).  If Friedman best differs from
+# median best, the cd_set is "indistinguishable from Friedman best",
+# which is the Demšar-standard equivalence claim.
+fr_path = f'{RESULTS_DIR}/friedman_nemenyi_ranks.parquet'
+if os.path.exists(fr_path):
+    fr = pd.read_parquet(fr_path)
+    cd_equiv = set(fr[fr.cd_indistinguishable]['cell'])
+    mat['equiv_to_best'] = mat['cell'].isin(cd_equiv)
+    equiv_source = 'Nemenyi CD (Friedman post-hoc, α=0.05)'
+    equiv_cells = cd_equiv
+    friedman_best_cell = fr.iloc[0]['cell']
+    print(f'\n   Friedman best (lowest mean rank): {friedman_best_cell}')
+    print(f'   Median-WAPE best:                 {best_row.cell}')
 else:
-    equiv_cells = set(wilcoxon_df[wilcoxon_df.cliffs_delta.abs() < EQUIV_THRESHOLD]['cell'])
-    equiv_cells.add(best_row.cell)
-    mat['equiv_to_best'] = mat['cell'].isin(equiv_cells)
-    equiv_source = f'threshold |Cliff δ| < {EQUIV_THRESHOLD}'
+    equiv_cells = set()
+    mat['equiv_to_best'] = False
+    equiv_source = 'NONE (Friedman output missing)'
+    friedman_best_cell = best_row.cell
 print(f'\n   Equivalence set ({equiv_source}): {len(equiv_cells)} cells')
 for c in mat[mat.equiv_to_best].sort_values('wape_h_med')['cell']:
     print(f'     - {c}')
@@ -270,7 +277,7 @@ import matplotlib.lines as mlines
 legend_handles = []
 # Forecaster entries (only those actually in matrix)
 for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-           'chronos_bolt','global_mean','dow_mean','ma_k21']:
+           'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']:
     if fc in mat.forecaster.unique():
         legend_handles.append(
             mlines.Line2D([], [], color=FC_COLORS[fc], marker=FC_MARKERS[fc],
@@ -285,7 +292,7 @@ legend_handles += [
                   label=f'★ Best WAPE: {best_row.imputer}__{FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
     mlines.Line2D([], [], color='#ff7f0e', marker='o', linestyle='--', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
-                  label=f'⊙ Equivalent to best (|Cliff δ|<0.147, n={n_equiv})'),
+                  label=f'⊙ CD-indistinguishable from Friedman best (n={n_equiv})'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
                   label=f'● Knee: {knee_row.imputer}__{FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
@@ -312,9 +319,10 @@ IMP_ORDER = ['no_imp','media_glob','media_cond','mediana_glob','mediana_cond',
              'forward_fill','seasonal_naive','linear_interp','lgb',
              'dlinear','saits','itransformer','timesnet','imputeformer']
 FC_ORDER = ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-            'chronos_bolt','global_mean','dow_mean','ma_k21']
+            'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']
 FC_SHORT = {'lgb_nolags':'LGB_nl','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nl','mlp_m5lags':'MLP_M5',
-            'tft':'TFT','chronos_bolt':'Chron','global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+            'tft':'TFT','chronos_bolt':'Chron','timesfm':'TimesFM',
+            'global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
 
 fig2, ax2 = plt.subplots(figsize=(13, 10))
 pivot = mat.pivot(index='imputer', columns='forecaster', values='wape_h_med')
@@ -345,9 +353,8 @@ ax2.set_xticks(range(len(FC_ORDER)))
 ax2.set_xticklabels([FC_SHORT[c] for c in FC_ORDER], fontsize=12, rotation=15)
 ax2.set_yticks(range(len(IMP_ORDER)))
 ax2.set_yticklabels(IMP_ORDER, fontsize=12)
-tost_used = 'TOST-confirmed (95% bootstrap CI)' if os.path.exists(tost_path) else f'|Cliff δ|<{EQUIV_THRESHOLD}'
 ax2.set_title(f'General heatmap WAPE_h_med — blue=best ({best_row.cell}), '
-              f'orange dashed=equivalence set ({tost_used}, n={len(eq_cells)})',
+              f'orange dashed=Nemenyi CD-equivalent to Friedman best (n={len(eq_cells)})',
               fontsize=13, pad=14)
 ax2.set_xlabel('Forecaster', fontsize=13)
 ax2.set_ylabel('Imputer', fontsize=13)

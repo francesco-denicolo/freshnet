@@ -50,7 +50,7 @@ print(f'   Volume thresholds (Q1/Q2/Q3 medians): '
 # ============================================================================
 print('\n2. Loading 95 cells and joining quartile...')
 
-NON_HPO_FC = {'chronos_bolt','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
 
 def parse_name(name):
     if '__' in name:
@@ -103,45 +103,35 @@ strat = pd.DataFrame(strat_rows)
 print(f'   {len(strat)} stratified observations')
 
 # ============================================================================
-# 4. Best per quartile + equivalence set
+# 4. Best per quartile + equivalence set — from Friedman+Nemenyi CD (script 46)
 # ============================================================================
-print('\n4. Best + equivalence set per quartile...')
+print('\n4. Best + equivalence set per quartile (Nemenyi CD, Demšar 2006)...')
 
-def cliff_delta(a, b):
-    """Compute Cliff's delta on paired series. Drop NaN pairs."""
-    a, b = np.asarray(a), np.asarray(b)
-    valid = ~(np.isnan(a) | np.isnan(b))
-    a, b = a[valid], b[valid]
-    if len(a) == 0: return np.nan
-    gt = (a < b).sum(); lt = (a > b).sum()
-    return (gt - lt) / len(a)
+fr_path = f'{RESULTS_DIR}/friedman_nemenyi_ranks_per_quartile.parquet'
+if not os.path.exists(fr_path):
+    raise RuntimeError(f'Missing {fr_path}. Run script 46 first.')
+fr_q = pd.read_parquet(fr_path)
 
 best_per_q = {}
 equiv_per_q = {}
 for q in ['Q1','Q2','Q3','Q4']:
-    sub = strat[strat.quartile == q].sort_values('wape_h_med')
-    best_cell = sub.iloc[0]['cell']
-    best_imp, best_fc = parse_name(best_cell)
-    best_per_q[q] = sub.iloc[0]
-    # Equivalence: Cliff δ best vs other cells on series in this quartile
-    best_df = per_series[(best_imp, best_fc)]
-    best_q = best_df[best_df.quartile == q].set_index(['store_id','product_id'])['hourly_wape']
-    equiv = []
-    for _, r in sub.iterrows():
-        if r.cell == best_cell:
-            equiv.append((r.cell, 0.0))
-            continue
-        other_imp, other_fc = parse_name(r.cell)
-        other_df = per_series[(other_imp, other_fc)]
-        other_q = other_df[other_df.quartile == q].set_index(['store_id','product_id'])['hourly_wape']
-        common = best_q.index.intersection(other_q.index)
-        d = cliff_delta(best_q.loc[common].values, other_q.loc[common].values)
-        equiv.append((r.cell, d))
-    eq_df = pd.DataFrame(equiv, columns=['cell','cliffs_delta'])
-    eq_df['equiv'] = eq_df.cliffs_delta.abs() < EQUIV_THRESHOLD
+    fr_sub = fr_q[fr_q.quartile == q].sort_values('mean_rank')
+    if len(fr_sub) == 0:
+        print(f'   {q}: SKIP (no Friedman output)')
+        continue
+    best_cell = fr_sub.iloc[0]['cell']
+    sub_strat = strat[(strat.quartile == q) & (strat.cell == best_cell)]
+    if len(sub_strat):
+        best_per_q[q] = sub_strat.iloc[0]
+    eq_cells_q = set(fr_sub[fr_sub.cd_indistinguishable]['cell'])
+    # Build eq_df compatible with downstream code: every cell + flag equiv
+    eq_df = fr_sub[['cell','mean_rank']].copy()
+    eq_df['equiv'] = eq_df['cell'].isin(eq_cells_q)
     equiv_per_q[q] = eq_df
     n_eq = eq_df.equiv.sum()
-    print(f'   {q}: best={best_cell} WAPE={sub.iloc[0].wape_h_med:.4f}, equivalence set: {n_eq} cells')
+    best_W = fr_sub.iloc[0]['kendall_W'] if 'kendall_W' in fr_sub.columns else float('nan')
+    print(f'   {q}: best={best_cell} (mean_rank={fr_sub.iloc[0].mean_rank:.3f}, '
+          f'CD={fr_sub.iloc[0].CD:.3f}, W={best_W:.3f}), CD-equiv set: {n_eq} cells')
 
 # Mark equivalence in stratified df
 strat['equiv'] = False

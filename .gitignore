@@ -3,6 +3,7 @@ data/
 baseline_paper/
 configs/
 freshnet/
+freshnet_timesfm/
 
 # Output, figure, checkpoint
 pipeline/results/
