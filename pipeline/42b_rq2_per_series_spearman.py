@@ -47,9 +47,11 @@ def find_parquet(imp, fc):
 # ---------------------------------------------------------------------
 # Per-series Spearman per forecaster
 # ---------------------------------------------------------------------
-panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm']
+panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm',
+          'global_mean','dow_mean','ma_k21']
 panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT',
-                'chronos_bolt':'Chronos-bolt','timesfm':'TimesFM'}
+                'chronos_bolt':'Chronos-bolt','timesfm':'TimesFM',
+                'global_mean':'GlobalMean','dow_mean':'DoWMean','ma_k21':'MA_K21'}
 
 results_per_fc = {}
 for fc in panels:
@@ -153,7 +155,8 @@ positions = np.arange(len(data)) + 1
 parts = ax.violinplot(data, positions=positions, widths=0.7, showmeans=False,
                       showmedians=True, showextrema=False)
 # Color violins
-colors = ['#4575b4','#f46d43','#7b3294','#d73027','#b15928']
+colors = ['#4575b4','#f46d43','#7b3294','#d73027','#b15928',
+          '#2ca02c','#bcbd22','#17becf']
 for i, pc in enumerate(parts['bodies']):
     pc.set_facecolor(colors[i])
     pc.set_alpha(0.6)
