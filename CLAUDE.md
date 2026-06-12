@@ -1061,7 +1061,7 @@ Bottom 5: tutti TFT cells (1.00-1.02 WAPE_med)
 
 ## Risposte alle Research Questions (data: 2026-06-11, riorganizzato)
 
-Matrice finale: **109 cell** (TimesFM completato su 10 imputer). Framework statistico unico per il paper: **Friedman + Kendall's W + Nemenyi CD** (Demšar 2006, JMLR).
+Matrice finale: **113 cell** (TimesFM completato su 14 imputer, allineato agli altri forecaster). Framework statistico unico per il paper: **Friedman + Kendall's W + Nemenyi CD** (Demšar 2006, JMLR).
 
 ---
 
@@ -1085,13 +1085,13 @@ Matrice [49.939 serie × 109 celle]. Output principale del paper.
 
 | Livello | k | N | **Kendall W** | CD | Best cell | # CD-equiv |
 |---|:---:|:---:|:---:|:---:|---|:---:|
-| **Globale** | 109 | 49,939 | **0.430 (moderate)** | 0.868 | **itransformer__MLP_M5** (mean rank 22.27) | **2** |
+| **Globale** | 113 | 49,939 | **0.454 (moderate)** | 0.903 | **itransformer__MLP_M5** | **2** |
 
 Equivalence set (2 cells):
 1. `itransformer__mlp_m5lags` (mean rank 22.27, best)
 2. `lgb__mlp_m5lags` (mean rank 22.78, Δ = 0.51 ≤ CD)
 
-**Finding 1.1**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.430 moderate).
+**Finding 1.1**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.454 moderate).
 
 ### 1.2 Per regime di volume — robustezza del best (script 46)
 
@@ -1099,10 +1099,10 @@ Stratificazione per quartile di volume (Q1-Q4, ~12.500 serie per Q).
 
 | Q | Range vol | Friedman best | Kendall W | CD | # CD-equiv |
 |---|---|---|:---:|:---:|:---:|
-| Q1 (basso) | [11, 40] | **lgb__MLP_M5** | 0.633 (large) | 1.735 | 12 |
-| Q2 | (40, 54] | **lgb__MLP_M5** | 0.567 (large) | 1.736 | 12 |
-| Q3 (medio-alto) | (54, 86] | **itransformer__MLP_M5** | 0.396 (moderate) | 1.737 | 4 |
-| Q4 (alto) | (86, 5326] | **itransformer__MLP_M5** | 0.376 (moderate) | 1.738 | 2 |
+| Q1 (basso) | [11, 40] | **lgb__MLP_M5** | 0.653 (large) | 1.804 | 12 |
+| Q2 | (40, 54] | **lgb__MLP_M5** | 0.586 (large) | 1.805 | 13 |
+| Q3 (medio-alto) | (54, 86] | **itransformer__MLP_M5** | 0.417 (moderate) | 1.806 | 4 |
+| Q4 (alto) | (86, 5326] | **itransformer__MLP_M5** | 0.396 (moderate) | 1.807 | 2 |
 
 **Finding 1.2**: crossover **soft**. La famiglia di forecaster vincente (MLP_M5) è **invariata** in tutti i regimi; l'imputer ottimale cambia tra `lgb` (basso volume Q1/Q2) e `itransformer` (alto volume Q3/Q4). Il regime più discriminante è Q4 (solo 2 celle CD-equivalenti); Q1 è il più saturato (12 equivalenti).
 
@@ -1117,7 +1117,7 @@ Per ciascun forecaster, framework applicato sulla sottomatrice ristretta ai suoi
 | Global Mean | 14 | mediana_glob | 6°/14 | +2.444 | **0.469** | moderate | **SÌ generalizzabile** |
 | MA_K21 | 14 | mediana_glob | 4°/14 | +1.216 | **0.464** | moderate | **SÌ generalizzabile** |
 | DoW Mean | 14 | mediana_glob | 5°/14 | +1.973 | **0.445** | moderate | **SÌ generalizzabile** |
-| **TimesFM** | 10 | imputeformer | 2°/10 | +0.154 | **0.229** | small | **SÌ generalizzabile** |
+| **TimesFM** | 14 | imputeformer | 2°/14 | +0.163 | **0.174** | small | **SÌ generalizzabile** |
 | **Chronos-bolt** | 14 | imputeformer | 2°/14 | +1.339 | **0.222** | small | **SÌ generalizzabile** |
 | **TFT** | 13 | dlinear | 2°/13 | +0.459 | **0.220** | small | **SÌ generalizzabile** |
 | **MLP_M5** | 14 | itransformer | 9°/14 | +0.592 | **0.029** | negligible | NO (effetto marginale) |
@@ -1178,7 +1178,7 @@ Questa sezione fornisce la **chiave esplicativa** del Finding 1.3: l'imputer è 
 ## Sezione 3 — Foundation models per retail
 
 - **Chronos-bolt** × no_imp: WAPE_h_med = 1.007 → competitivo, Pareto solo a Q2 con `forward_fill`.
-- **TimesFM 2.5-200M** × 10 imputer: WAPE_h_med best = 1.191 (imputeformer), peggio di Chronos del 18% (CPU only, 5x più lento).
+- **TimesFM 2.5-200M** × 14 imputer: WAPE_h_med best = 1.191 (imputeformer), peggio di Chronos del 18% (CPU only, 5x più lento). I 4 imputer aggiunti tardivamente (lgb, mediana_cond, media_cond, media_glob) producono WAPE_med 1.24–1.27 → vanno tutti al fondo del ranking interno di TimesFM, abbassando Kendall W (k=10: 0.229 → k=14: 0.174).
 
 **Finding 3**: entrambi i foundation models sono **recovery-sensitive** (vedere Sezione 2 — Cliff δ vs 0: TimesFM +0.556 LARGE, Chronos +0.472 medium). Best imputer coerente per entrambi: **imputeformer**. Nonostante la recovery-sensitivity, **i foundation rimangono dominati da MLP_M5** sulla matrice principale (mean rank ≈ 35-40 vs 22.3 di `itransformer__MLP_M5`). Utili come baseline zero-shot ma non competitivi su retail deperibile con lag features disponibili.
 
