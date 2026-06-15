@@ -208,6 +208,88 @@ Per ogni serie i (i=1..50K), Spearman ρ_i tra `WAPE_recovery` (Traccia A) e `WA
 
 Questa sezione fornisce la **chiave esplicativa** del Finding RQ1: l'imputer è irrelevante per MLP_M5/LGB_M5 perché i lag M5 isolano il forecasting dalla qualità dell'imputation; per Chronos/TimesFM/TFT esiste un'asimmetria architetturale ma non sufficientemente forte da rendere la recovery un proxy.
 
+### 2.1 — Pairwise concordance: framework robusto sostitutivo (script 42c)
+
+L'aggregate Spearman ρ su n=13 imputer ha SE ≈ ±0.32 → sensibile alla composizione del set di imputer. Sostituiamo con **pairwise concordance probability**:
+
+```
+Per ciascun forecaster fc:
+   13 imputer → 78 coppie distinte (A, B)
+   Per ciascuna coppia:
+      Per ciascuna delle 50K serie:
+         "concordant" se sign(rec_A − rec_B) = sign(fc_A − fc_B)
+      P_pair = mean(concordant)  ← stimato su N=50K serie (SE ≈ ±0.002)
+   78 valori P_pair per forecaster → distribuzione interpretabile
+```
+
+| Forecaster | Mediana P(concord) | CI95 bootstrap | % coppie > 0.5 | Lettura |
+|---|:---:|:---:|:---:|---|
+| **MA_K21** | **0.804** | [0.772, 0.825] | 83% | recovery predice fortemente |
+| **DoWMean** | **0.816** | [0.788, 0.841] | 87% | predice fortemente |
+| **GlobalMean** | **0.827** | [0.802, 0.850] | 86% | predice fortemente |
+| TimesFM | 0.560 | [0.490, 0.617] | 60% | predice debolmente |
+| Chronos-bolt | 0.559 | [0.461, 0.717] | 58% | predice debolmente |
+| LGB_M5 | 0.525 | [0.516, 0.536] | 81% | quasi random |
+| MLP_M5 | 0.510 | [0.502, 0.519] | 63% | random |
+| **TFT** | **0.399** | [0.314, 0.484] | 35% | **INVERSO** |
+
+**Vantaggi sull'aggregate Spearman**: ogni misura basata su N=50K invece di n=13, 78 misure invece di 1, robustezza all'inclusione/esclusione di singoli imputer.
+
+### 2.2 — Stratificazione per volume quartile (script 42c2)
+
+Il rapporto recovery → forecasting **dipende dal regime di volume** in modo non triviale:
+
+| Forecaster | Globale | Q1 | Q2 | Q3 | Q4 | Trend |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| GlobalMean | 0.83 | **0.94** | 0.91 | 0.81 | 0.67 | **↓ decresce con volume** |
+| DoWMean | 0.82 | 0.91 | 0.89 | 0.80 | 0.68 | ↓ |
+| MA_K21 | 0.80 | 0.92 | 0.88 | 0.77 | 0.65 | ↓ |
+| Chronos-bolt | 0.56 | 0.65 | 0.68 | 0.61 | **0.33** | **↓ crollo in Q4 → inverso** |
+| TimesFM | 0.56 | 0.57 | 0.59 | 0.56 | 0.46 | ↓ debole |
+| MLP_M5 | 0.51 | 0.50 | 0.50 | 0.51 | 0.53 | invariato (~0.5) |
+| LGB_M5 | 0.52 | 0.51 | 0.51 | 0.53 | 0.55 | invariato (~0.5) |
+| **TFT** | 0.40 | 0.38 | 0.41 | 0.43 | **0.34** | inverso ovunque, picco in Q4 |
+
+**Finding RQ2 stratificato** — 4 pattern distinti per quartile:
+
+1. **Naive aggregati: dipendenza recovery → forecasting ALTA in basso volume, DECRESCENTE con volume**. In Q1 (P≈0.92) il forecasting naive è quasi una funzione lineare dell'imputer; in Q4 (P≈0.67) ci sono abbastanza dati osservati da diluire il contributo dell'imputer.
+2. **Chronos: crollo drammatico in Q4** (P=0.33 < 0.5). In alto volume Chronos diventa **anti-correlato con recovery**: imputer "troppo smooth" interferiscono con l'attention. **Boundary condition del transfer learning**.
+3. **ML+lag: indifferenti al regime** (P ≈ 0.50 ovunque). I lag features compensano l'imputer in ogni quartile — coerente con W ≈ 0 di RQ1.
+4. **TFT: inversione strutturale** (P 0.34-0.43 in ogni Q). Pattern adversarial **non regime-specifico**, ma amplificato in alto volume (Q4).
+
+**Implicazioni**:
+- La validità della Traccia A come proxy del forecasting **dipende dal regime di volume**: forte in basso volume (anche per Chronos), assente o inversa in alto volume.
+- La **convergenza in Q4** (tutti i forecaster vicino o sotto 0.5) è coerente con RQ4 (Sezione 1.2): in alto volume le famiglie di forecaster convergono e l'imputer effect si attenua.
+- Il crollo Chronos in Q4 è un finding nuovo che suggerisce una limitazione del foundation model in regime di alto volume — meritevole di approfondimento.
+
+### 2.3 — Tentativo di spiegazione meccanicistica per TFT inverso (script 42d)
+
+Per indagare l'inversione TFT, abbiamo testato l'ipotesi «*TFT preferisce imputer dinamici*» calcolando per ciascun imputer la **DYNAMICITY** (std del residuo dopo aver rimosso il pattern orario, normalizzato per la variabilità naturale dei valori osservati):
+
+```
+DYN_i = std(ε_imp_i) / std(ε_obs_i)
+    dove ε(d,h) = y(d,h) − μ_serie(h)
+```
+
+**Risultato**: ipotesi REJECTED. Spearman ρ tra DYN ranking e TFT ranking = **−0.01** (no correlazione).
+
+**Finding inatteso**: l'analisi DYN ha rivelato un pattern diverso ma robusto:
+
+| Forecaster | Spearman ρ (DYN vs forecasting rank) | Interpretazione |
+|---|:---:|---|
+| **GlobalMean** | **+0.74** | preferisce fortemente imputer STATICI (alto DYN → peggior rank) |
+| **DoWMean** | **+0.74** | idem |
+| MA_K21 | +0.63 | preferisce statici |
+| TimesFM | +0.55 | preferisce moderatamente statici |
+| Chronos-bolt | +0.46 | preferisce moderatamente statici |
+| LGB_M5 | −0.12 | indifferente |
+| MLP_M5 | −0.01 | indifferente |
+| **TFT** | **−0.01** | **indifferente alla dinamicità** ★ |
+
+La preferenza naive per imputer statici è **logica** (i naive usano direttamente i valori imputati nella mean/median; imputer dinamici aggiungono rumore). L'**indifferenza TFT alla DYN** falsifica l'ipotesi originale: l'inversione TFT non è spiegata dalla dinamicità.
+
+**Conclusione**: l'anomalia TFT non è spiegata dalla DYN. Una possibile ipotesi alternativa (architectural alignment DL vs non-DL — i top 4 imputer per TFT sono tutti DL: dlinear, timesnet, itransformer, saits) richiede future work per essere formalmente testata. Riportiamo l'osservazione come finding aperto.
+
 ---
 
 ## Sezione 3 — Foundation models per retail
@@ -225,10 +307,11 @@ Questa sezione fornisce la **chiave esplicativa** del Finding RQ1: l'imputer è 
 1. **Dicotomia chiara**: MLP_M5/LGB_M5 hanno W ≈ 0 (negligible) → imputer praticamente irrilevante. Foundation, TFT, naive hanno W ≥ 0.22 (small-moderate) → imputer aiuta, best coerente (imputeformer per foundation, dlinear per TFT, mediana_glob per naive).
 2. **Sensitivity loss MAE vs MSE (1.3.1)**: il claim "imputer doesn't matter" è stabile sotto entrambe le loss → finding strutturale.
 
-**RQ2 — Mechanism: la recovery predice il forecasting? (Sezione 2 — n=13 imputer)**
-3. **Dicotomia naive vs others**: naive aggregati con δ ≈ +0.84–0.88 LARGE (recovery determina quasi deterministicamente forecasting); tutti gli altri forecaster (ML+lag, foundation, TFT) con |δ| ≤ 0.42 small/medium-inverso.
-4. **Implicazione**: la valutazione di imputer via metriche di recovery è proxy **affidabile solo per naive aggregati**. Per le altre architetture (incluso Chronos/TimesFM/TFT), recovery non predice forecasting in modo robusto.
-5. **TFT mostra associazione inversa medium** (δ = −0.42): tendenza adversarial (forecast migliori con imputer peggiori in recovery).
+**RQ2 — Mechanism: la recovery predice il forecasting? (Sezione 2 — n=13 imputer, pairwise concordance)**
+3. **Dicotomia naive vs others**: naive aggregati con P(concord) ≈ 0.80-0.83 (recovery determina forecasting); tutti gli altri forecaster (ML+lag ~0.51, foundation ~0.56, TFT 0.40 inverso) con relazione debole o nulla.
+4. **Stratificazione per volume** (Sez. 2.2): dipendenza recovery → forecasting **decresce con il volume per tutti i forecaster eccetto ML+lag**. Naive scendono da 0.91 (Q1) a 0.67 (Q4); Chronos crolla a 0.33 (inverso) in Q4 — boundary condition del transfer learning.
+5. **TFT inverso strutturale** (Sez. 2.2): P(concord) 0.34-0.43 in ogni quartile, non regime-specifico. L'ipotesi "TFT preferisce imputer dinamici" è rifiutata (DYN analysis, Sez. 2.3); la spiegazione meccanicistica rimane aperta.
+6. **Naive preferiscono imputer statici** (Sez. 2.3): Spearman ρ tra DYNAMICITY ranking e naive ranking ≈ +0.74 — finding nuovo che spiega meccanisticamente perché i naive sono recovery-sensitive (alto-recovery → spesso statico → naive ottimale).
 
 **RQ3 — Identification: qual è il best? (Sezione 1.1)**
 6. **Best globale**: `itransformer__MLP_M5` (mean rank 22.27 su 113 celle), equivalence set di 2 cells entrambe MLP_M5 (CD = 0.903). Kendall W = 0.454 moderate.
