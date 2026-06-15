@@ -3,9 +3,26 @@
 > Documento di riferimento per la stesura del paper. Tutti i finding numerici,
 > tabelle, e claim per ciascuna sezione. Aggiornare qui (non in `CLAUDE.md`).
 
-**Ultimo update**: 2026-06-12
+**Ultimo update**: 2026-06-14
 **Matrice finale**: 113 cells (TimesFM completato su 14 imputer, allineato agli altri forecaster).
 **Framework statistico unico**: Friedman + Kendall's W + Nemenyi CD (Demšar 2006, JMLR).
+
+---
+
+## Research Questions e mapping con le sezioni
+
+Ordinamento "logically sustainable": dalla domanda di existence (foundationale) attraverso mechanism, identification, conditions, fino a boundary (paradigma alternativo). Ogni RQ presuppone strettamente le precedenti.
+
+| RQ | Tipo | Domanda | Sezione |
+|---|---|---|---|
+| **RQ1** | existence | Per ciascun forecaster, l'imputation migliora il forecasting rispetto a `no_imp`? | 1.3 |
+| **RQ2** | mechanism | La qualità della recovery (Traccia A) predice la qualità del forecasting downstream (Traccia B)? | 2 |
+| **RQ3** | identification | Qual è la coppia (imputer, forecaster) migliore sulla matrice intera? Quante celle sono indistinguibili dal best? | 1.1 + 1.1 (b) Pareto |
+| **RQ4** | conditions | Il best cambia in funzione del regime di volume delle serie? | 1.2 (a/b/c) |
+| **RQ5** | boundary | I foundation models pre-trained (Chronos, TimesFM) alterano queste conclusioni? | 3 |
+| _legacy_ | sensitivity | MAE vs MSE training loss | 1.3.1 |
+
+→ Sequenza: **existence → mechanism → identification → conditions → boundary**. Mechanism-first deductive: stabilisce prima il framework interpretativo (RQ2), poi lo applica all'identification (RQ3).
 
 ---
 
@@ -35,7 +52,7 @@ Equivalence set (2 cells):
 1. `itransformer__mlp_m5lags` (mean rank 22.27, best)
 2. `lgb__mlp_m5lags` (mean rank 22.78, Δ = 0.51 ≤ CD)
 
-**Finding 1.1 (a)**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.454 moderate).
+**Finding RQ3 (a)**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.454 moderate).
 
 #### 1.1 (b) Trade-off WAPE × |WPE|: Pareto frontier globale (script 35)
 
@@ -54,7 +71,7 @@ Pareto su `(WAPE_h_med, |WPE_h_med|)` — accuracy vs bias. Frontier = celle non
 - Lato |WPE|: **naive aggregati** (Global/DoW/MA con vari imputer, |WPE| 0.06–0.19, WAPE 1.10–1.16).
 - TimesFM entra solo in posizione min-|WPE| (con linear_interp).
 
-**Finding 1.1 (b)**: il trade-off è **strutturale**. Il best-WAPE ha |WPE| sempre elevato (≥ 0.77) — i forecaster ML/DL **sotto-stimano sistematicamente**. Per ridurre il bias servono naive aggregati che pagano in WAPE. Il knee point `mediana_glob__dow_mean` rappresenta un compromesso ragionevole per practitioner che valuta sia accuracy che bias.
+**Finding RQ3 (b)**: il trade-off è **strutturale**. Il best-WAPE ha |WPE| sempre elevato (≥ 0.77) — i forecaster ML/DL **sotto-stimano sistematicamente**. Per ridurre il bias servono naive aggregati che pagano in WAPE. Il knee point `mediana_glob__dow_mean` rappresenta un compromesso ragionevole per practitioner che valuta sia accuracy che bias.
 
 ### 1.2 Per regime di volume — robustezza del best (script 46)
 
@@ -67,7 +84,7 @@ Stratificazione per quartile di volume (Q1-Q4, ~12.500 serie per Q).
 | Q3 (medio-alto) | (54, 86] | **itransformer__MLP_M5** | 0.417 (moderate) | 1.806 | 4 |
 | Q4 (alto) | (86, 5326] | **itransformer__MLP_M5** | 0.396 (moderate) | 1.807 | 2 |
 
-**Finding 1.2 (a)**: crossover **soft**. La famiglia di forecaster vincente (MLP_M5) è **invariata** in tutti i regimi; l'imputer ottimale cambia tra `lgb` (basso volume Q1/Q2) e `itransformer` (alto volume Q3/Q4). Il regime più discriminante è Q4 (solo 2 celle CD-equivalenti); Q1 è il più saturato (12 equivalenti).
+**Finding RQ4 (a)**: crossover **soft**. La famiglia di forecaster vincente (MLP_M5) è **invariata** in tutti i regimi; l'imputer ottimale cambia tra `lgb` (basso volume Q1/Q2) e `itransformer` (alto volume Q3/Q4). Il regime più discriminante è Q4 (solo 2 celle CD-equivalenti); Q1 è il più saturato (12 equivalenti).
 
 **Nota su W vs CD-equiv set size**: W e #equiv non sono ridondanti. Q1 ha W large + molti equiv (separazione forte tra famiglie ma debole dentro MLP_M5); Q4 ha W moderate + pochi equiv (naive competono → meno accordo globale, ma MLP_M5 differenziato → top isolato).
 
@@ -82,7 +99,7 @@ Stessa metrica (WAPE × |WPE|) applicata dentro ciascun quartile. La frontier **
 | Q3 (medio-alto) | 15 | `lgb__MLP_M5` (0.958) | `mediana_cond__MA_K21` (\|WPE\|=0.13) | MLP_M5, TFT in testa; **naive emergono al low-bias** |
 | Q4 (alto vol) | **12** / 113 | `itransformer__MLP_M5` (**0.757**) | `media_cond__MA_K21` (\|WPE\|=**0.06**) | MLP_M5 (top WAPE), naive (low bias) — gap minimo |
 
-**Finding 1.2 (b)**: tre pattern emergono dalla Pareto stratificata:
+**Finding RQ4 (b)**: tre pattern emergono dalla Pareto stratificata:
 
 1. **# Pareto-optimal decresce con il volume** (Q1: 28 → Q4: 12) → stesso pattern del CD-equiv set: alto volume = più discriminante.
 2. **In Q1/Q2 (basso volume) la frontier è popolata da TFT** che occupa la coda low-bias (linear_interp__TFT, mediana_glob__TFT) → TFT è il forecaster trade-off in basso volume.
@@ -106,7 +123,7 @@ Figure `fig_rq3_crossover_fixed_global.png` (cella best globale per famiglia, fi
 | `imputeformer__MA_K21` | 1.260 | 1.216 | 1.050 | 0.779 |
 | `imputeformer__TimesFM` | 1.316 | 1.308 | 1.154 | 0.884 |
 
-**Finding 1.2 (c)**: tre fenomeni di crossover osservabili nel line-plot:
+**Finding RQ4 (c)**: tre fenomeni di crossover osservabili nel line-plot:
 
 1. **Convergenza generalizzata in Q4** (alto volume): MLP_M5, LGB_M5, TFT e tutti e tre i naive aggregati (Global/DoW/MA) convergono a WAPE ≈ 0.77–0.78. In basso volume questi metodi erano molto distanti (ML ≈ 1.00 vs naive ≈ 1.24), in alto volume diventano indistinguibili. **L'alto volume comprime le differenze tra famiglie**.
 
@@ -144,7 +161,7 @@ Per ciascun forecaster, framework applicato sulla sottomatrice ristretta ai suoi
 | Q2 | LGB_M5, MLP_M5 | tutti gli altri |
 | Q3-Q4 | nessuno | tutti |
 
-**Finding 1.3**: dicotomia chiara basata sull'architettura del forecaster:
+**Finding RQ1**: dicotomia chiara basata sull'architettura del forecaster:
 - **Imputer-sensitive** (Chronos, TFT, TimesFM, naive aggregati): l'imputer **aiuta sempre**, ranking generalizzabile (W ≥ 0.22). Best imputer coerente: **imputeformer** per foundation models, **mediana_glob** per naive, **dlinear** per TFT.
 - **Imputer-irrelevant** (MLP_M5, LGB_M5): W ≈ 0 in ogni regime → il ranking degli imputer è praticamente random cross-serie → in basso volume `no_imp` è anche CD-equivalent al best (l'imputer non aiuta neppure statisticamente).
 
@@ -160,31 +177,36 @@ Per verificare che il finding "W ≈ 0 per MLP_M5/LGB_M5" non sia un artefatto d
 - Spread inter-imputer entro ciascun forecaster: MSE ~0.01–0.02 vs MAE ~0.008–0.024.
 - **Lo spread rimane piccolo sotto entrambe le loss** → il finding "imputer effect negligible per MLP_M5/LGB_M5" è strutturale, non causato dalla loss.
 
-**Conclusione 1.3.1**: il claim 1.3 ("imputer is irrelevant for MLP_M5/LGB_M5") sopravvive al sensitivity test sulla loss → finding robusto.
+**Conclusione 1.3.1**: il claim RQ1 ("imputer is irrelevant for MLP_M5/LGB_M5") sopravvive al sensitivity test sulla loss → finding robusto.
 
 ---
 
 ## Sezione 2 — Recovery quality predice forecasting? (script 42 + 42b)
 
-Per ogni serie i (i=1..50K), Spearman ρ_i tra `WAPE_recovery` (9 imputer, Traccia A) e `WAPE_forecasting_per_serie` (Traccia B). Distribuzione dei ~50K ρ_i sintetizzata con Cliff δ vs 0 + CI bootstrap 95% + categoria Romano.
+Per ogni serie i (i=1..50K), Spearman ρ_i tra `WAPE_recovery` (Traccia A) e `WAPE_forecasting_per_serie` (Traccia B). Distribuzione dei ~50K ρ_i sintetizzata con Cliff δ vs 0 + CI bootstrap 95% + categoria Romano.
+
+**Aggiornamento 2026-06-15**: estesa Traccia A da 9 a **13 imputer** aggiungendo media_glob, media_cond, mediana_cond, lgb (esclusi originariamente — i loro WAPE_recovery erano disponibili in `traccia_a.parquet` ma non mappati negli script). Per TFT n=12 (manca imputeformer__TFT). I risultati cambiano qualitativamente rispetto a n=9.
 
 | Forecaster | Famiglia | median ρ | Cliff δ vs 0 | CI 95% | Categoria Romano | Predice? |
 |---|---|:---:|:---:|:---:|---|---|
-| **MA_K21** ★ | naive | +0.800 | **+0.868** | [+0.864, +0.872] | **LARGE** | SÌ (massimo) |
-| **DoW Mean** | naive | +0.867 | **+0.823** | [+0.817, +0.828] | **LARGE** | SÌ |
-| **Global Mean** | naive | +0.883 | **+0.813** | [+0.808, +0.818] | **LARGE** | SÌ |
-| **TimesFM** | foundation | +0.333 | **+0.556** | [+0.549, +0.563] | **LARGE** | SÌ |
-| **Chronos-bolt** | foundation | +0.367 | **+0.472** | [+0.464, +0.479] | **medium** | SÌ |
-| MLP_M5 | ML+lag | +0.100 | +0.183 | [+0.174, +0.191] | small | debole |
-| LGB_M5 | ML+lag | +0.100 | +0.142 | [+0.134, +0.151] | borderline | quasi no |
-| TFT | DL+lag | −0.143 | −0.239 | [−0.247, −0.230] | small (inverso) | no, segno opposto |
+| **MA_K21** ★ | naive | +0.79 | **+0.883** | [+0.879, +0.888] | **LARGE** | SÌ (massimo) |
+| **DoW Mean** | naive | +0.81 | **+0.849** | [+0.845, +0.854] | **LARGE** | SÌ |
+| **Global Mean** | naive | +0.80 | **+0.841** | [+0.836, +0.846] | **LARGE** | SÌ |
+| **MLP_M5** | ML+lag | +0.09 | +0.212 | [+0.204, +0.220] | small | debole |
+| **LGB_M5** | ML+lag | +0.08 | +0.171 | [+0.162, +0.179] | small | debole |
+| **Chronos-bolt** | foundation | +0.21 | **+0.153** | [+0.144, +0.161] | **small** | debole |
+| **TimesFM** | foundation | +0.13 | **+0.132** | [+0.124, +0.141] | **small** | debole |
+| **TFT** | DL+lag | −0.32 | **−0.418** | [−0.426, −0.410] | **medium (inverso)** | no, segno opposto |
 
-**Finding 2**: la recovery predice il forecasting in modo **crescente** all'aumentare della dipendenza diretta dai dati imputati:
-- **Naive** (LARGE δ ≈ +0.82–0.87): la predizione è quasi una funzione lineare dei valori imputati → recovery → forecasting in modo quasi deterministico.
-- **Foundation models** (medium–LARGE δ ≈ +0.47–0.56): ricevono il segnale imputato ma lo trasformano con il modello pre-addestrato → effetto attenuato ma reale.
-- **ML/DL con lag features M5** (negligible–small): i lag agiscono come buffer di compensazione → decoupling dalla qualità dell'imputer. `TimesNet` (worst recovery 1.04) genera la migliore cell forecasting per MLP_M5 (0.973) → conferma diretta del decoupling.
+**Finding RQ2**: con il design completo a 13 imputer la dicotomia è **molto più netta** di quanto suggerisse l'analisi a 9 imputer:
 
-Questa sezione fornisce la **chiave esplicativa** del Finding 1.3: l'imputer è irrelevante per MLP_M5/LGB_M5 perché i lag M5 isolano il forecasting dalla qualità dell'imputation.
+- **Naive aggregati** (LARGE δ ≈ +0.84–0.88): la predizione è quasi una funzione lineare dei valori imputati → la recovery determina quasi deterministicamente il forecasting downstream.
+- **Tutti gli altri forecaster** (small / medium inverso, |δ| ≤ 0.42): la recovery **non predice il forecasting in modo robusto**. I foundation models (Chronos, TimesFM) non differiscono qualitativamente dai ML+lag su questa dimensione.
+- **TFT mostra un'associazione inversa medium** (δ = −0.42): tendenza a generare forecast migliori con imputer **peggiori** in recovery — segnale di selezione adversarial via attention mechanism, da indagare.
+
+**Implicazione metodologica**: la valutazione di imputer via metriche di recovery (Traccia A) è un proxy **affidabile** solo se il forecaster downstream è un naive aggregato (cui la predizione è banalmente una funzione dell'output dell'imputer). Per **tutte le altre architetture** — incluso il presunto "imputer-sensitive" Chronos/TimesFM — la recovery quality non si traduce in forecasting quality in modo robusto.
+
+Questa sezione fornisce la **chiave esplicativa** del Finding RQ1: l'imputer è irrelevante per MLP_M5/LGB_M5 perché i lag M5 isolano il forecasting dalla qualità dell'imputation; per Chronos/TimesFM/TFT esiste un'asimmetria architetturale ma non sufficientemente forte da rendere la recovery un proxy.
 
 ---
 
@@ -193,24 +215,32 @@ Questa sezione fornisce la **chiave esplicativa** del Finding 1.3: l'imputer è 
 - **Chronos-bolt** × no_imp: WAPE_h_med = 1.007 → competitivo, Pareto solo a Q2 con `forward_fill`.
 - **TimesFM 2.5-200M** × 14 imputer: WAPE_h_med best = 1.191 (imputeformer), peggio di Chronos del 18% (CPU only, 5x più lento). I 4 imputer aggiunti tardivamente (lgb, mediana_cond, media_cond, media_glob) producono WAPE_med 1.24–1.27 → vanno tutti al fondo del ranking interno di TimesFM, abbassando Kendall W (k=10: 0.229 → k=14: 0.174).
 
-**Finding 3**: entrambi i foundation models sono **recovery-sensitive** (vedere Sezione 2 — Cliff δ vs 0: TimesFM +0.556 LARGE, Chronos +0.472 medium). Best imputer coerente per entrambi: **imputeformer**. Nonostante la recovery-sensitivity, **i foundation rimangono dominati da MLP_M5** sulla matrice principale (mean rank ≈ 35-40 vs 22.3 di `itransformer__MLP_M5`). Utili come baseline zero-shot ma non competitivi su retail deperibile con lag features disponibili.
+**Finding RQ5**: i foundation models sono **dominati da MLP_M5** sulla matrice principale (mean rank ≈ 35-40 vs 22.3 di `itransformer__MLP_M5`). Best imputer coerente per entrambi: **imputeformer**. **Aggiornamento post-estensione Traccia A**: con n=13 imputer, foundation e ML+lag mostrano sensibilità alla recovery di entità simile (small, |δ| ≤ 0.22) — i foundation non hanno l'asimmetria forte che suggeriva il design parziale a n=9. Utili come baseline zero-shot ma non competitivi su retail deperibile con lag features disponibili.
 
 ---
 
-## Sintesi findings per il paper
+## Sintesi findings per il paper (ordinata per RQ — logically sustainable)
 
-**Sezione 1 — Best cell + equivalence set (Friedman + W + CD)**
-1. **Best globale**: `itransformer__MLP_M5` (mean rank 22.27 su 113 celle), equivalence set di 2 cells entrambe MLP_M5. Kendall W = 0.454 moderate.
-2. **Per regime di volume — best**: crossover soft — la famiglia MLP_M5 vince in tutti i quartili, l'imputer ottimale cambia (lgb in Q1/Q2 basso volume, itransformer in Q3/Q4 medio-alto/alto). Q4 più discriminante (2 equiv), Q1 più saturato (12 equiv).
-3. **Per regime di volume — Pareto**: 28→12 cells Pareto-optimal da Q1 a Q4. TFT dominante in basso volume (low-bias tail), MLP_M5/naive si specializzano in alto volume. Chronos appare solo a Q2.
-4. **Per regime di volume — crossover line-plot**: convergenza generalizzata in Q4 (ML/TFT/naive tutti a WAPE ≈ 0.77); Chronos piatto (perde relativamente); TimesFM peggiore in tutti i quartili. Decision tree practitioner emerge naturalmente dalle line.
-5. **Per forecaster**: dicotomia chiara. MLP_M5/LGB_M5 hanno W ≈ 0 (negligible) → imputer praticamente irrilevante. Foundation, TFT, naive hanno W ≥ 0.22 (small-moderate) → imputer aiuta, best coerente (imputeformer / dlinear / mediana_glob). **Sensitivity loss MAE vs MSE**: il claim "imputer doesn't matter" è stabile sotto entrambe le loss (Sez. 1.3.1).
+**RQ1 — Existence: per ciascun forecaster, l'imputer aiuta vs no_imp? (Sezione 1.3)**
+1. **Dicotomia chiara**: MLP_M5/LGB_M5 hanno W ≈ 0 (negligible) → imputer praticamente irrilevante. Foundation, TFT, naive hanno W ≥ 0.22 (small-moderate) → imputer aiuta, best coerente (imputeformer per foundation, dlinear per TFT, mediana_glob per naive).
+2. **Sensitivity loss MAE vs MSE (1.3.1)**: il claim "imputer doesn't matter" è stabile sotto entrambe le loss → finding strutturale.
 
-**Sezione 2 — Recovery quality predice forecasting?**
-6. La recovery predice il forecasting in modo **crescente** con la dipendenza diretta dai dati imputati: naive δ ≈ +0.85 LARGE, foundation δ ≈ +0.5 medium-LARGE, ML+lag δ ≈ +0.15 small. I lag M5 sono buffer che disaccoppia ML/DL dalla qualità imputer.
+**RQ2 — Mechanism: la recovery predice il forecasting? (Sezione 2 — n=13 imputer)**
+3. **Dicotomia naive vs others**: naive aggregati con δ ≈ +0.84–0.88 LARGE (recovery determina quasi deterministicamente forecasting); tutti gli altri forecaster (ML+lag, foundation, TFT) con |δ| ≤ 0.42 small/medium-inverso.
+4. **Implicazione**: la valutazione di imputer via metriche di recovery è proxy **affidabile solo per naive aggregati**. Per le altre architetture (incluso Chronos/TimesFM/TFT), recovery non predice forecasting in modo robusto.
+5. **TFT mostra associazione inversa medium** (δ = −0.42): tendenza adversarial (forecast migliori con imputer peggiori in recovery).
 
-**Sezione 3 — Foundation models**
-7. Chronos e TimesFM sono **recovery-sensitive** ma **dominati da MLP_M5** sulla matrice. Best imputer per entrambi: imputeformer. Utili come baseline zero-shot, non competitivi su retail con lag disponibili.
+**RQ3 — Identification: qual è il best? (Sezione 1.1)**
+6. **Best globale**: `itransformer__MLP_M5` (mean rank 22.27 su 113 celle), equivalence set di 2 cells entrambe MLP_M5 (CD = 0.903). Kendall W = 0.454 moderate.
+7. **Pareto trade-off (1.1 b)**: 26/113 cells Pareto-optimal. Trade-off strutturale accuracy ↔ bias: ML/DL hanno |WPE| ≥ 0.77, naive aggregati riducono bias pagando in WAPE. Knee = `mediana_glob__dow_mean` (1.101 / 0.190).
+
+**RQ4 — Conditions: cambia per regime di volume? (Sezione 1.2)**
+8. **Soft crossover** (1.2 a): famiglia MLP_M5 invariata in ogni Q; imputer cambia (`lgb` in Q1/Q2, `itransformer` in Q3/Q4). Q4 più discriminante (2 equiv), Q1 più saturato (12 equiv).
+9. **Pareto per quartile** (1.2 b): 28→12 cells Pareto-optimal da Q1 a Q4. TFT dominante low-bias in Q1/Q2; MLP_M5/naive si specializzano in Q3/Q4.
+10. **Crossover line-plot** (1.2 c): convergenza generalizzata in Q4 (ML/TFT/naive ≈ 0.77); Chronos piatto; TimesFM peggiore.
+
+**RQ5 — Boundary: foundation models alterano queste conclusioni? (Sezione 3)**
+11. Chronos e TimesFM sono **dominati da MLP_M5** sulla matrice. Best imputer per entrambi: imputeformer. Con n=13 imputer, foundation e ML+lag mostrano sensibilità alla recovery simile (small) — i foundation non hanno l'asimmetria forte suggerita dal design parziale.
 
 → **Messaggio scientifico chiave**: "*la famiglia MLP_M5 domina il benchmark in ogni regime; dentro MLP_M5 la scelta dell'imputer è praticamente irrilevante (W ≈ 0) perché i lag features M5 disaccoppiano il forecasting dalla recovery quality. L'imputer conta solo per i forecaster senza lag (foundation models e naive aggregati), dove la recovery predice direttamente il forecasting (Cliff δ vs 0 ≥ +0.47 medium-LARGE).*"
 
@@ -218,14 +248,17 @@ Questa sezione fornisce la **chiave esplicativa** del Finding 1.3: l'imputer è 
 
 ## Framework statistico del paper (riferimento unico)
 
-| Sezione | Domanda | Test | Effect size | Script |
+| RQ | Sezione | Test | Effect size | Script |
 |---|---|---|---|---|
-| Sez. 1.1, 1.2, 1.3 | Best cell + equiv set (k > 2 metodi) | Friedman χ² | **Kendall's W** + Nemenyi CD | 45, 46, 48, 49 |
-| Sez. 1.1 (b), 1.2 (b) | Pareto trade-off WAPE × \|WPE\| | dominance | n. Pareto-optimal cells | 35, 36 |
-| Sez. 1.2 (c) | Crossover line-plot evoluzione famiglie per Q | descrittivo | Δ WAPE per famiglia per Q | 39 |
-| Sez. 1.3.1 | Robustness loss MAE vs MSE (pairwise A vs B) | Wilcoxon paired | Cliff δ | 38 |
-| Sez. 2 | Recovery vs forecasting (correlazione) | Wilcoxon vs 0 (su ρ_i) | **Cliff δ vs 0** + CI bootstrap (cat. Romano) | 42, 42b |
-| Sez. 3 | Foundation models | come Sez. 1 + 2 | come Sez. 1 + 2 | 45, 42b |
+| RQ1 (imputer aiuta?) | 1.3 | Friedman χ² (per fc) | Kendall's W + Nemenyi CD | 48, 49 |
+| _sensitivity_ | 1.3.1 | Wilcoxon paired | Cliff δ | 38 |
+| RQ2 (recovery → forecasting) | 2 | Wilcoxon vs 0 (su ρ_i) | **Cliff δ vs 0** + CI bootstrap (cat. Romano) | 42, 42b |
+| RQ3 (best globale) | 1.1 (a) | Friedman χ² | **Kendall's W** + Nemenyi CD | 45 |
+| RQ3 (Pareto) | 1.1 (b) | dominance | n. Pareto-optimal cells | 35 |
+| RQ4 (best per Q) | 1.2 (a) | Friedman χ² | Kendall's W + Nemenyi CD | 46 |
+| RQ4 (Pareto per Q) | 1.2 (b) | dominance | n. Pareto-optimal cells | 36 |
+| RQ4 (crossover line) | 1.2 (c) | descrittivo | Δ WAPE per famiglia per Q | 39 |
+| RQ5 (foundation models) | 3 | come RQ1 + RQ2 + RQ3 | come RQ1 + RQ2 + RQ3 | 45, 42b |
 
 **Niente TOST. Niente soglia Cliff δ < 0.147 come decision rule per "equivalence" tra k metodi.**
 Script TOST/threshold-based (43, 44, 47) restano come **supplementary** ma non sono citati nel paper.

@@ -22,15 +22,26 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# Recovery values (same as RQ2 base)
+# Recovery values (Traccia A — WAPE_recovery su MNAR-masked val gg 84-90)
+# Extended to all 13 imputers with available Traccia A values
 recovery = {
-    'mediana_glob': 0.8090, 'imputeformer': 0.8666, 'itransformer': 0.9302,
-    'saits': 0.9431, 'dlinear': 0.9513, 'timesnet': 1.0405,
-    'linear_interp': 1.0473, 'seasonal_naive': 1.0638, 'forward_fill': 1.1878,
+    'mediana_glob':   0.8090,   # 18_fase_b1_imputation_mediana_glob.py
+    'mediana_cond':   0.8462,   # 04_fase_b1_imputation_naive_ml.py
+    'lgb':            0.8472,   # 04_fase_b1_imputation_naive_ml.py
+    'imputeformer':   0.8666,   # 30b_fase_b1_imputation_imputeformer.py
+    'itransformer':   0.9302,   # 27_fase_b1_imputation_itransformer.py
+    'saits':          0.9431,   # 16_fase_b1_imputation_saits.py
+    'media_glob':     0.9454,   # 04_fase_b1_imputation_naive_ml.py
+    'media_cond':     0.9560,   # 04_fase_b1_imputation_naive_ml.py
+    'dlinear':        0.9513,   # 05_fase_b1_imputation_dlinear.py
+    'timesnet':       1.0405,   # 28_fase_b1_imputation_timesnet.py
+    'linear_interp':  1.0473,   # 14_fase_b1_imputation_classic.py
+    'seasonal_naive': 1.0638,   # 14_fase_b1_imputation_classic.py
+    'forward_fill':   1.1878,   # 14_fase_b1_imputation_classic.py
 }
 imputers = list(recovery.keys())
 recovery_vec = np.array([recovery[i] for i in imputers])
-print(f'9 imputer con WAPE_recovery')
+print(f'{len(imputers)} imputer con WAPE_recovery')
 
 # ---------------------------------------------------------------------
 # Helper: load WAPE per series for (imputer, forecaster) cell

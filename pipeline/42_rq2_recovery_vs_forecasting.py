@@ -28,11 +28,17 @@ import matplotlib.pyplot as plt
 print('1. Collecting WAPE_recovery per imputer...')
 recovery = {}
 ta_files = glob.glob(f'{RESULTS_DIR}/traccia_a_*.parquet')
+# Also include traccia_a.parquet (no underscore-suffix; contains the 4 naive/lgb imputer entries)
+_ta_main = f'{RESULTS_DIR}/traccia_a.parquet'
+if os.path.exists(_ta_main):
+    ta_files.append(_ta_main)
 imp_name_map = {
     'Forward Fill':'forward_fill','Seasonal Naive':'seasonal_naive',
     'Linear Interp':'linear_interp','DLinear':'dlinear','SAITS':'saits',
     'iTransformer':'itransformer','TimesNet':'timesnet',
     'ImputeFormer':'imputeformer','Mediana globale':'mediana_glob',
+    'Media globale':'media_glob','Media condizionata':'media_cond',
+    'Mediana condizionata':'mediana_cond','LGB imputer':'lgb',
     'CSDI':'csdi',  # CSDI was removed but if file lingers, map it
 }
 for f in ta_files:
