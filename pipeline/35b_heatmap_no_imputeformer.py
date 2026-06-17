@@ -33,17 +33,20 @@ mat = pd.read_parquet(os.path.join(RESULTS_DIR, 'hpo_matrix_pareto.parquet'))
 mat_no = mat[mat.imputer != 'imputeformer'].copy()
 print(f'  Total cells: {len(mat)}, after removing imputeformer: {len(mat_no)}')
 
-# Best cell (WAPE_h_med) — keep using global best from full matrix for reference
-best_row = mat.sort_values('wape_h_med').iloc[0]
-print(f'  Reference best (full matrix): {best_row.cell} (WAPE_h_med={best_row.wape_h_med:.4f})')
-
-# Re-derive equiv set from Friedman if available
+# Best cell — use FRIEDMAN best (coerent with framework Sez. 1.1)
+# Not median-WAPE best, to avoid mismatch with equiv-set (Nemenyi post-hoc).
 fr_path = f'{RESULTS_DIR}/friedman_nemenyi_ranks.parquet'
 if os.path.exists(fr_path):
     fr = pd.read_parquet(fr_path)
     cd_equiv = set(fr[fr.cd_indistinguishable]['cell'])
+    friedman_best_cell = fr.iloc[0]['cell']
+    best_row = mat[mat.cell == friedman_best_cell].iloc[0]
+    print(f'  Friedman best (mean rank): {friedman_best_cell} (mean_rank={fr.iloc[0]["mean_rank"]:.2f})')
+    print(f'  (median-WAPE best for reference: {mat.sort_values("wape_h_med").iloc[0].cell})')
 else:
     cd_equiv = set()
+    best_row = mat.sort_values('wape_h_med').iloc[0]
+    print(f'  Fallback: median-WAPE best (Friedman parquet missing): {best_row.cell}')
 
 # Pivot
 pivot = mat_no.pivot(index='imputer', columns='forecaster', values='wape_h_med')
@@ -75,8 +78,8 @@ ax.set_xticklabels([FC_SHORT[c] for c in FC_ORDER], fontsize=12, rotation=15)
 ax.set_yticks(range(len(IMP_ORDER)))
 ax.set_yticklabels(IMP_ORDER, fontsize=12)
 ax.set_title(f'General heatmap WAPE_h_med (NO imputeformer) — '
-             f'blue=best ({best_row.cell}), '
-             f'orange dashed=Nemenyi CD-equivalent to Friedman best (n={len(cd_equiv)})',
+             f'blue=Friedman best ({best_row.cell}), '
+             f'orange dashed=Nemenyi CD-equivalent set (n={len(cd_equiv)})',
              fontsize=12, pad=14)
 ax.set_xlabel('Forecaster', fontsize=13)
 ax.set_ylabel('Imputer', fontsize=13)

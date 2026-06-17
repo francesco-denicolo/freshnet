@@ -181,6 +181,120 @@ Per verificare che il finding "W ≈ 0 per MLP_M5/LGB_M5" non sia un artefatto d
 
 ---
 
+### 1.4 — Discussione strutturata dei risultati: dai dati grezzi alla decisione operativa
+
+In questa sezione presentiamo i risultati della matrice 113-celle seguendo una **sequenza logica progressiva**: (1) dati grezzi → (2) framework rigoroso → (3) bridge operativo → (4) confronto delle due viste e implicazioni per il deployment.
+
+#### Step 1 — Dati grezzi: WAPE heatmap
+
+WAPE è la metrica direttamente misurata sulle 50K serie di test (ore in-stock, gg 91-97). La heatmap (Fig. `fig_heatmap_general_no_imputeformer.png`) mostra `WAPE_h_med` per ciascuna cella della matrice in unità grezze, **senza applicare alcun framework analitico**.
+
+Caratterizzazione qualitativa:
+- Range osservato: WAPE_h_med ∈ [0.97, 1.30]
+- Pattern visivo: famiglia MLP_M5 (colonna) ha WAPE bassi (~0.97-0.98) per molti imputer
+- Naive aggregati (DoW Mean, Global Mean, MA_K21): WAPE moderato (~1.10-1.20) ma generalmente più alti
+- Foundation models (Chronos, TimesFM): WAPE medio-alto
+
+Questa è la **fotografia dei dati**. Non rappresenta ancora una decisione.
+
+#### Step 2 — Framework rigoroso: Friedman + Kendall's W + Nemenyi CD
+
+Per identificare il best in modo **statisticamente solido**, applichiamo il framework Friedman + W + Nemenyi CD (Demšar 2006) alla matrice [49,939 serie × 113 celle]. I 3 output:
+
+**(2a) CD diagram** (`fig_cd_diagram.png`) — best cell + equivalence-set in dimensione 1:
+- **Friedman best**: `itransformer__MLP_M5` (mean rank = **22.36** su 113)
+- **Kendall W**: **0.454** (moderate) — ranking generalizzabile cross-serie
+- **CD**: **0.903** rank units (α=0.05)
+- **Equivalence-set**: 2 cells (best + `lgb__MLP_M5`, Δ = 0.51 ≤ CD)
+
+**(2b) WAPE heatmap annotata** — la stessa heatmap dello Step 1, ora con bordi:
+- bordo **blu** su `itransformer__MLP_M5` (Friedman best)
+- bordo **arancione dashed** su `lgb__MLP_M5` (equiv-set)
+
+→ Mostra visivamente che il best Friedman **non è la cella con WAPE_h_med minimo** della matrice (`timesnet__MLP_M5` ha mediana minore, 0.9731 < 0.9794). Questa apparente "incongruenza" sarà discussa nello Step 4.
+
+**(2c) Pareto frontier su (mean rank, |WPE|)** (`fig_pareto_meanrank.png`) — multi-criterio rigoroso:
+- 13 cells Pareto-optimal sotto criterio paired-rank
+- Asse X coerente col framework Friedman
+- Linea verticale a `best + CD = 23.27` → CD-equiv set visibile geometricamente
+
+**Output dello Step 2**: il best statisticamente certificato + l'insieme delle 13 cells robust che bilanciano accuracy paired con bias control.
+
+#### Step 3 — Bridge to operations: Pareto frontier su (WAPE, |WPE|)
+
+Il framework Friedman dello Step 2 fornisce la certificazione statistica del best, ma è espresso in unità **mean rank** che non sono actionable per:
+- SLA contrattuali (espressi in WAPE assoluto, es. "WAPE < 0.85")
+- Calcolo del ROI (Δ WAPE × volume × margine)
+- Dimensionamento safety stock (richiede percentili WAPE)
+- Comunicazione con stakeholder non-tecnici
+
+Per **tradurre la certificazione rigorosa in numeri operativi**, mostriamo la Pareto frontier su (WAPE_h_med, |WPE_h_med|) — `fig_pareto_hpo.png`:
+- **26 cells Pareto-optimal** (più della Pareto Friedman = 13)
+- Asse X in unità interpretabili (WAPE)
+- 3 punti notevoli:
+  - Min WAPE: `timesnet__MLP_M5` (WAPE 0.9731, |WPE| 0.886)
+  - Knee point: `mediana_glob__dow_mean` (WAPE 1.10, |WPE| 0.19)
+  - Min |WPE|: `linear_interp__timesfm` (WAPE 1.30, |WPE| 0.061)
+
+**Output dello Step 3**: rappresentazione operativa dello stesso decision space, in unità che supportano SLA verification, ROI computation, safety stock sizing.
+
+#### Step 4 — Confronto delle due Pareto frontiers
+
+I due Pareto frontier (Step 2c e Step 3) **non sono in subset relation**: hanno intersezione significativa ma ciascuno include cells uniche.
+
+| Insieme | # cells | Caratterizzazione | Implicazione operativa |
+|---|:---:|---|---|
+| **Intersezione** | 11 | doubly Pareto-optimal (robust su entrambi i criteri) | ★ **SAFEST CHOICES** |
+| **Solo Friedman Pareto** | 2 | paired-robust ma marginally-dominated | safe per generalizzazione |
+| **Solo WAPE Pareto** | 15 | median-good ma paired-fragile | da usare con awareness |
+
+##### 4.1 — Le 2 cells uniche sulla Friedman Pareto
+
+| Cell | WAPE_h_med | \|WPE\| | mean rank | Status |
+|---|:---:|:---:|:---:|---|
+| `itransformer__MLP_M5` ★ | 0.9794 | 0.8929 | 22.36 | Friedman best |
+| `saits__MLP_M5` | 0.9790 | 0.8838 | 24.21 | Friedman 2nd |
+
+Sono dominate su (WAPE, |WPE|) da `timesnet__MLP_M5` (WAPE minore, |WPE| minore) e `dlinear__TFT`. **Paradosso paired vs marginal**: vincono in paired comparison ma la mediana marginale è leggermente più alta. È il caso classico in cui la consistency paired prevale sull'avantaggio mediano.
+
+##### 4.2 — Le 15 cells uniche sulla WAPE Pareto
+
+Top case: `timesnet__MLP_M5` (WAPE_h_med = 0.9731, mean rank = 24.34). Ha la **mediana WAPE minima della matrice**, ma il mean rank è statisticamente distinguibile dal Friedman best (Δ = 1.98 > CD = 0.903). La sua bassa mediana deriva da **shape distribuzionale favorevole** (sotto-popolazione di serie dove timesnet eccelle), non da vittoria sistematica paired.
+
+Le altre 14 cells si dividono in:
+- 3 TFT cells con vari imputer (itransformer, linear_interp)
+- 1 Chronos cell (linear_interp)
+- 11 naive aggregati (DoW Mean, MA_K21, Global Mean × vari imputer)
+
+Tutte hanno mean rank significativamente più alto del Friedman best (Δ > CD). Il loro vantaggio in WAPE Pareto deriva da shape distribuzionale, non da paired victory.
+
+**"Statisticamente fragili"** (chiarimento): NON significa che le cells siano inaffidabili. Significa che la loro mediana favorevole può **non generalizzarsi** sotto distribution shift (mix di prodotti diverso, regime cambiato), perché non è "guadagnata" attraverso confronto paired ma da specifica conformazione del test set.
+
+##### 4.3 — Le 11 cells dell'intersezione (doubly Pareto-optimal)
+
+Sono robust su entrambi i criteri (paired + marginal). Si dividono in 3 archetipi:
+
+| Archetype | Cell esempio | Mean rank | WAPE | \|WPE\| | Use case |
+|---|---|:---:|:---:|:---:|---|
+| **Accuracy-extreme** (TFT) | `dlinear__TFT` | 29.39 | 0.9785 | 0.858 | accuracy KPI |
+| **Balanced** (TFT) | `linear_interp__TFT` | 44.96 | 1.002 | 0.477 | mix accuracy/bias |
+| **Bias-extreme** (naive) | `media_cond__MA_K21` | 65.91 | 1.141 | 0.068 | inventory critica |
+
+##### 4.4 — Sintesi operativa
+
+Il workflow di deployment a 2 step diventa:
+
+1. **Identificare le candidate cells**: prima Friedman Pareto (Step 2c) → filtra a 13 cells robust. Tra queste, scegliere l'archetype operativo (accuracy / balanced / bias-control).
+
+2. **Quantificare la scelta**: poi Pareto WAPE (Step 3) → leggere valori assoluti (WAPE, |WPE|, distribuzione) per:
+   - SLA verification
+   - ROI computation (Δ WAPE × volume × margine)
+   - Safety stock sizing (percentili WAPE)
+
+L'**intersezione** delle due Pareto (11 cells) rappresenta le scelte **safest**: robust sia in paired comparison sia in marginal trade-off. Cells "solo Friedman" (2) sono safe per generalizzazione ma marginally meno attraenti; cells "solo WAPE" (15) richiedono awareness di shape-dependence.
+
+---
+
 ## Sezione 2 — Recovery quality predice forecasting? (script 42 + 42b)
 
 Per ogni serie i (i=1..50K), Spearman ρ_i tra `WAPE_recovery` (Traccia A) e `WAPE_forecasting_per_serie` (Traccia B). Distribuzione dei ~50K ρ_i sintetizzata con Cliff δ vs 0 + CI bootstrap 95% + categoria Romano.
