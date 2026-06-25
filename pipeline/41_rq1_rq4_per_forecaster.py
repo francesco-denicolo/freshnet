@@ -30,7 +30,7 @@ EQUIV_TH = 0.147
 # ---------------------------------------------------------------------
 # Load all cells (paired per-series WAPE)
 # ---------------------------------------------------------------------
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
 
 def parse_name(name):
     if '__' in name: return name.split('__', 1)
@@ -174,9 +174,9 @@ print('\nGenerating RQ1 heatmap...')
 imp_order = ['media_glob','media_cond','mediana_glob','mediana_cond',
              'forward_fill','seasonal_naive','linear_interp','lgb',
              'dlinear','saits','itransformer','timesnet','imputeformer']
-fc_order = ['lgb_m5lags','mlp_m5lags','tft','chronos_bolt','global_mean','dow_mean','ma_k21']
+fc_order = ['lgb_m5lags','mlp_m5lags','tft','chronos_bolt','global_mean','dow_mean','ma_k56']
 fc_short = {'lgb_m5lags':'LGB_M5','mlp_m5lags':'MLP_M5','tft':'TFT','chronos_bolt':'Chronos',
-            'global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+            'global_mean':'GM','dow_mean':'DoW','ma_k56':'MA56'}
 
 # Pivot rq1
 piv = rq1.pivot(index='imputer', columns='forecaster', values='cliffs_delta_improvement')

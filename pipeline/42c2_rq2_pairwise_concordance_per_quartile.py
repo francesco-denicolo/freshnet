@@ -42,7 +42,7 @@ recovery = {
 }
 imputers_all = list(recovery.keys())
 
-NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k21'}
+NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56'}
 
 def find_parquet(imp, fc):
     p_hpo = f'{RESULTS_DIR}/{imp}__{fc}_hpo_test_per_series.parquet'
@@ -52,11 +52,11 @@ def find_parquet(imp, fc):
     return None
 
 panels = ['mlp_m5lags', 'lgb_m5lags', 'tft', 'chronos_bolt', 'timesfm',
-          'global_mean', 'dow_mean', 'ma_k21']
+          'global_mean', 'dow_mean', 'ma_k56']
 panel_titles = {
     'mlp_m5lags': 'MLP_M5', 'lgb_m5lags': 'LGB_M5', 'tft': 'TFT',
     'chronos_bolt': 'Chronos-bolt', 'timesfm': 'TimesFM',
-    'global_mean': 'GlobalMean', 'dow_mean': 'DoWMean', 'ma_k21': 'MA_K21',
+    'global_mean': 'GlobalMean', 'dow_mean': 'DoWMean', 'ma_k56': 'MA_K56',
 }
 
 # ----------------------------------------------------------------------
@@ -184,7 +184,7 @@ print(f'\nSaved: rq2_pairwise_concordance_per_quartile.parquet ({len(summary)} r
 print('\n3. Building figure...')
 fig, axes = plt.subplots(2, 4, figsize=(20, 10), sharey=True)
 quartiles = ['Q1', 'Q2', 'Q3', 'Q4']
-order_fc = panels  # mlp_m5lags, lgb_m5lags, tft, chronos_bolt, timesfm, global_mean, dow_mean, ma_k21
+order_fc = panels  # mlp_m5lags, lgb_m5lags, tft, chronos_bolt, timesfm, global_mean, dow_mean, ma_k56
 colors = ['#4575b4', '#f46d43', '#7b3294', '#d73027', '#b15928',
           '#2ca02c', '#bcbd22', '#17becf']
 
@@ -192,7 +192,7 @@ colors = ['#4575b4', '#f46d43', '#7b3294', '#d73027', '#b15928',
 # Bottom row: naive aggregati (3 forecaster)
 groups = [
     ('ML + DL + Foundation', ['mlp_m5lags', 'lgb_m5lags', 'tft', 'chronos_bolt', 'timesfm']),
-    ('Naive aggregati', ['global_mean', 'dow_mean', 'ma_k21'])
+    ('Naive aggregati', ['global_mean', 'dow_mean', 'ma_k56'])
 ]
 
 for row, (group_title, group_fcs) in enumerate(groups):

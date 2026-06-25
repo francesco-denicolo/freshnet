@@ -36,7 +36,7 @@ IMPUTERS_ORDER = ['No imputation', 'Media condizionata', 'Media globale',
                    'Mediana condizionata', 'Mediana globale',
                    'LGB imputer', 'DLinear',
                    'Forward Fill', 'Seasonal Naive', 'Linear Interp', 'SAITS']
-FORECASTERS_ORDER = ['Global Mean', 'DoW Mean', 'MA (K=21)',
+FORECASTERS_ORDER = ['Global Mean', 'DoW Mean', 'MA (K=56)',
                       'LGB (no lags)', 'LGB (M5 lags)',
                       'MLP (no lags)', 'MLP (M5 lags)',
                       'Chronos-bolt']
@@ -44,7 +44,7 @@ FORECASTERS_ORDER = ['Global Mean', 'DoW Mean', 'MA (K=21)',
 # Map (imputer, forecaster) -> parquet filename
 FC_FILE_MAP = {
     'Global Mean': 'global_mean', 'DoW Mean': 'dow_mean',
-    'MA (K=21)': 'ma_k21', 'Naive Direct': 'naive_direct',
+    'MA (K=56)': 'ma_k56', 'Naive Direct': 'naive_direct',
     'LGB (no lags)': 'lgb_nolags', 'LGB (M5 lags)': 'lgb_m5lags',
     'MLP (no lags)': 'mlp_nolags', 'MLP (M5 lags)': 'mlp_m5lags',
     'Chronos-bolt': 'chronos_bolt',
@@ -65,7 +65,7 @@ def get_parquet_path(imp, fc):
         imp_safe = 'no_imp' if imp == 'No imputation' else IMP_FILE_MAP[imp]
         return os.path.join(RESULTS_DIR, f'{imp_safe}__{fc_safe}_test_per_series.parquet')
     if imp == 'No imputation':
-        if fc in ['Global Mean','DoW Mean','MA (K=21)','Naive Direct']:
+        if fc in ['Global Mean','DoW Mean','MA (K=56)','Naive Direct']:
             return os.path.join(RESULTS_DIR, f'naive_{fc_safe}_test_per_series.parquet')
         else:
             return os.path.join(RESULTS_DIR, f'{fc_safe}_test_per_series.parquet')
@@ -73,7 +73,7 @@ def get_parquet_path(imp, fc):
         imp_safe = IMP_FILE_MAP[imp]
         if fc in ['LGB (no lags)', 'MLP (no lags)']:
             return os.path.join(RESULTS_DIR, f'{fc_safe}_test_per_series.parquet')
-        elif fc in ['Global Mean','DoW Mean','MA (K=21)']:
+        elif fc in ['Global Mean','DoW Mean','MA (K=56)']:
             return os.path.join(RESULTS_DIR, f'{imp_safe}__{fc_safe}_test_per_series.parquet')
         else:
             return os.path.join(RESULTS_DIR, f'{imp_safe}__{fc_safe}_test_per_series.parquet')
@@ -272,7 +272,7 @@ print('  6. TEST STATISTICI — Per ogni forecaster, confronto imputer pairwise'
 print('=' * 72)
 
 # Forecasters where imputation matters (exclude no-lags which are invariant)
-FC_TO_TEST = ['Global Mean', 'DoW Mean', 'MA (K=21)', 'LGB (M5 lags)', 'MLP (M5 lags)', 'Chronos-bolt']
+FC_TO_TEST = ['Global Mean', 'DoW Mean', 'MA (K=56)', 'LGB (M5 lags)', 'MLP (M5 lags)', 'Chronos-bolt']
 
 all_wilcoxon = []  # collect all results for summary
 

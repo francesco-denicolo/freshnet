@@ -696,7 +696,7 @@ table(s, Inches(0.55), Inches(1.45), Inches(6.1), [
 ], [2.0, 3.2], font=11.5, header_font=11.5, rh=0.55)
 table(s, Inches(6.95), Inches(1.45), Inches(5.85), [
     ["Famiglia forecaster", "Forecaster"],
-    ["Naive", "Global Mean, DoW Mean, MA (K=21)"],
+    ["Naive", "Global Mean, DoW Mean, MA (K=56)"],
     ["ML tabellare", "LGB (M5 lags)"],
     ["Deep Learning", "MLP (M5 lags), TFT"],
     ["Foundation", "Chronos-bolt, TimesFM 2.5"],
@@ -715,7 +715,7 @@ header(s, "Appendice A3", "RQ1.3 — L'imputer aiuta? Tabella completa", nxt())
 table(s, Inches(0.7), Inches(1.5), Inches(12.0), [
     ["Forecaster", "k", "Friedman best", "no_imp pos.", "Kendall W", "Categoria", "Aiuta?"],
     ["Global Mean", "14", "mediana_glob", "6°/14", "0.469", "moderate", ("SÌ", GREEN, True)],
-    ["MA_K21", "14", "mediana_glob", "4°/14", "0.464", "moderate", ("SÌ", GREEN, True)],
+    ["MA_K56", "14", "mediana_glob", "6°/14", "0.463", "moderate", ("SÌ", GREEN, True)],
     ["DoW Mean", "14", "mediana_glob", "5°/14", "0.445", "moderate", ("SÌ", GREEN, True)],
     ["TimesFM", "14", "imputeformer", "2°/14", "0.174", "small", ("SÌ", GREEN, True)],
     ["Chronos-bolt", "14", "imputeformer", "2°/14", "0.222", "small", ("SÌ", GREEN, True)],
@@ -732,7 +732,7 @@ s = slide()
 header(s, "Appendice A4", "RQ2 — Recovery → Forecasting, dettaglio per forecaster", nxt())
 table(s, Inches(1.0), Inches(1.5), Inches(11.3), [
     ["Forecaster", "Famiglia", "median ρ", "Cliff δ vs 0", "Categoria Romano", "Predice?"],
-    ["MA_K21", "naive", "+0.800", ("+0.868", GREEN, True), "LARGE", "SÌ (massimo)"],
+    ["MA_K56", "naive", "+0.758", ("+0.847", GREEN, True), "LARGE", "SÌ"],
     ["DoW Mean", "naive", "+0.867", ("+0.823", GREEN, True), "LARGE", "SÌ"],
     ["Global Mean", "naive", "+0.883", ("+0.813", GREEN, True), "LARGE", "SÌ"],
     ["TimesFM", "foundation", "+0.333", ("+0.556", TEAL, True), "LARGE", "SÌ"],

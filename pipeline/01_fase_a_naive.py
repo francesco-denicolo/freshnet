@@ -23,6 +23,10 @@ os.makedirs(FIG_DIR, exist_ok=True)
 H_START, H_END = 6, 23   # slice [6:23] → ore 6-22 inclusive
 N_HOURS = H_END - H_START # 17
 MA_K_CANDIDATES = [3, 5, 7, 10, 14, 21, 28, 42, 56, 83]
+# K=56 was re-selected (2026-06-23) under the per-series median WAPE criterion
+# (min_hours=34) to match the Optuna HPO criterion. The grid search below is kept
+# for transparency; BEST_K is forced to 56 below.
+FORCED_BEST_K = 56
 
 # ===========================================================================
 print('=' * 72)
@@ -124,8 +128,10 @@ for K in MA_K_CANDIDATES:
     ma_val[K] = w
     print(f'  K={K:>3}: WAPE_h={w:.4f}')
 
-BEST_K = min(ma_val, key=ma_val.get)
-print(f'  Best K: {BEST_K}')
+_pooled_best = min(ma_val, key=ma_val.get)
+BEST_K = FORCED_BEST_K
+print(f'  Pooled grid winner: {_pooled_best}  (deprecated criterion)')
+print(f'  Best K (forced, median-WAPE HPO-coherent): {BEST_K}')
 
 # ---------------------------------------------------------------------------
 # Full evaluation on val + test

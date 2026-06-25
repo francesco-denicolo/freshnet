@@ -32,9 +32,9 @@ piv = summary.pivot(index='forecaster', columns='quartile', values='median')[['Q
 piv['Globale'] = glob_df.set_index('forecaster')['median']
 
 # Row order (by family)
-fc_order = ['GlobalMean', 'DoWMean', 'MA_K21', 'Chronos-bolt', 'TimesFM',
+fc_order = ['GlobalMean', 'DoWMean', 'MA_K56', 'Chronos-bolt', 'TimesFM',
             'TFT', 'MLP_M5', 'LGB_M5']
-fc_families = {'GlobalMean':'naive','DoWMean':'naive','MA_K21':'naive',
+fc_families = {'GlobalMean':'naive','DoWMean':'naive','MA_K56':'naive',
                'Chronos-bolt':'foundation','TimesFM':'foundation',
                'TFT':'DL+lag','MLP_M5':'ML+lag','LGB_M5':'ML+lag'}
 piv = piv.reindex(fc_order)
@@ -110,7 +110,7 @@ ax2.text(0.5, 0.97, '4 Pattern di recovery -> forecasting',
 patterns = [
     ('PATTERN A — Naive: predice fortemente, decresce con volume',
      '#1b7837',
-     'GlobalMean / DoWMean / MA_K21',
+     'GlobalMean / DoWMean / MA_K56',
      'P da ~0.92 (Q1) a ~0.67 (Q4)',
      'naive usano direttamente valori imputati'),
     ('PATTERN B — Foundation: pattern complesso',

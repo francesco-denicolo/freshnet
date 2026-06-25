@@ -1,0 +1,491 @@
+START Wed Jun 24 19:42:12 CEST 2026
+=== LGB seed 1 ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0568801
+Early stopping, best iteration is:
+[96]	val's l1: 0.05688
+  Best iter: 96
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7864, med=0.9859
+  WPE_h pool=-0.6026, time=643s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__lgb_m5lags_hpo_seed1_test_per_series.parquet
+DONE
+=== LGB seed 2 ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0572397
+[200]	val's l1: 0.0571387
+[300]	val's l1: 0.0570898
+[400]	val's l1: 0.0570069
+[500]	val's l1: 0.0569769
+Did not meet early stopping. Best iteration is:
+[500]	val's l1: 0.0569769
+  Best iter: 500
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7883, med=0.9821
+  WPE_h pool=-0.6022, time=1542s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__lgb_m5lags_hpo_seed2_test_per_series.parquet
+DONE
+=== LGB seed 3 ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569613
+[200]	val's l1: 0.0568894
+Early stopping, best iteration is:
+[239]	val's l1: 0.0568758
+  Best iter: 239
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7859, med=0.9841
+  WPE_h pool=-0.5960, time=986s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__lgb_m5lags_hpo_seed3_test_per_series.parquet
+DONE
+=== MLP seed 1 ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 403s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053446, val_WAPE=0.795322
+  Epoch   2: loss=0.048102, val_WAPE=0.789360
+  Epoch   3: loss=0.047928, val_WAPE=0.796012
+  Epoch   4: loss=0.047865, val_WAPE=0.781053
+  Epoch   5: loss=0.047832, val_WAPE=0.788392
+  Epoch   6: loss=0.047822, val_WAPE=0.789569
+  Epoch   7: loss=0.047805, val_WAPE=0.792714
+  Epoch   8: loss=0.047799, val_WAPE=0.788211
+  Epoch   9: loss=0.047801, val_WAPE=0.791004
+  Epoch  10: loss=0.047797, val_WAPE=0.787864
+  Epoch  11: loss=0.047794, val_WAPE=0.797513
+  Epoch  12: loss=0.047787, val_WAPE=0.794929
+  Epoch  13: loss=0.047781, val_WAPE=0.791563
+  Epoch  14: loss=0.047784, val_WAPE=0.790798
+  Early stop (best=4, WAPE=0.781053)
+
+4. Test...
+
+  WAPE_h pool=0.7700, med=0.9760
+  WPE_h pool=-0.5290
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__mlp_m5lags_hpo_seed1_test_per_series.parquet
+DONE
+=== MLP seed 2 ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 404s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.054245, val_WAPE=0.792011
+  Epoch   2: loss=0.048135, val_WAPE=0.790404
+  Epoch   3: loss=0.047944, val_WAPE=0.789554
+  Epoch   4: loss=0.047870, val_WAPE=0.794227
+  Epoch   5: loss=0.047834, val_WAPE=0.786117
+  Epoch   6: loss=0.047813, val_WAPE=0.786830
+  Epoch   7: loss=0.047803, val_WAPE=0.790106
+  Epoch   8: loss=0.047793, val_WAPE=0.801372
+  Epoch   9: loss=0.047788, val_WAPE=0.784980
+  Epoch  10: loss=0.047786, val_WAPE=0.789410
+  Epoch  11: loss=0.047787, val_WAPE=0.783625
+  Epoch  12: loss=0.047775, val_WAPE=0.784638
+  Epoch  13: loss=0.047773, val_WAPE=0.786313
+  Epoch  14: loss=0.047776, val_WAPE=0.793051
+  Epoch  15: loss=0.047772, val_WAPE=0.793483
+  Epoch  16: loss=0.047777, val_WAPE=0.785212
+  Epoch  17: loss=0.047767, val_WAPE=0.785633
+  Epoch  18: loss=0.047766, val_WAPE=0.788788
+  Epoch  19: loss=0.047769, val_WAPE=0.786695
+  Epoch  20: loss=0.047775, val_WAPE=0.784565
+  Epoch  21: loss=0.047760, val_WAPE=0.790908
+  Early stop (best=11, WAPE=0.783625)
+
+4. Test...
+
+  WAPE_h pool=0.7711, med=0.9772
+  WPE_h pool=-0.5390
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__mlp_m5lags_hpo_seed2_test_per_series.parquet
+DONE
+=== MLP seed 3 ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 405s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.056192, val_WAPE=0.995171
+  Epoch   2: loss=0.050546, val_WAPE=0.799877
+  Epoch   3: loss=0.047975, val_WAPE=0.784364
+  Epoch   4: loss=0.047885, val_WAPE=0.790967
+  Epoch   5: loss=0.047845, val_WAPE=0.788693
+  Epoch   6: loss=0.047808, val_WAPE=0.787090
+  Epoch   7: loss=0.047796, val_WAPE=0.786855
+  Epoch   8: loss=0.047790, val_WAPE=0.792015
+  Epoch   9: loss=0.047784, val_WAPE=0.782893
+  Epoch  10: loss=0.047785, val_WAPE=0.794101
+  Epoch  11: loss=0.047788, val_WAPE=0.790670
+  Epoch  12: loss=0.047778, val_WAPE=0.794312
+  Epoch  13: loss=0.047789, val_WAPE=0.791318
+  Epoch  14: loss=0.047768, val_WAPE=0.786312
+  Epoch  15: loss=0.047770, val_WAPE=0.787770
+  Epoch  16: loss=0.047760, val_WAPE=0.787906
+  Epoch  17: loss=0.047764, val_WAPE=0.784065
+  Epoch  18: loss=0.047768, val_WAPE=0.791084
+  Epoch  19: loss=0.047752, val_WAPE=0.793897
+  Early stop (best=9, WAPE=0.782893)
+
+4. Test...
+
+  WAPE_h pool=0.7721, med=0.9744
+  WPE_h pool=-0.5295
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__mlp_m5lags_hpo_seed3_test_per_series.parquet
+DONE
+ALL DONE Wed Jun 24 21:31:29 CEST 2026
+=== EXTRA seeds 4-5 START Wed Jun 24 21:32:26 CEST 2026 ===
+=== LGB seed 4 ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569039
+[200]	val's l1: 0.056848
+[300]	val's l1: 0.0568172
+Early stopping, best iteration is:
+[273]	val's l1: 0.0568156
+  Best iter: 273
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7867, med=0.9802
+  WPE_h pool=-0.5937, time=1065s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__lgb_m5lags_hpo_seed4_test_per_series.parquet
+DONE
+=== LGB seed 5 ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569112
+[200]	val's l1: 0.0568298
+[300]	val's l1: 0.0567952
+Early stopping, best iteration is:
+[337]	val's l1: 0.0567811
+  Best iter: 337
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7855, med=0.9800
+  WPE_h pool=-0.5900, time=6613s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__lgb_m5lags_hpo_seed5_test_per_series.parquet
+DONE
+=== MLP seed 4 ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 398s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051896, val_WAPE=0.794830
+  Epoch   2: loss=0.047996, val_WAPE=0.784917
+  Epoch   3: loss=0.047899, val_WAPE=0.786711
+  Epoch   4: loss=0.047856, val_WAPE=0.788385
+  Epoch   5: loss=0.047827, val_WAPE=0.785382
+  Epoch   6: loss=0.047805, val_WAPE=0.785949
+  Epoch   7: loss=0.047809, val_WAPE=0.787850
+  Epoch   8: loss=0.047786, val_WAPE=0.797364
+  Epoch   9: loss=0.047788, val_WAPE=0.790390
+  Epoch  10: loss=0.047775, val_WAPE=0.782581
+  Epoch  11: loss=0.047790, val_WAPE=0.790576
+  Epoch  12: loss=0.047782, val_WAPE=0.787966
+  Epoch  13: loss=0.047784, val_WAPE=0.793417
+  Epoch  14: loss=0.047783, val_WAPE=0.795059
+  Epoch  15: loss=0.047780, val_WAPE=0.788230
+  Epoch  16: loss=0.047789, val_WAPE=0.791565
+  Epoch  17: loss=0.047781, val_WAPE=0.787436
+  Epoch  18: loss=0.047770, val_WAPE=0.784395
+  Epoch  19: loss=0.047772, val_WAPE=0.779761
+  Epoch  20: loss=0.047775, val_WAPE=0.790711
+  Epoch  21: loss=0.047792, val_WAPE=0.794694
+  Epoch  22: loss=0.047783, val_WAPE=0.787597
+  Epoch  23: loss=0.047777, val_WAPE=0.792111
+  Epoch  24: loss=0.047773, val_WAPE=0.782037
+  Epoch  25: loss=0.047775, val_WAPE=0.781359
+  Epoch  26: loss=0.047775, val_WAPE=0.789484
+  Epoch  27: loss=0.047791, val_WAPE=0.794030
+  Epoch  28: loss=0.047779, val_WAPE=0.804640
+  Epoch  29: loss=0.047777, val_WAPE=0.791383
+  Early stop (best=19, WAPE=0.779761)
+
+4. Test...
+
+  WAPE_h pool=0.7678, med=0.9692
+  WPE_h pool=-0.5263
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__mlp_m5lags_hpo_seed4_test_per_series.parquet
+DONE
+=== MLP seed 5 ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 401s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053597, val_WAPE=0.796910
+  Epoch   2: loss=0.048081, val_WAPE=0.798326
+  Epoch   3: loss=0.047926, val_WAPE=0.803333
+  Epoch   4: loss=0.047867, val_WAPE=0.791462
+  Epoch   5: loss=0.047832, val_WAPE=0.788626
+  Epoch   6: loss=0.047828, val_WAPE=0.789731
+  Epoch   7: loss=0.047815, val_WAPE=0.790766
+  Epoch   8: loss=0.047796, val_WAPE=0.791690
+  Epoch   9: loss=0.047814, val_WAPE=0.792959
+  Epoch  10: loss=0.047801, val_WAPE=0.788082
+  Epoch  11: loss=0.047796, val_WAPE=0.793806
+  Epoch  12: loss=0.047795, val_WAPE=0.791531
+  Epoch  13: loss=0.047797, val_WAPE=0.794787
+  Epoch  14: loss=0.047787, val_WAPE=0.791953
+  Epoch  15: loss=0.047788, val_WAPE=0.783835
+  Epoch  16: loss=0.047787, val_WAPE=0.786651
+  Epoch  17: loss=0.047791, val_WAPE=0.797830
+  Epoch  18: loss=0.047785, val_WAPE=0.794654
+  Epoch  19: loss=0.047781, val_WAPE=0.788357
+  Epoch  20: loss=0.047792, val_WAPE=0.790610
+  Epoch  21: loss=0.047796, val_WAPE=0.784790
+  Epoch  22: loss=0.047791, val_WAPE=0.789013
+  Epoch  23: loss=0.047781, val_WAPE=0.799319
+  Epoch  24: loss=0.047785, val_WAPE=0.789678
+  Epoch  25: loss=0.047787, val_WAPE=0.787071
+  Early stop (best=15, WAPE=0.783835)
+
+4. Test...
+
+  WAPE_h pool=0.7695, med=0.9769
+  WPE_h pool=-0.5677
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/seedrun_itransformer__mlp_m5lags_hpo_seed5_test_per_series.parquet
+DONE
+EXTRA DONE Thu Jun 25 00:27:39 CEST 2026

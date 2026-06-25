@@ -21,11 +21,11 @@ IMP_ORDER = ['no_imp', 'media_glob', 'media_cond', 'mediana_glob', 'mediana_cond
              'forward_fill', 'seasonal_naive', 'linear_interp', 'lgb',
              'dlinear', 'saits', 'itransformer', 'timesnet']
 FC_ORDER = ['lgb_nolags', 'lgb_m5lags', 'mlp_nolags', 'mlp_m5lags', 'tft',
-            'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k21']
+            'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56']
 FC_SHORT = {
     'lgb_nolags': 'LGB_nl', 'lgb_m5lags': 'LGB_M5', 'mlp_nolags': 'MLP_nl',
     'mlp_m5lags': 'MLP_M5', 'tft': 'TFT', 'chronos_bolt': 'Chron',
-    'timesfm': 'TimesFM', 'global_mean': 'GM', 'dow_mean': 'DoW', 'ma_k21': 'MA21',
+    'timesfm': 'TimesFM', 'global_mean': 'GM', 'dow_mean': 'DoW', 'ma_k56': 'MA56',
 }
 
 print('Loading hpo_matrix_pareto.parquet...')

@@ -12,7 +12,7 @@ COMPLETED_DIR = os.path.join(DATA_DIR, 'completed_sales_622')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 21
+H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 56
 IMPUTERS = {
     'mediana_glob': 'Mediana globale',
 }

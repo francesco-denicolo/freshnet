@@ -24,19 +24,19 @@ FC_COLORS = {
     'lgb_nolags':'#fdae61', 'lgb_m5lags':'#f46d43',
     'mlp_nolags':'#74add1', 'mlp_m5lags':'#4575b4',
     'tft':'#7b3294', 'chronos_bolt':'#d73027', 'timesfm':'#b15928',
-    'global_mean':'#2ca02c', 'dow_mean':'#bcbd22', 'ma_k21':'#17becf',
+    'global_mean':'#2ca02c', 'dow_mean':'#bcbd22', 'ma_k56':'#17becf',
 }
 FC_MARKERS = {
     'lgb_nolags':'^', 'lgb_m5lags':'^',
     'mlp_nolags':'D', 'mlp_m5lags':'D',
     'tft':'o', 'chronos_bolt':'P', 'timesfm':'*',
-    'global_mean':'s', 'dow_mean':'X', 'ma_k21':'v',
+    'global_mean':'s', 'dow_mean':'X', 'ma_k56':'v',
 }
 FC_LABELS = {
     'lgb_nolags':'LGB_nolags', 'lgb_m5lags':'LGB_M5',
     'mlp_nolags':'MLP_nolags', 'mlp_m5lags':'MLP_M5',
     'tft':'TFT', 'chronos_bolt':'Chronos-bolt', 'timesfm':'TimesFM',
-    'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k21':'MA (K=21)',
+    'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k56':'MA (K=56)',
 }
 
 print('Loading data...')
@@ -133,7 +133,7 @@ ax.grid(True, alpha=0.25, linestyle='--')
 # Legend
 legend_handles = []
 for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-           'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']:
+           'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56']:
     if fc in mat.forecaster.unique():
         legend_handles.append(
             mlines.Line2D([], [], color=FC_COLORS[fc], marker=FC_MARKERS[fc],

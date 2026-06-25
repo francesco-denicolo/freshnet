@@ -1,93 +1,174 @@
-# Evocity
+# Imputer × Forecaster Benchmark on FreshRetailNet-50K
 
+Systematic benchmark of the interaction between stockout-imputation strategies and
+demand forecasters on perishable retail data (FreshRetailNet-50K, 50 000 series).
 
+The repository underpins an applied research paper currently in preparation. All
+finding numerics, tables and claims are consolidated in
+[`PAPER_FINDINGS.md`](./PAPER_FINDINGS.md); this README documents the codebase
+structure and the experimental protocol.
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Problem statement
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+In retail demand forecasting on perishable goods, observed sales `S_obs(t)` are
+censored by stockouts:
 
 ```
-cd existing_repo
-git remote add origin https://lab.sidea.space/sirio/evocity.git
-git branch -M main
-git push -uf origin main
+S_obs(t) = min(D(t), I(t))
 ```
 
-## Integrate with your tools
+Standard forecasters trained on `S_obs` learn to predict zero during stockouts,
+producing a systematic underestimation of latent demand `D(t)`. The community
+addresses this with a *two-stage* pipeline: first impute the censored values,
+then forecast from the completed signal.
 
-* [Set up project integrations](https://lab.sidea.space/sirio/evocity/-/settings/integrations)
+**Question.** Does the choice of imputer materially affect forecasting accuracy,
+and if so under which conditions?
 
-## Collaborate with your team
+The benchmark answers this with five Research Questions structured as
+existence → mechanism → identification → conditions → boundary
+(see [`PAPER_FINDINGS.md`](./PAPER_FINDINGS.md) §1–3).
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+---
 
-## Test and Deploy
+## Dataset
 
-Use the built-in continuous integration in GitLab.
+[FreshRetailNet-50K](https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K)
+(Liu et al., 2025, arXiv:2505.16319): 50 000 store × product series, 90 train
+days + 7 test days at hourly granularity, 18 Chinese cities, 863 perishable
+SKUs.
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+Operational hours 6–22 (17 hours/day). Temporal split:
 
-***
+- train: days 1–83
+- val: days 84–90 (early stopping, HP selection)
+- test: days 91–97 (final evaluation)
 
-# Editing this README
+The dataset itself is not committed (see `.gitignore`).
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+---
 
-## Suggestions for a good README
+## Experimental design
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+**Matrix.** 14 imputers × 8 forecaster families → 113 active cells
+(some forecaster × imputer combinations were not feasible; see Section 3 of
+`PAPER_FINDINGS.md` for exclusions).
 
-## Name
-Choose a self-explaining name for your project.
+| Family | Members |
+|---|---|
+| Naive imputers | Global mean, conditional mean, global median, conditional median |
+| Classical TS imputers | Forward fill, seasonal naive, linear interp |
+| ML / DL imputers | LGB imputer, DLinear, SAITS, iTransformer, TimesNet, ImputeFormer, CSDI |
+| Naive forecasters | Global Mean, DoW Mean, **MA (K=56)** |
+| ML forecasters | LGB (M5 lags) |
+| Deep learning | MLP (M5 lags), TFT (Temporal Fusion Transformer) |
+| Foundation models | Chronos-bolt, TimesFM 2.5 |
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+The MA window `K=56` is selected on validation under the per-series median
+WAPE criterion with `min_hours=34`, the same objective used by Optuna HPO for
+the ML/DL forecasters (see *Coherence note* at the top of `PAPER_FINDINGS.md`).
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+**Loss uniformity.** All ML/DL forecasters are trained with MAE loss to align
+training objective and evaluation metric (WAPE = volume-weighted MAE).
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+**HPO.** TPE + MedianPruner (Optuna), objective = `val_WAPE_med` per-series
+on in-stock hours (min 34 hours). Best hyperparameters serialized in
+`pipeline/results/hpo_*_best.json`.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+**Evaluation.** WAPE and WPE on in-stock hours of the test horizon, both
+pooled and as per-series median over the 49 939 series that admit a finite
+WAPE (61 / 50 000 series have zero total in-stock sales over the 7 test days
+and are dropped from the paired analysis).
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+**Statistical framework.** Friedman χ² + Kendall’s W + Nemenyi CD post-hoc
+(Demšar 2006, JMLR). Effect size via Cliff’s δ (descriptive, not as decision
+rule). Stratification: Q1–Q4 of the per-series volume distribution.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+---
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Repository layout
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```
+.
+├── README.md                ← this file
+├── CLAUDE.md                ← engineering log + project history (working notes)
+├── PAPER_FINDINGS.md        ← findings of record for the paper
+├── STUDY_REPORT.md          ← internal report (PINN-Retail legacy + pivot)
+├── build_presentation.py    ← assembles the .pptx presentation
+├── data/                    ← raw FreshRetailNet parquets (gitignored)
+├── pipeline/
+│   ├── 01–06_*.py           ← Phase A: baseline forecasters (no imputation)
+│   ├── 04–18_*.py           ← Phase B1: imputers
+│   ├── 06–32_*.py           ← Phase B2: forecaster × imputer cells
+│   ├── 25_tft_full_training.py
+│   ├── 26_chronos_bolt_*    ← Chronos-bolt zero-shot scoring
+│   ├── 30–33_timesfm_*      ← TimesFM cells
+│   ├── 35–39_*.py           ← matrix aggregation, Pareto frontiers, RQ4 crossover
+│   ├── 41–49_*.py           ← Friedman + Kendall W + Nemenyi CD analyses, RQ1–RQ4 stratified
+│   ├── ma_k56_retrain.py    ← MA forecaster re-train under HPO-coherent K
+│   ├── ma_k_reselect_median.py ← MA grid search under both criteria
+│   ├── aggregate_robustness.py ← seed sensitivity + recursive vs frozen lags
+│   ├── build_nv_ref.py      ← reference completed demand y*(s,d) for newsvendor eval
+│   ├── results/             ← per-series parquets, aggregate parquets (gitignored)
+│   └── figures/             ← PNG outputs (gitignored)
+├── notebooks/
+├── notebooks_622/           ← exploration restricted to operational hours 6-22
+├── notebooks_final/         ← consolidated baselines (PINN-Retail era)
+├── src/                     ← reusable modules (data, models, losses, metrics)
+└── 4_chronos2_forecasting.py
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+History note. An earlier line of work (sections 1–5 of `CLAUDE.md`) explored a
+physics-informed neural network (PINN-Retail) for end-to-end censored-demand
+forecasting. The current paper pivoted to the benchmark above; the PINN code
+remains under `notebooks_final/` and `src/` for completeness.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+---
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Reproducibility
 
-## License
-For open source projects, say how it is licensed.
+The full re-run is staged in `pipeline/` and numbered. The most relevant
+endpoints are:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+1. **Imputation.** Scripts `04`, `05`, `14`, `16`, `18`, `27`, `28`, `31` (one
+   per imputer family). Each writes `data/completed_sales_622/<imputer>.parquet`
+   and a per-series recovery WAPE.
+2. **Forecasting cells.** Scripts `06–32` (one per forecaster family or single
+   cell). Each writes `pipeline/results/<imputer>__<forecaster>_test_per_series.parquet`.
+3. **Matrix aggregation.** `35_pareto_analysis_hpo.py` consolidates the 113
+   cells into `hpo_matrix_pareto.parquet` and the global Pareto frontier.
+4. **Statistical analyses.** `45/46/47/48/49_*.py` for Friedman + Kendall W +
+   Nemenyi CD at global / per-quartile / per-forecaster scope. `42_*.py` for
+   the recovery → forecasting Spearman / pairwise concordance analyses.
+5. **Figures.** Slide-ready 16:9 PNGs are produced by `35f`, `49b`, `42c2b`,
+   etc., directly from the aggregate parquets.
+
+Python environments used during development are kept under `freshnet/`,
+`freshnet_timesfm/`, `chronos_env/` (gitignored). Key versions: Python 3.9,
+PyTorch 2.x, PyTorch Lightning, PyPOTS (DLinear, SAITS, iTransformer, TimesNet,
+ImputeFormer, CSDI), LightGBM, statsmodels, scikit-posthocs.
+
+---
+
+## Status
+
+- **Matrix**: 113 active cells.
+- **Framework**: Friedman + Kendall’s W + Nemenyi CD.
+- **Global best**: `itransformer__MLP_M5` (Kendall W = 0.459 moderate, CD = 0.903, equivalence set 2 cells).
+- **Best per quartile**: `lgb__MLP_M5` (Q1, Q2), `itransformer__MLP_M5` (Q3, Q4).
+- **Global Pareto**: 25 / 113 cells optimal; per-quartile ranges from 27 (Q1) to 9 (Q4).
+- **Recovery → forecasting**: naive aggregators large effect; foundation models
+  small/medium; ML+lag negligible (lag features absorb the imputer signal).
+
+All findings consolidated in `PAPER_FINDINGS.md`; that file is the source of
+truth for the paper draft.
+
+---
+
+## License & citation
+
+Internal research code, no public license. If you build on this work, please
+cite the FreshRetailNet-50K dataset paper (Liu et al., 2025) and contact the
+maintainer regarding citation of this benchmark.

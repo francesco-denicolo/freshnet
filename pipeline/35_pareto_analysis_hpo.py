@@ -26,7 +26,7 @@ FC_COLORS = {
     'tft':'#7b3294',
     'chronos_bolt':'#d73027',
     'timesfm':'#b15928',
-    'global_mean':'#2ca02c', 'dow_mean':'#bcbd22', 'ma_k21':'#17becf',
+    'global_mean':'#2ca02c', 'dow_mean':'#bcbd22', 'ma_k56':'#17becf',
 }
 FC_MARKERS = {
     'lgb_nolags':'^', 'lgb_m5lags':'^',
@@ -34,7 +34,7 @@ FC_MARKERS = {
     'tft':'o',
     'chronos_bolt':'P',
     'timesfm':'*',
-    'global_mean':'s', 'dow_mean':'X', 'ma_k21':'v',
+    'global_mean':'s', 'dow_mean':'X', 'ma_k56':'v',
 }
 FC_LABELS = {
     'lgb_nolags':'LGB_nolags', 'lgb_m5lags':'LGB_M5',
@@ -42,10 +42,10 @@ FC_LABELS = {
     'tft':'TFT',
     'chronos_bolt':'Chronos-bolt',
     'timesfm':'TimesFM',
-    'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k21':'MA (K=21)',
+    'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k56':'MA (K=56)',
 }
 # Non-HPO forecasters (use _test_per_series.parquet, not _hpo)
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
 
 # ============================================================================
 # 1. Load all cells: HPO for tunable forecasters, baseline for non-HPO
@@ -277,7 +277,7 @@ import matplotlib.lines as mlines
 legend_handles = []
 # Forecaster entries (only those actually in matrix)
 for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-           'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']:
+           'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56']:
     if fc in mat.forecaster.unique():
         legend_handles.append(
             mlines.Line2D([], [], color=FC_COLORS[fc], marker=FC_MARKERS[fc],
@@ -319,10 +319,10 @@ IMP_ORDER = ['no_imp','media_glob','media_cond','mediana_glob','mediana_cond',
              'forward_fill','seasonal_naive','linear_interp','lgb',
              'dlinear','saits','itransformer','timesnet','imputeformer']
 FC_ORDER = ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-            'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']
+            'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56']
 FC_SHORT = {'lgb_nolags':'LGB_nl','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nl','mlp_m5lags':'MLP_M5',
             'tft':'TFT','chronos_bolt':'Chron','timesfm':'TimesFM',
-            'global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+            'global_mean':'GM','dow_mean':'DoW','ma_k56':'MA56'}
 
 fig2, ax2 = plt.subplots(figsize=(13, 10))
 pivot = mat.pivot(index='imputer', columns='forecaster', values='wape_h_med')

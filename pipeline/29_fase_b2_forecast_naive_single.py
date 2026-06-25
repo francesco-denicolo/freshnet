@@ -2,7 +2,11 @@
 29_fase_b2_forecast_naive_single.py — Naive forecaster su completed_sales per UN imputer
 ==========================================================================================
 Usage: freshnet/bin/python pipeline/29_fase_b2_forecast_naive_single.py <imputer_key>
-Produce 3 celle naive: global_mean, dow_mean, ma_k21.
+Produce 3 celle naive: global_mean, dow_mean, ma_k56.
+
+K=56 was re-selected (2026-06-23) under the per-series median WAPE criterion
+(min_hours=34), matching the Optuna HPO criterion of LGB_M5/MLP_M5/TFT.
+Previous K=21 was selected under pooled WAPE (now deprecated for coherence).
 """
 import sys, os, functools, numpy as np, pandas as pd
 print = functools.partial(print, flush=True)
@@ -13,7 +17,7 @@ COMPLETED_DIR = os.path.join(DATA_DIR, 'completed_sales_622')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 21
+H_START, H_END = 6, 23; N_HOURS = H_END - H_START; MA_K = 56
 
 IMP_KEY = sys.argv[1]
 IMP_LABELS = {

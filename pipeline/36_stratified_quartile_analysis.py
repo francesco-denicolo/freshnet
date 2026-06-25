@@ -50,7 +50,7 @@ print(f'   Volume thresholds (Q1/Q2/Q3 medians): '
 # ============================================================================
 print('\n2. Loading 95 cells and joining quartile...')
 
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
 
 def parse_name(name):
     if '__' in name:
@@ -153,10 +153,10 @@ IMP_ORDER = ['no_imp','media_glob','media_cond','mediana_glob','mediana_cond',
              'forward_fill','seasonal_naive','linear_interp','lgb',
              'dlinear','saits','itransformer','timesnet','imputeformer']
 FC_ORDER = ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-            'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21']
+            'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56']
 FC_LABEL = {'lgb_nolags':'LGB_nl','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nl','mlp_m5lags':'MLP_M5',
             'tft':'TFT','chronos_bolt':'Chron','timesfm':'TimesFM',
-            'global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+            'global_mean':'GM','dow_mean':'DoW','ma_k56':'MA56'}
 
 fig, axes = plt.subplots(2, 2, figsize=(18, 14))
 for ax, q in zip(axes.flat, ['Q1','Q2','Q3','Q4']):
@@ -233,11 +233,11 @@ def pareto_mask(x, y):
 FC_COLORS = {'lgb_nolags':'#fdae61','lgb_m5lags':'#f46d43',
              'mlp_nolags':'#74add1','mlp_m5lags':'#4575b4',
              'tft':'#7b3294','chronos_bolt':'#d73027',
-             'global_mean':'#2ca02c','dow_mean':'#bcbd22','ma_k21':'#17becf'}
+             'global_mean':'#2ca02c','dow_mean':'#bcbd22','ma_k56':'#17becf'}
 FC_MK = {'lgb_nolags':'^','lgb_m5lags':'^','mlp_nolags':'D','mlp_m5lags':'D',
-         'tft':'o','chronos_bolt':'P','global_mean':'s','dow_mean':'X','ma_k21':'v'}
+         'tft':'o','chronos_bolt':'P','global_mean':'s','dow_mean':'X','ma_k56':'v'}
 FC_LB = {'lgb_nolags':'LGB_nolags','lgb_m5lags':'LGB_M5','mlp_nolags':'MLP_nolags','mlp_m5lags':'MLP_M5',
-         'tft':'TFT','chronos_bolt':'Chronos-bolt','global_mean':'Global Mean','dow_mean':'DoW Mean','ma_k21':'MA (K=21)'}
+         'tft':'TFT','chronos_bolt':'Chronos-bolt','global_mean':'Global Mean','dow_mean':'DoW Mean','ma_k56':'MA (K=56)'}
 
 import matplotlib.lines as mlines
 
@@ -283,7 +283,7 @@ for ax, q in zip(axes.flat, ['Q1','Q2','Q3','Q4']):
 # Common legend
 handles = []
 for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
-           'chronos_bolt','global_mean','dow_mean','ma_k21']:
+           'chronos_bolt','global_mean','dow_mean','ma_k56']:
     if fc in strat.forecaster.unique():
         handles.append(mlines.Line2D([],[],color=FC_COLORS[fc],marker=FC_MK[fc],linestyle='None',
                        markeredgecolor='black',markersize=10,label=FC_LB[fc]))

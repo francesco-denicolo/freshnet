@@ -35,7 +35,7 @@ N_BOOT = 300
 SEED = 42
 np.random.seed(SEED)
 
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
 
 def parse_name(n):
     return n.split('__', 1) if '__' in n else ('no_imp', n)
@@ -185,9 +185,9 @@ print('\n7. Plotting stratified heatmaps...')
 IMP_ORDER = ['media_glob','media_cond','mediana_glob','mediana_cond',
              'forward_fill','seasonal_naive','linear_interp','lgb',
              'dlinear','saits','itransformer','timesnet','imputeformer']
-FC_ORDER = ['lgb_m5lags','mlp_m5lags','tft','chronos_bolt','global_mean','dow_mean','ma_k21']
+FC_ORDER = ['lgb_m5lags','mlp_m5lags','tft','chronos_bolt','global_mean','dow_mean','ma_k56']
 FC_SHORT = {'lgb_m5lags':'LGB_M5','mlp_m5lags':'MLP_M5','tft':'TFT','chronos_bolt':'Chronos',
-            'global_mean':'GM','dow_mean':'DoW','ma_k21':'MA21'}
+            'global_mean':'GM','dow_mean':'DoW','ma_k56':'MA56'}
 
 def heatmap_panel(ax, level, title):
     sub = out[out.level == level]

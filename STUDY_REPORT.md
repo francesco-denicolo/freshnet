@@ -179,8 +179,8 @@ Profilo medio per (store, product, hour) su tutto il train. Vettore 17 valori.
 #### 2. DoW Mean
 Profilo medio per (store, product, dow, hour). 7 profili da 17 valori.
 
-#### 3. MA (K=21)
-Media degli ultimi K=21 giorni (selezionato su val). Vettore 17 valori.
+#### 3. MA (K=56)
+Media degli ultimi K=56 giorni (selezionato su val sotto criterio median per-serie WAPE, coerente con HPO Optuna). Vettore 17 valori.
 
 #### 4. Naive Direct
 Profilo del giorno 90 (ultimo del train), replicato sui 7 giorni test.
@@ -364,7 +364,7 @@ SAITS                  1.1075  1.1008  1.1123  1.1003   1.1094  1.0707   1.0876 
 | MLP (M5 lags) | +0.82 (large) | +0.19 (small) |
 | LGB (no lags) | +0.80 (large) | +0.20 (small) |
 | MLP (no lags) | +0.78 (large) | +0.19 (small) |
-| MA (K=21) | +0.77 (large) | +0.14 (negligible) |
+| MA (K=56) | +0.77 (large) | +0.14 (negligible) |
 | Global Mean | +0.74 (large) | +0.16 (small) |
 | DoW Mean | +0.72 (large) | +0.15 (negligible) |
 | **Chronos-bolt** | **+0.71** (large) | **+0.09** (negligible) |

@@ -22,11 +22,11 @@ IMPUTERS = ['No imputation', 'Media condizionata', 'Media globale',
             'Mediana condizionata', 'Mediana globale',
             'LGB imputer', 'DLinear',
             'Forward Fill', 'Seasonal Naive', 'Linear Interp', 'SAITS']
-FORECASTERS = ['Global Mean', 'DoW Mean', 'MA (K=21)',
+FORECASTERS = ['Global Mean', 'DoW Mean', 'MA (K=56)',
                'LGB (no lags)', 'LGB (M5 lags)',
                'MLP (no lags)', 'MLP (M5 lags)', 'Chronos-bolt']
 
-FC_FILE = {'Global Mean':'global_mean','DoW Mean':'dow_mean','MA (K=21)':'ma_k21',
+FC_FILE = {'Global Mean':'global_mean','DoW Mean':'dow_mean','MA (K=56)':'ma_k56',
            'LGB (no lags)':'lgb_nolags','LGB (M5 lags)':'lgb_m5lags',
            'MLP (no lags)':'mlp_nolags','MLP (M5 lags)':'mlp_m5lags',
            'Chronos-bolt':'chronos_bolt'}
@@ -39,7 +39,7 @@ IMP_FILE = {'Media condizionata':'media_cond','Media globale':'media_glob',
 FC_COLORS = {
     'Global Mean':    '#bcbcbc',
     'DoW Mean':       '#969696',
-    'MA (K=21)':      '#737373',
+    'MA (K=56)':      '#737373',
     'LGB (no lags)':  '#fdae61',
     'LGB (M5 lags)':  '#f46d43',
     'MLP (no lags)':  '#74add1',
@@ -49,7 +49,7 @@ FC_COLORS = {
 FC_MARKERS = {
     'Global Mean':   's',
     'DoW Mean':      's',
-    'MA (K=21)':     's',
+    'MA (K=56)':     's',
     'LGB (no lags)': '^',
     'LGB (M5 lags)': '^',
     'MLP (no lags)': 'D',
@@ -63,7 +63,7 @@ def get_path(imp, fc):
         imp_safe = 'no_imp' if imp == 'No imputation' else IMP_FILE[imp]
         return os.path.join(RESULTS_DIR, f'{imp_safe}__chronos_bolt_test_per_series.parquet')
     if imp == 'No imputation':
-        if fc in ['Global Mean','DoW Mean','MA (K=21)']:
+        if fc in ['Global Mean','DoW Mean','MA (K=56)']:
             return os.path.join(RESULTS_DIR, f'naive_{fc_safe}_test_per_series.parquet')
         return os.path.join(RESULTS_DIR, f'{fc_safe}_test_per_series.parquet')
     imp_safe = IMP_FILE[imp]
@@ -137,11 +137,12 @@ ax.annotate(f"Min WAPE\n{p_min_wape['imputer']}\n+ {p_min_wape['forecaster']}",
             xytext=(15, -10), textcoords='offset points', fontsize=9,
             bbox=dict(boxstyle='round,pad=0.3', facecolor='lightyellow', alpha=0.8))
 
-# 2. Knee point (MLP M5 + Mediana cond, rank 10)
-p_knee = df_pareto[
-    (df_pareto['forecaster'] == 'MLP (M5 lags)') &
-    (df_pareto['imputer'] == 'Mediana condizionata')
-].iloc[0]
+# 2. Knee point — closest to origin in normalized (WAPE, |WPE|) space
+_xn = (df_pareto['wape_med'] - df_pareto['wape_med'].min()) / (
+    df_pareto['wape_med'].max() - df_pareto['wape_med'].min() + 1e-9)
+_yn = (df_pareto['abs_wpe_med'] - df_pareto['abs_wpe_med'].min()) / (
+    df_pareto['abs_wpe_med'].max() - df_pareto['abs_wpe_med'].min() + 1e-9)
+p_knee = df_pareto.assign(_dist=(_xn**2 + _yn**2)**0.5).sort_values('_dist').iloc[0]
 ax.scatter(p_knee['wape_med'], p_knee['abs_wpe_med'],
            s=400, marker='*', color='lime', edgecolor='black', linewidth=1.5,
            zorder=5, label='Knee point')

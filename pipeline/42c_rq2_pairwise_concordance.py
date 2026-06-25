@@ -53,7 +53,7 @@ imputers_all = list(recovery.keys())
 rec_vec_all = np.array([recovery[i] for i in imputers_all])
 print(f'{len(imputers_all)} imputer con WAPE_recovery')
 
-NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k21'}
+NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56'}
 
 def find_parquet(imp, fc):
     p_hpo = f'{RESULTS_DIR}/{imp}__{fc}_hpo_test_per_series.parquet'
@@ -63,11 +63,11 @@ def find_parquet(imp, fc):
     return None
 
 panels = ['mlp_m5lags', 'lgb_m5lags', 'tft', 'chronos_bolt', 'timesfm',
-          'global_mean', 'dow_mean', 'ma_k21']
+          'global_mean', 'dow_mean', 'ma_k56']
 panel_titles = {
     'mlp_m5lags': 'MLP_M5', 'lgb_m5lags': 'LGB_M5', 'tft': 'TFT',
     'chronos_bolt': 'Chronos-bolt', 'timesfm': 'TimesFM',
-    'global_mean': 'GlobalMean', 'dow_mean': 'DoWMean', 'ma_k21': 'MA_K21',
+    'global_mean': 'GlobalMean', 'dow_mean': 'DoWMean', 'ma_k56': 'MA_K56',
 }
 
 # ----------------------------------------------------------------------

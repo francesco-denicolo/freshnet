@@ -31,7 +31,7 @@ matgen = pd.read_parquet(f'{RESULTS_DIR}/hpo_matrix_pareto.parquet')
 #   (b) Per-quartile best: choose the best cell per family per quartile (cells change)
 # ---------------------------------------------------------------------
 families = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm',
-            'global_mean','dow_mean','ma_k21']
+            'global_mean','dow_mean','ma_k56']
 
 # (a) Best globally per family
 family_best_global = {}
@@ -74,10 +74,10 @@ print(pivot.to_string(float_format='%.4f'))
 # ---------------------------------------------------------------------
 FC_COLORS = {'mlp_m5lags':'#4575b4','lgb_m5lags':'#f46d43','tft':'#7b3294',
              'chronos_bolt':'#d73027','timesfm':'#b15928','global_mean':'#2ca02c',
-             'dow_mean':'#bcbd22','ma_k21':'#17becf'}
+             'dow_mean':'#bcbd22','ma_k56':'#17becf'}
 FC_LABELS = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT',
              'chronos_bolt':'Chronos','timesfm':'TimesFM','global_mean':'GlobalMean',
-             'dow_mean':'DoWMean','ma_k21':'MA21'}
+             'dow_mean':'DoWMean','ma_k56':'MA56'}
 markers = ['o','D','s','v','^','P','X']
 
 quartiles = ['Q1','Q2','Q3','Q4']

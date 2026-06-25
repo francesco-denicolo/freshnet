@@ -52,7 +52,7 @@ def archetype(row):
     fc = row.forecaster
     if fc == 'tft':
         return ('TFT', '#7b3294')
-    if fc in ('global_mean', 'dow_mean', 'ma_k21'):
+    if fc in ('global_mean', 'dow_mean', 'ma_k56'):
         return ('Naive aggregato', '#2ca02c')
     if fc == 'timesfm':
         return ('Foundation', '#b15928')
@@ -103,7 +103,7 @@ ax.plot(inter_sorted.mean_rank, inter_sorted.abs_wpe_med, '-', c='black',
 for _, r in intersection.iterrows():
     txt = r.cell.replace('mlp_m5lags', 'MLP_M5').replace('lgb_m5lags', 'LGB_M5')
     txt = txt.replace('chronos_bolt', 'Chronos').replace('global_mean', 'GlobalMean')
-    txt = txt.replace('dow_mean', 'DoWMean').replace('ma_k21', 'MA_K21')
+    txt = txt.replace('dow_mean', 'DoWMean').replace('ma_k56', 'MA_K56')
     txt = txt.replace('timesfm', 'TimesFM').replace('tft', 'TFT')
     ax.annotate(txt, (r.mean_rank, r.abs_wpe_med),
                 xytext=(6, 6), textcoords='offset points',
@@ -112,21 +112,24 @@ for _, r in intersection.iterrows():
 
 ax.set_xlabel('Friedman mean rank (lower = better accuracy)', fontsize=13)
 ax.set_ylabel('|WPE_h median| (lower = less bias)', fontsize=13)
-ax.set_title(f'11 cells doubly Pareto-optimal (intersezione delle due frontiere)',
+ax.set_title(f'{len(intersection)} cells doubly Pareto-optimal (intersezione delle due frontiere)',
              fontsize=14, pad=10)
 ax.grid(True, alpha=0.3, linestyle='--')
 ax.set_xlim(15, 110)
 ax.set_ylim(-0.03, 1.0)
 
-# Custom legend for archetypes
+# Custom legend for archetypes — counts computed dynamically
 import matplotlib.lines as mlines
+n_tft = (intersection.archetype == 'TFT').sum()
+n_naive = (intersection.archetype == 'Naive aggregato').sum()
+n_found = (intersection.archetype == 'Foundation').sum()
 arch_handles = [
     mlines.Line2D([], [], color='#7b3294', marker='o', linestyle='None',
-                  markeredgecolor='black', markersize=12, label='TFT (4 cells)'),
+                  markeredgecolor='black', markersize=12, label=f'TFT ({n_tft} cells)'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None',
-                  markeredgecolor='black', markersize=12, label='Naive aggregato (6 cells)'),
+                  markeredgecolor='black', markersize=12, label=f'Naive aggregato ({n_naive} cells)'),
     mlines.Line2D([], [], color='#b15928', marker='o', linestyle='None',
-                  markeredgecolor='black', markersize=12, label='Foundation/TimesFM (1 cell)'),
+                  markeredgecolor='black', markersize=12, label=f'Foundation/TimesFM ({n_found} cell{"s" if n_found != 1 else ""})'),
     mlines.Line2D([], [], color='gold', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=16,
                   label='Friedman best (NOT in intersection)'),
@@ -156,11 +159,11 @@ archetype_data = [
      ['WAPE ~ 0.98', '|WPE| ~ 0.85', 'rank 29-33'],
      'Per accuracy KPI con bias control medio'),
     ('KNEE (balanced)', '#2ca02c',
-     ['mediana_glob__MA_K21', 'mediana_cond__MA_K21'],
+     ['mediana_glob__MA_K56', 'mediana_cond__MA_K56'],
      ['WAPE ~ 1.11-1.12', '|WPE| ~ 0.13-0.15', 'rank 55-58'],
      'Trade-off bilanciato accuracy/bias'),
     ('BIAS-extreme', '#b15928',
-     ['media_cond__MA_K21', 'linear_interp__TimesFM'],
+     ['media_cond__MA_K56', 'linear_interp__TimesFM'],
      ['WAPE ~ 1.14-1.29', '|WPE| ~ 0.06-0.07', 'rank 66-98'],
      'Per inventory critica e bias-bound SLA'),
 ]
@@ -202,7 +205,7 @@ ax2.text(0.5, 0.04,
                    edgecolor='#d73027', linewidth=1.5))
 
 # Big title at top
-fig.suptitle('Doubly Pareto-optimal cells: 11 safest choices per il deployment',
+fig.suptitle(f'Doubly Pareto-optimal cells: {len(intersection)} safest choices per il deployment',
              fontsize=18, fontweight='bold', y=0.985)
 
 plt.tight_layout(rect=[0, 0, 1, 0.965])

@@ -38,11 +38,11 @@ IMPUTERS = ['No imputation', 'Media condizionata', 'Media globale',
             'Mediana condizionata', 'Mediana globale',
             'LGB imputer', 'DLinear',
             'Forward Fill', 'Seasonal Naive', 'Linear Interp', 'SAITS']
-FORECASTERS = ['Global Mean', 'DoW Mean', 'MA (K=21)',
+FORECASTERS = ['Global Mean', 'DoW Mean', 'MA (K=56)',
                'LGB (no lags)', 'LGB (M5 lags)',
                'MLP (no lags)', 'MLP (M5 lags)', 'Chronos-bolt']
 
-FC_FILE = {'Global Mean':'global_mean','DoW Mean':'dow_mean','MA (K=21)':'ma_k21',
+FC_FILE = {'Global Mean':'global_mean','DoW Mean':'dow_mean','MA (K=56)':'ma_k56',
            'LGB (no lags)':'lgb_nolags','LGB (M5 lags)':'lgb_m5lags',
            'MLP (no lags)':'mlp_nolags','MLP (M5 lags)':'mlp_m5lags',
            'Chronos-bolt':'chronos_bolt'}
@@ -59,7 +59,7 @@ def get_path(imp, fc):
         imp_safe = 'no_imp' if imp == 'No imputation' else IMP_FILE[imp]
         return os.path.join(RESULTS_DIR, f'{imp_safe}__{fc_safe}_test_per_series.parquet')
     if imp == 'No imputation':
-        if fc in ['Global Mean','DoW Mean','MA (K=21)']:
+        if fc in ['Global Mean','DoW Mean','MA (K=56)']:
             return os.path.join(RESULTS_DIR, f'naive_{fc_safe}_test_per_series.parquet')
         return os.path.join(RESULTS_DIR, f'{fc_safe}_test_per_series.parquet')
     imp_safe = IMP_FILE[imp]

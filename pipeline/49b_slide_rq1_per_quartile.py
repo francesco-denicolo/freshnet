@@ -28,7 +28,7 @@ data = pd.DataFrame([
     # forecaster      family          Q1      Q2      Q3      Q4    no_imp_helps_q1, q2, q3, q4
     ['Global Mean',  'naive',         0.754,  0.672,  0.423,  0.193, True, True, True, True],
     ['DoW Mean',     'naive',         0.691,  0.628,  0.415,  0.193, True, True, True, True],
-    ['MA_K21',       'naive',         0.700,  0.636,  0.435,  0.212, True, True, True, True],
+    ['MA_K56',       'naive',         0.729,  0.655,  0.425,  0.191, True, True, True, True],
     ['Chronos-bolt', 'foundation',    0.501,  0.415,  0.153,  0.182, True, True, True, True],
     ['TimesFM',      'foundation',    0.447,  0.263,  0.095,  0.080, False, True, True, True],
     ['TFT',          'DL+lag',        0.263,  0.215,  0.160,  0.348, True, True, True, True],

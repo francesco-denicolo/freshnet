@@ -1,0 +1,1866 @@
+WAIT for seeds to finish (Wed Jun 24 21:28:34 CEST 2026)
+SEEDS DONE -> start recursive (Thu Jun 25 00:27:39 CEST 2026)
+=== RECURSIVE LGB dlinear (Thu Jun 25 00:27:39 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × DLinear (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569171
+[200]	val's l1: 0.0568914
+Early stopping, best iteration is:
+[215]	val's l1: 0.056889
+  Best iter: 215
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9956  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_dlinear__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB forward_fill (Thu Jun 25 00:43:33 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Forward Fill (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0579777
+[200]	val's l1: 0.0578449
+[300]	val's l1: 0.057804
+[400]	val's l1: 0.0577746
+[500]	val's l1: 0.057693
+Did not meet early stopping. Best iteration is:
+[498]	val's l1: 0.057693
+  Best iter: 498
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9952  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_forward_fill__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB imputeformer (Thu Jun 25 01:08:36 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × ImputeFormer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0568852
+[200]	val's l1: 0.0568434
+Early stopping, best iteration is:
+[264]	val's l1: 0.0568192
+  Best iter: 264
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9950  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_imputeformer__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB itransformer (Thu Jun 25 01:26:33 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570619
+[200]	val's l1: 0.0569591
+[300]	val's l1: 0.0569381
+[400]	val's l1: 0.0569216
+[500]	val's l1: 0.0568935
+Did not meet early stopping. Best iteration is:
+[498]	val's l1: 0.0568935
+  Best iter: 498
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9972  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_itransformer__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB lgb (Thu Jun 25 01:50:25 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × LGB imputer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571054
+[200]	val's l1: 0.0570381
+[300]	val's l1: 0.0570193
+[400]	val's l1: 0.0570084
+[500]	val's l1: 0.0569686
+Did not meet early stopping. Best iteration is:
+[497]	val's l1: 0.0569685
+  Best iter: 497
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9962  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_lgb__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB linear_interp (Thu Jun 25 02:16:51 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Linear Interp (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0575729
+[200]	val's l1: 0.057493
+[300]	val's l1: 0.0574664
+Early stopping, best iteration is:
+[368]	val's l1: 0.057456
+  Best iter: 368
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9945  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_linear_interp__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB media_cond (Thu Jun 25 02:39:00 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Media condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571902
+[200]	val's l1: 0.0571207
+[300]	val's l1: 0.0570756
+Early stopping, best iteration is:
+[368]	val's l1: 0.0570448
+  Best iter: 368
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9946  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_media_cond__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB media_glob (Thu Jun 25 03:01:15 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Media globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571302
+[200]	val's l1: 0.0570578
+[300]	val's l1: 0.0570202
+[400]	val's l1: 0.0569847
+[500]	val's l1: 0.056956
+Did not meet early stopping. Best iteration is:
+[497]	val's l1: 0.0569551
+  Best iter: 497
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9923  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_media_glob__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB mediana_cond (Thu Jun 25 03:28:26 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Mediana condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570618
+[200]	val's l1: 0.0569439
+[300]	val's l1: 0.0569194
+[400]	val's l1: 0.0569129
+Early stopping, best iteration is:
+[436]	val's l1: 0.0568937
+  Best iter: 436
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9930  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_mediana_cond__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB mediana_glob (Thu Jun 25 03:53:47 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Mediana globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0568692
+[200]	val's l1: 0.0568325
+Early stopping, best iteration is:
+[232]	val's l1: 0.0568127
+  Best iter: 232
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9930  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_mediana_glob__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB saits (Thu Jun 25 04:09:38 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × SAITS (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569571
+Early stopping, best iteration is:
+[140]	val's l1: 0.0569177
+  Best iter: 140
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9970  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_saits__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB seasonal_naive (Thu Jun 25 04:22:05 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Seasonal Naive (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570933
+[200]	val's l1: 0.0570246
+Early stopping, best iteration is:
+[239]	val's l1: 0.0569952
+  Best iter: 239
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9930  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_seasonal_naive__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE LGB timesnet (Thu Jun 25 04:38:17 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × TimesNet (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569906
+[200]	val's l1: 0.0569528
+[300]	val's l1: 0.0569174
+Early stopping, best iteration is:
+[309]	val's l1: 0.0569164
+  Best iter: 309
+
+3. Recursive test inference (days 91-97)...
+    Computing lags for 50,000 days...
+    day 91: 50000 series
+    Computing lags for 50,000 days...
+    day 92: 50000 series
+    Computing lags for 50,000 days...
+    day 93: 50000 series
+    Computing lags for 50,000 days...
+    day 94: 50000 series
+    Computing lags for 50,000 days...
+    day 95: 50000 series
+    Computing lags for 50,000 days...
+    day 96: 50000 series
+    Computing lags for 50,000 days...
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9960  (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_timesnet__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP dlinear (Thu Jun 25 04:57:48 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × DLinear (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 364s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053795, val_WAPE=0.796126
+  Epoch   2: loss=0.048142, val_WAPE=0.803797
+  Epoch   3: loss=0.047910, val_WAPE=0.801667
+  Epoch   4: loss=0.047810, val_WAPE=0.784894
+  Epoch   5: loss=0.047734, val_WAPE=0.789247
+  Epoch   6: loss=0.047681, val_WAPE=0.789697
+  Epoch   7: loss=0.047661, val_WAPE=0.796882
+  Epoch   8: loss=0.047648, val_WAPE=0.795334
+  Epoch   9: loss=0.047640, val_WAPE=0.789711
+  Epoch  10: loss=0.047630, val_WAPE=0.800771
+  Epoch  11: loss=0.047632, val_WAPE=0.800851
+  Epoch  12: loss=0.047622, val_WAPE=0.793574
+  Epoch  13: loss=0.047617, val_WAPE=0.792550
+  Epoch  14: loss=0.047623, val_WAPE=0.795225
+  Early stop (best=4, WAPE=0.784894)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9980 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_dlinear__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP forward_fill (Thu Jun 25 05:13:13 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Forward Fill (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 368s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052844, val_WAPE=0.796295
+  Epoch   2: loss=0.048294, val_WAPE=0.801267
+  Epoch   3: loss=0.048163, val_WAPE=0.797618
+  Epoch   4: loss=0.048145, val_WAPE=0.791650
+  Epoch   5: loss=0.048100, val_WAPE=0.800611
+  Epoch   6: loss=0.048091, val_WAPE=0.795030
+  Epoch   7: loss=0.048084, val_WAPE=0.796261
+  Epoch   8: loss=0.048072, val_WAPE=0.806974
+  Epoch   9: loss=0.048087, val_WAPE=0.794604
+  Epoch  10: loss=0.048067, val_WAPE=0.810419
+  Epoch  11: loss=0.048064, val_WAPE=0.789900
+  Epoch  12: loss=0.048074, val_WAPE=0.796295
+  Epoch  13: loss=0.048047, val_WAPE=0.791521
+  Epoch  14: loss=0.048046, val_WAPE=0.794313
+  Epoch  15: loss=0.048048, val_WAPE=0.803881
+  Epoch  16: loss=0.048051, val_WAPE=0.807398
+  Epoch  17: loss=0.048030, val_WAPE=0.796137
+  Epoch  18: loss=0.048041, val_WAPE=0.809934
+  Epoch  19: loss=0.048029, val_WAPE=0.789650
+  Epoch  20: loss=0.048051, val_WAPE=0.792638
+  Epoch  21: loss=0.048036, val_WAPE=0.791480
+  Epoch  22: loss=0.048034, val_WAPE=0.790964
+  Epoch  23: loss=0.048031, val_WAPE=0.793047
+  Epoch  24: loss=0.048031, val_WAPE=0.791732
+  Epoch  25: loss=0.048046, val_WAPE=0.790886
+  Epoch  26: loss=0.048037, val_WAPE=0.803805
+  Epoch  27: loss=0.048033, val_WAPE=0.793982
+  Epoch  28: loss=0.048027, val_WAPE=0.801155
+  Epoch  29: loss=0.048033, val_WAPE=0.796880
+  Early stop (best=19, WAPE=0.789650)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9995 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_forward_fill__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP imputeformer (Thu Jun 25 05:37:28 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × ImputeFormer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 366s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052268, val_WAPE=0.794489
+  Epoch   2: loss=0.048043, val_WAPE=0.794985
+  Epoch   3: loss=0.047912, val_WAPE=0.798764
+  Epoch   4: loss=0.047868, val_WAPE=0.785489
+  Epoch   5: loss=0.047838, val_WAPE=0.783861
+  Epoch   6: loss=0.047825, val_WAPE=0.786929
+  Epoch   7: loss=0.047811, val_WAPE=0.794981
+  Epoch   8: loss=0.047810, val_WAPE=0.796938
+  Epoch   9: loss=0.047805, val_WAPE=0.795895
+  Epoch  10: loss=0.047796, val_WAPE=0.791220
+  Epoch  11: loss=0.047792, val_WAPE=0.791432
+  Epoch  12: loss=0.047796, val_WAPE=0.793573
+  Epoch  13: loss=0.047798, val_WAPE=0.792022
+  Epoch  14: loss=0.047787, val_WAPE=0.789483
+  Epoch  15: loss=0.047789, val_WAPE=0.794590
+  Early stop (best=5, WAPE=0.783861)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9999 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_imputeformer__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP itransformer (Thu Jun 25 05:54:08 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 370s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053471, val_WAPE=0.790547
+  Epoch   2: loss=0.048080, val_WAPE=0.793711
+  Epoch   3: loss=0.047909, val_WAPE=0.795607
+  Epoch   4: loss=0.047843, val_WAPE=0.784976
+  Epoch   5: loss=0.047802, val_WAPE=0.784674
+  Epoch   6: loss=0.047794, val_WAPE=0.781636
+  Epoch   7: loss=0.047789, val_WAPE=0.787553
+  Epoch   8: loss=0.047767, val_WAPE=0.796399
+  Epoch   9: loss=0.047778, val_WAPE=0.790449
+  Epoch  10: loss=0.047769, val_WAPE=0.788508
+  Epoch  11: loss=0.047777, val_WAPE=0.786603
+  Epoch  12: loss=0.047765, val_WAPE=0.788233
+  Epoch  13: loss=0.047766, val_WAPE=0.787532
+  Epoch  14: loss=0.047770, val_WAPE=0.789520
+  Epoch  15: loss=0.047766, val_WAPE=0.792688
+  Epoch  16: loss=0.047770, val_WAPE=0.791275
+  Early stop (best=6, WAPE=0.781636)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9992 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_itransformer__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP lgb (Thu Jun 25 06:10:21 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × LGB imputer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 370s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051882, val_WAPE=0.789339
+  Epoch   2: loss=0.048229, val_WAPE=0.798831
+  Epoch   3: loss=0.048067, val_WAPE=0.814662
+  Epoch   4: loss=0.048014, val_WAPE=0.790973
+  Epoch   5: loss=0.047965, val_WAPE=0.785700
+  Epoch   6: loss=0.047967, val_WAPE=0.784434
+  Epoch   7: loss=0.047943, val_WAPE=0.793751
+  Epoch   8: loss=0.047945, val_WAPE=0.813473
+  Epoch   9: loss=0.047938, val_WAPE=0.797548
+  Epoch  10: loss=0.047953, val_WAPE=0.807007
+  Epoch  11: loss=0.047945, val_WAPE=0.792390
+  Epoch  12: loss=0.047936, val_WAPE=0.789625
+  Epoch  13: loss=0.047934, val_WAPE=0.791763
+  Epoch  14: loss=0.047915, val_WAPE=0.785222
+  Epoch  15: loss=0.047916, val_WAPE=0.796664
+  Epoch  16: loss=0.047916, val_WAPE=0.792448
+  Early stop (best=6, WAPE=0.784434)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9997 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_lgb__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP linear_interp (Thu Jun 25 06:27:03 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Linear Interp (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 365s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052774, val_WAPE=0.803891
+  Epoch   2: loss=0.048043, val_WAPE=0.803484
+  Epoch   3: loss=0.047747, val_WAPE=0.807810
+  Epoch   4: loss=0.047645, val_WAPE=0.797302
+  Epoch   5: loss=0.047603, val_WAPE=0.802934
+  Epoch   6: loss=0.047573, val_WAPE=0.794871
+  Epoch   7: loss=0.047544, val_WAPE=0.805438
+  Epoch   8: loss=0.047530, val_WAPE=0.804835
+  Epoch   9: loss=0.047504, val_WAPE=0.802359
+  Epoch  10: loss=0.047520, val_WAPE=0.805272
+  Epoch  11: loss=0.047512, val_WAPE=0.799114
+  Epoch  12: loss=0.047481, val_WAPE=0.796899
+  Epoch  13: loss=0.047472, val_WAPE=0.794832
+  Epoch  14: loss=0.047517, val_WAPE=0.797146
+  Epoch  15: loss=0.047487, val_WAPE=0.794794
+  Epoch  16: loss=0.047491, val_WAPE=0.804176
+  Epoch  17: loss=0.047471, val_WAPE=0.808256
+  Epoch  18: loss=0.047479, val_WAPE=0.795890
+  Epoch  19: loss=0.047462, val_WAPE=0.797633
+  Epoch  20: loss=0.047466, val_WAPE=0.799859
+  Epoch  21: loss=0.047470, val_WAPE=0.796677
+  Epoch  22: loss=0.047462, val_WAPE=0.796891
+  Epoch  23: loss=0.047467, val_WAPE=0.796063
+  Epoch  24: loss=0.047466, val_WAPE=0.796973
+  Epoch  25: loss=0.047465, val_WAPE=0.797848
+  Early stop (best=15, WAPE=0.794794)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9999 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_linear_interp__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP media_cond (Thu Jun 25 06:49:03 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Media condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 365s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051899, val_WAPE=0.799827
+  Epoch   2: loss=0.048306, val_WAPE=0.806709
+  Epoch   3: loss=0.048159, val_WAPE=0.802662
+  Epoch   4: loss=0.048116, val_WAPE=0.785128
+  Epoch   5: loss=0.048088, val_WAPE=0.790775
+  Epoch   6: loss=0.048075, val_WAPE=0.795750
+  Epoch   7: loss=0.048078, val_WAPE=0.815296
+  Epoch   8: loss=0.048060, val_WAPE=0.805218
+  Epoch   9: loss=0.048046, val_WAPE=0.794288
+  Epoch  10: loss=0.048037, val_WAPE=0.787877
+  Epoch  11: loss=0.048037, val_WAPE=0.797602
+  Epoch  12: loss=0.048016, val_WAPE=0.789261
+  Epoch  13: loss=0.048018, val_WAPE=0.791790
+  Epoch  14: loss=0.048020, val_WAPE=0.790986
+  Early stop (best=4, WAPE=0.785128)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9995 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_media_cond__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP media_glob (Thu Jun 25 07:04:58 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Media globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 371s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051957, val_WAPE=0.793920
+  Epoch   2: loss=0.048179, val_WAPE=0.804075
+  Epoch   3: loss=0.048072, val_WAPE=0.805001
+  Epoch   4: loss=0.047976, val_WAPE=0.787423
+  Epoch   5: loss=0.047943, val_WAPE=0.793454
+  Epoch   6: loss=0.047918, val_WAPE=0.791248
+  Epoch   7: loss=0.047908, val_WAPE=0.802640
+  Epoch   8: loss=0.047923, val_WAPE=0.804210
+  Epoch   9: loss=0.047907, val_WAPE=0.800772
+  Epoch  10: loss=0.047904, val_WAPE=0.802985
+  Epoch  11: loss=0.047894, val_WAPE=0.786080
+  Epoch  12: loss=0.047893, val_WAPE=0.789208
+  Epoch  13: loss=0.047881, val_WAPE=0.791882
+  Epoch  14: loss=0.047879, val_WAPE=0.794828
+  Epoch  15: loss=0.047882, val_WAPE=0.792087
+  Epoch  16: loss=0.047870, val_WAPE=0.797919
+  Epoch  17: loss=0.047870, val_WAPE=0.793969
+  Epoch  18: loss=0.047872, val_WAPE=0.797503
+  Epoch  19: loss=0.047863, val_WAPE=0.793697
+  Epoch  20: loss=0.047869, val_WAPE=0.786283
+  Epoch  21: loss=0.047865, val_WAPE=0.792437
+  Early stop (best=11, WAPE=0.786080)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9937 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_media_glob__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP mediana_cond (Thu Jun 25 07:23:54 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Mediana condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 366s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053434, val_WAPE=0.810798
+  Epoch   2: loss=0.048531, val_WAPE=0.812949
+  Epoch   3: loss=0.048256, val_WAPE=0.803481
+  Epoch   4: loss=0.048133, val_WAPE=0.789109
+  Epoch   5: loss=0.048082, val_WAPE=0.800953
+  Epoch   6: loss=0.048071, val_WAPE=0.789431
+  Epoch   7: loss=0.048046, val_WAPE=0.789334
+  Epoch   8: loss=0.048037, val_WAPE=0.806082
+  Epoch   9: loss=0.048038, val_WAPE=0.795341
+  Epoch  10: loss=0.048037, val_WAPE=0.803798
+  Epoch  11: loss=0.048030, val_WAPE=0.792039
+  Epoch  12: loss=0.048061, val_WAPE=0.791936
+  Epoch  13: loss=0.048037, val_WAPE=0.790177
+  Epoch  14: loss=0.048016, val_WAPE=0.789013
+  Epoch  15: loss=0.048016, val_WAPE=0.793336
+  Epoch  16: loss=0.048013, val_WAPE=0.797447
+  Epoch  17: loss=0.048014, val_WAPE=0.792448
+  Epoch  18: loss=0.048008, val_WAPE=0.794590
+  Epoch  19: loss=0.048007, val_WAPE=0.785976
+  Epoch  20: loss=0.048018, val_WAPE=0.793180
+  Epoch  21: loss=0.048003, val_WAPE=0.793127
+  Epoch  22: loss=0.047999, val_WAPE=0.796561
+  Epoch  23: loss=0.048001, val_WAPE=0.796846
+  Epoch  24: loss=0.048029, val_WAPE=0.792159
+  Epoch  25: loss=0.048008, val_WAPE=0.791752
+  Epoch  26: loss=0.048004, val_WAPE=0.807459
+  Epoch  27: loss=0.048005, val_WAPE=0.797433
+  Epoch  28: loss=0.048020, val_WAPE=0.803341
+  Epoch  29: loss=0.048009, val_WAPE=0.786975
+  Early stop (best=19, WAPE=0.785976)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9999 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_mediana_cond__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP mediana_glob (Thu Jun 25 07:48:30 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Mediana globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 364s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.055639, val_WAPE=0.815158
+  Epoch   2: loss=0.048413, val_WAPE=0.803522
+  Epoch   3: loss=0.048067, val_WAPE=0.803672
+  Epoch   4: loss=0.047969, val_WAPE=0.787440
+  Epoch   5: loss=0.047956, val_WAPE=0.795480
+  Epoch   6: loss=0.047935, val_WAPE=0.788210
+  Epoch   7: loss=0.047915, val_WAPE=0.787349
+  Epoch   8: loss=0.047915, val_WAPE=0.802702
+  Epoch   9: loss=0.047919, val_WAPE=0.798987
+  Epoch  10: loss=0.047903, val_WAPE=0.801673
+  Epoch  11: loss=0.047893, val_WAPE=0.789940
+  Epoch  12: loss=0.047880, val_WAPE=0.791563
+  Epoch  13: loss=0.047881, val_WAPE=0.794804
+  Epoch  14: loss=0.047877, val_WAPE=0.789409
+  Epoch  15: loss=0.047876, val_WAPE=0.791514
+  Epoch  16: loss=0.047881, val_WAPE=0.794225
+  Epoch  17: loss=0.047871, val_WAPE=0.795461
+  Early stop (best=7, WAPE=0.787349)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9996 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_mediana_glob__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP saits (Thu Jun 25 08:05:57 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × SAITS (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 367s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053693, val_WAPE=0.799951
+  Epoch   2: loss=0.048158, val_WAPE=0.803124
+  Epoch   3: loss=0.047984, val_WAPE=0.799284
+  Epoch   4: loss=0.047886, val_WAPE=0.786810
+  Epoch   5: loss=0.047835, val_WAPE=0.787585
+  Epoch   6: loss=0.047812, val_WAPE=0.787917
+  Epoch   7: loss=0.047796, val_WAPE=0.787224
+  Epoch   8: loss=0.047783, val_WAPE=0.799379
+  Epoch   9: loss=0.047780, val_WAPE=0.793455
+  Epoch  10: loss=0.047777, val_WAPE=0.800092
+  Epoch  11: loss=0.047778, val_WAPE=0.792815
+  Epoch  12: loss=0.047777, val_WAPE=0.790698
+  Epoch  13: loss=0.047777, val_WAPE=0.788047
+  Epoch  14: loss=0.047773, val_WAPE=0.793400
+  Early stop (best=4, WAPE=0.786810)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=1.0000 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_saits__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP seasonal_naive (Thu Jun 25 08:21:32 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Seasonal Naive (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 366s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053896, val_WAPE=0.799303
+  Epoch   2: loss=0.048390, val_WAPE=0.804145
+  Epoch   3: loss=0.048195, val_WAPE=0.798329
+  Epoch   4: loss=0.048138, val_WAPE=0.791536
+  Epoch   5: loss=0.048111, val_WAPE=0.788467
+  Epoch   6: loss=0.048099, val_WAPE=0.790515
+  Epoch   7: loss=0.048097, val_WAPE=0.796938
+  Epoch   8: loss=0.048078, val_WAPE=0.810924
+  Epoch   9: loss=0.048071, val_WAPE=0.802213
+  Epoch  10: loss=0.048078, val_WAPE=0.796215
+  Epoch  11: loss=0.048060, val_WAPE=0.800514
+  Epoch  12: loss=0.048070, val_WAPE=0.784935
+  Epoch  13: loss=0.048070, val_WAPE=0.792876
+  Epoch  14: loss=0.048051, val_WAPE=0.794631
+  Epoch  15: loss=0.048041, val_WAPE=0.788459
+  Epoch  16: loss=0.048042, val_WAPE=0.793033
+  Epoch  17: loss=0.048039, val_WAPE=0.801452
+  Epoch  18: loss=0.048041, val_WAPE=0.796045
+  Epoch  19: loss=0.048047, val_WAPE=0.785001
+  Epoch  20: loss=0.048052, val_WAPE=0.790119
+  Epoch  21: loss=0.048041, val_WAPE=0.797085
+  Epoch  22: loss=0.048036, val_WAPE=0.795318
+  Early stop (best=12, WAPE=0.784935)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9995 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_seasonal_naive__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== RECURSIVE MLP timesnet (Thu Jun 25 08:42:02 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × TimesNet (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+  Built in 367s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052365, val_WAPE=0.795946
+  Epoch   2: loss=0.048062, val_WAPE=0.799465
+  Epoch   3: loss=0.047915, val_WAPE=0.803267
+  Epoch   4: loss=0.047857, val_WAPE=0.790273
+  Epoch   5: loss=0.047830, val_WAPE=0.791257
+  Epoch   6: loss=0.047821, val_WAPE=0.789175
+  Epoch   7: loss=0.047813, val_WAPE=0.790768
+  Epoch   8: loss=0.047810, val_WAPE=0.800315
+  Epoch   9: loss=0.047809, val_WAPE=0.794852
+  Epoch  10: loss=0.047799, val_WAPE=0.800972
+  Epoch  11: loss=0.047805, val_WAPE=0.797620
+  Epoch  12: loss=0.047794, val_WAPE=0.793573
+  Epoch  13: loss=0.047784, val_WAPE=0.788864
+  Epoch  14: loss=0.047784, val_WAPE=0.797512
+  Epoch  15: loss=0.047794, val_WAPE=0.793326
+  Epoch  16: loss=0.047787, val_WAPE=0.796029
+  Epoch  17: loss=0.047782, val_WAPE=0.794738
+  Epoch  18: loss=0.047779, val_WAPE=0.796925
+  Epoch  19: loss=0.047781, val_WAPE=0.790321
+  Epoch  20: loss=0.047775, val_WAPE=0.791208
+  Epoch  21: loss=0.047774, val_WAPE=0.790065
+  Epoch  22: loss=0.047773, val_WAPE=0.791533
+  Epoch  23: loss=0.047766, val_WAPE=0.792543
+  Early stop (best=13, WAPE=0.788864)
+
+4. Recursive test inference (days 91-97)...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 91: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 92: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 93: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 94: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 95: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 96: 50000 series
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+    day 97: 50000 series
+  Recursive WAPE_h med=0.9999 (50000 series) -> /Users/utente/Desktop/FreshNetRetail/pipeline/results/recursive_timesnet__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+=== AGGREGATE (Thu Jun 25 09:03:15 CEST 2026) ===
+============================================================
+SEED ROBUSTNESS (Maj-5) — itransformer cell, WAPE_h median
+  LGB-M5: n=6 seeds | values=[np.float64(0.9856), np.float64(0.9859), np.float64(0.9821), np.float64(0.9841), np.float64(0.9802), np.float64(0.98)]
+           range(max-min)=0.0059  (min 0.9800, max 0.9859)
+  MLP-M5: n=6 seeds | values=[np.float64(0.9794), np.float64(0.976), np.float64(0.9772), np.float64(0.9744), np.float64(0.9692), np.float64(0.9769)]
+           range(max-min)=0.0102  (min 0.9692, max 0.9794)
+============================================================
+RECURSIVE vs FROZEN imputer spread (Maj-4) — across 13 imputers
+  LGB-M5: frozen cells=13, recursive cells=13, common=13
+    FROZEN  spread(max-min)=0.0082  (min 0.9787, max 0.9869)
+    RECURS. spread(max-min)=0.0049  (min 0.9923, max 0.9972)
+    per-imputer (frozen -> recursive):
+      dlinear          0.9821 -> 0.9956
+      forward_fill     0.9823 -> 0.9952
+      imputeformer     0.9820 -> 0.9950
+      itransformer     0.9856 -> 0.9972
+      lgb              0.9832 -> 0.9962
+      linear_interp    0.9840 -> 0.9945
+      media_cond       0.9841 -> 0.9946
+      media_glob       0.9848 -> 0.9923
+      mediana_cond     0.9787 -> 0.9930
+      mediana_glob     0.9816 -> 0.9930
+      saits            0.9869 -> 0.9970
+      seasonal_naive   0.9810 -> 0.9930
+      timesnet         0.9820 -> 0.9960
+  MLP-M5: frozen cells=13, recursive cells=13, common=13
+    FROZEN  spread(max-min)=0.0268  (min 0.9731, max 0.9999)
+    RECURS. spread(max-min)=0.0063  (min 0.9937, max 1.0000)
+    per-imputer (frozen -> recursive):
+      dlinear          0.9777 -> 0.9980
+      forward_fill     0.9764 -> 0.9995
+      imputeformer     0.9817 -> 0.9999
+      itransformer     0.9794 -> 0.9992
+      lgb              0.9759 -> 0.9997
+      linear_interp    0.9999 -> 0.9999
+      media_cond       0.9894 -> 0.9995
+      media_glob       0.9793 -> 0.9937
+      mediana_cond     0.9773 -> 0.9999
+      mediana_glob     0.9840 -> 0.9996
+      saits            0.9790 -> 1.0000
+      seasonal_naive   0.9811 -> 0.9995
+      timesnet         0.9731 -> 0.9999
+============================================================
+saved /Users/utente/Desktop/FreshNetRetail/pipeline/results/robustness_summary.txt
+PIPELINE DONE (Thu Jun 25 09:03:21 CEST 2026)

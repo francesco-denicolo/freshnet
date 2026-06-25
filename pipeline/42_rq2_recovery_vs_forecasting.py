@@ -60,7 +60,7 @@ for k, v in sorted(recovery.items(), key=lambda x: x[1]):
 # 2. Compute WAPE_forecasting median per (imputer, forecaster)
 # ---------------------------------------------------------------------
 print('\n2. Loading forecasting cells...')
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k21'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
 
 def parse_name(name):
     if '__' in name: return name.split('__', 1)

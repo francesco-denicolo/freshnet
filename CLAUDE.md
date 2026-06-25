@@ -616,7 +616,7 @@ Mediana globale aggiunta successivamente per completare il design 2×2 (mean/med
 
 | Famiglia | Forecaster |
 |---|---|
-| Naive | Global Mean, DoW Mean, MA (K=21), Naive Direct |
+| Naive | Global Mean, DoW Mean, MA (K=56), Naive Direct |
 | ML tabellare | LGB (no lags), LGB (M5 lags) |
 | Deep Learning | MLP (no lags), MLP (M5 lags), TFT (Temporal Fusion Transformer) |
 | Foundation Model | Chronos-bolt (small) |
@@ -1065,13 +1065,14 @@ Bottom 5: tutti TFT cells (1.00-1.02 WAPE_med)
 > Quel file contiene Sezione 1 (Best cell + Pareto), Sezione 2 (Recovery → Forecasting),
 > Sezione 3 (Foundation models), Sintesi, Framework statistico e bibliografia.
 >
-> **Stato attuale (2026-06-12)**:
+> **Stato attuale (2026-06-23)**:
 > - Matrice: **113 cells** (TimesFM completato su 14 imputer).
 > - Framework: **Friedman + Kendall's W + Nemenyi CD** (Demšar 2006).
-> - Best globale: `itransformer__MLP_M5` (Kendall W = 0.454 moderate, CD = 0.903, equiv set 2 cells).
+> - Best globale: `itransformer__MLP_M5` (Kendall W = 0.459 moderate, CD = 0.903, equiv set 2 cells).
 > - Best per Q: `lgb__MLP_M5` (Q1/Q2), `itransformer__MLP_M5` (Q3/Q4).
-> - Pareto globale: 26/113 cells optimal; per Q va da 28 (Q1) a 12 (Q4).
+> - Pareto globale: 25/113 cells optimal; per Q va da 27 (Q1) a 9 (Q4).
 > - Recovery → forecasting: pattern naive (LARGE) → foundation (medium/LARGE) → ML+lag (small/negligible).
+> - **MA forecaster**: K=56 (re-selezionato 2026-06-23 sotto criterio median per-serie val WAPE, coerente con HPO).
 >
 > **Aggiornare `PAPER_FINDINGS.md`, non questa sezione.**
 

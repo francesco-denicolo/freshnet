@@ -21,7 +21,7 @@ N_BOOT = 300
 SEED = 42
 np.random.seed(SEED)
 
-NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k21'}
+NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56'}
 
 def parse_name(n):
     return n.split('__', 1) if '__' in n else ('no_imp', n)

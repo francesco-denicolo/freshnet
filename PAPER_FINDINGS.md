@@ -3,9 +3,11 @@
 > Documento di riferimento per la stesura del paper. Tutti i finding numerici,
 > tabelle, e claim per ciascuna sezione. Aggiornare qui (non in `CLAUDE.md`).
 
-**Ultimo update**: 2026-06-14
+**Ultimo update**: 2026-06-23
 **Matrice finale**: 113 cells (TimesFM completato su 14 imputer, allineato agli altri forecaster).
 **Framework statistico unico**: Friedman + Kendall's W + Nemenyi CD (Demšar 2006, JMLR).
+
+**Coherence note (2026-06-23)**: il forecaster MA è ora `MA_K56` (K=56), riselezionato sotto criterio median per-serie val WAPE (`min_hours=34`) per coerenza con l'objective HPO Optuna usato per LGB_M5/MLP_M5/TFT. Il precedente K=21 era selezionato via pooled WAPE (deprecato). Il finding di vertice (best globale `itransformer__MLP_M5`) è invariato; le 4 celle MA sulla Pareto sono ora `{media_cond, media_glob, mediana_cond, mediana_glob, seasonal_naive} × MA_K56`.
 
 ---
 
@@ -46,19 +48,19 @@ Matrice [49.939 serie × 113 celle]. Output principale del paper.
 
 | Livello | k | N | **Kendall W** | CD | Best cell | # CD-equiv |
 |---|:---:|:---:|:---:|:---:|---|:---:|
-| **Globale** | 113 | 49,939 | **0.454 (moderate)** | 0.903 | **itransformer__MLP_M5** | **2** |
+| **Globale** | 113 | 49,939 | **0.459 (moderate)** | 0.903 | **itransformer__MLP_M5** | **2** |
 
 Equivalence set (2 cells):
-1. `itransformer__mlp_m5lags` (mean rank 22.27, best)
+1. `itransformer__mlp_m5lags` (mean rank 22.33, best)
 2. `lgb__mlp_m5lags` (mean rank 22.78, Δ = 0.51 ≤ CD)
 
-**Finding RQ3 (a)**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.454 moderate).
+**Finding RQ3 (a)**: il best globale è `itransformer__MLP_M5`. Solo `lgb__MLP_M5` gli sta statisticamente alla pari. Entrambe le 2 celle sono **MLP_M5**: la famiglia di forecaster vincente è isolata. Il ranking è generalizzabile (W = 0.459 moderate).
 
 #### 1.1 (b) Trade-off WAPE × |WPE|: Pareto frontier globale (script 35)
 
 Pareto su `(WAPE_h_med, |WPE_h_med|)` — accuracy vs bias. Frontier = celle non-dominate.
 
-**26 / 113 cells Pareto-optimal**. I tre punti di riferimento:
+**25 / 113 cells Pareto-optimal** (ricalcolato post-K56; era 26 pre-K56). I tre punti di riferimento:
 
 | Ruolo | Cella | WAPE | \|WPE\| |
 |---|---|:---:|:---:|
@@ -79,9 +81,9 @@ Stratificazione per quartile di volume (Q1-Q4, ~12.500 serie per Q).
 
 | Q | Range vol | Friedman best | Kendall W | CD | # CD-equiv |
 |---|---|---|:---:|:---:|:---:|
-| Q1 (basso) | [11, 40] | **lgb__MLP_M5** | 0.653 (large) | 1.804 | 12 |
-| Q2 | (40, 54] | **lgb__MLP_M5** | 0.586 (large) | 1.805 | 13 |
-| Q3 (medio-alto) | (54, 86] | **itransformer__MLP_M5** | 0.417 (moderate) | 1.806 | 4 |
+| Q1 (basso) | [11, 40] | **lgb__MLP_M5** | 0.663 (large) | 1.804 | 12 |
+| Q2 | (40, 54] | **lgb__MLP_M5** | 0.592 (large) | 1.806 | 12 |
+| Q3 (medio-alto) | (54, 86] | **itransformer__MLP_M5** | 0.420 (moderate) | 1.807 | 4 |
 | Q4 (alto) | (86, 5326] | **itransformer__MLP_M5** | 0.396 (moderate) | 1.807 | 2 |
 
 **Finding RQ4 (a)**: crossover **soft**. La famiglia di forecaster vincente (MLP_M5) è **invariata** in tutti i regimi; l'imputer ottimale cambia tra `lgb` (basso volume Q1/Q2) e `itransformer` (alto volume Q3/Q4). Il regime più discriminante è Q4 (solo 2 celle CD-equivalenti); Q1 è il più saturato (12 equivalenti).
@@ -94,14 +96,14 @@ Stessa metrica (WAPE × |WPE|) applicata dentro ciascun quartile. La frontier **
 
 | Q | # Pareto | Top-WAPE | Min-\|WPE\| | Famiglie sulla frontier |
 |---|:---:|---|---|---|
-| Q1 (basso vol) | **28** / 113 | `mediana_cond__LGB_M5` (1.000) | `mediana_cond__TFT` (\|WPE\|=0.57) | LGB_M5, MLP_M5, TFT (dominante in coda low-bias) |
-| Q2 | 22 | `mediana_cond__LGB_M5` (0.995) | `forward_fill__Chronos-bolt` (\|WPE\|=0.39) | LGB_M5, MLP_M5, TFT, Chronos al margine |
-| Q3 (medio-alto) | 15 | `lgb__MLP_M5` (0.958) | `mediana_cond__MA_K21` (\|WPE\|=0.13) | MLP_M5, TFT in testa; **naive emergono al low-bias** |
-| Q4 (alto vol) | **12** / 113 | `itransformer__MLP_M5` (**0.757**) | `media_cond__MA_K21` (\|WPE\|=**0.06**) | MLP_M5 (top WAPE), naive (low bias) — gap minimo |
+| Q1 (basso vol) | **27** / 113 | `mediana_cond__LGB_M5` (1.000) | `seasonal_naive__GlobalMean` (\|WPE\|=0.10) | LGB_M5, MLP_M5, TFT (dominante in coda low-bias) |
+| Q2 | 21 | `mediana_cond__LGB_M5` (0.995) | `seasonal_naive__GlobalMean` (\|WPE\|=0.01) | LGB_M5, MLP_M5, TFT, Chronos al margine |
+| Q3 (medio-alto) | 16 | `lgb__MLP_M5` (0.958) | `seasonal_naive__GlobalMean` (\|WPE\|=0.04) | MLP_M5, TFT in testa; **naive emergono al low-bias** |
+| Q4 (alto vol) | **9** / 113 | `itransformer__MLP_M5` (**0.757**) | `linear_interp__MA_K56` (\|WPE\|=**0.03**) | MLP_M5 (top WAPE), naive (low bias) — gap minimo |
 
 **Finding RQ4 (b)**: tre pattern emergono dalla Pareto stratificata:
 
-1. **# Pareto-optimal decresce con il volume** (Q1: 28 → Q4: 12) → stesso pattern del CD-equiv set: alto volume = più discriminante.
+1. **# Pareto-optimal decresce con il volume** (Q1: 27 → Q4: 9) → stesso pattern del CD-equiv set: alto volume = più discriminante.
 2. **In Q1/Q2 (basso volume) la frontier è popolata da TFT** che occupa la coda low-bias (linear_interp__TFT, mediana_glob__TFT) → TFT è il forecaster trade-off in basso volume.
 3. **In Q3/Q4 (alto volume) la frontier si specializza**: MLP_M5/TFT al top-WAPE, **naive aggregati (Global/DoW/MA) al low-bias**. In Q4 il knee diventa sub-optimale rispetto a Q1: gap WAPE↔|WPE| si comprime (0.76 vs 0.06 in Q4 — naive batte ML su |WPE| pagando solo +3% WAPE!).
 4. **Chronos** appare solo nella Pareto di Q2 (forward_fill__Chronos-bolt) → posizione di nicchia. **TimesFM** entra solo nella Pareto globale (min |WPE| con linear_interp) e mai in quella per quartile.
@@ -120,7 +122,7 @@ Figure `fig_rq3_crossover_fixed_global.png` (cella best globale per famiglia, fi
 | `imputeformer__Chronos-bolt` | 1.004 | 1.004 | 1.004 | 0.949 |
 | `imputeformer__DoW Mean` | 1.230 | 1.207 | 1.046 | 0.777 |
 | `imputeformer__Global Mean` | 1.245 | 1.221 | 1.044 | 0.775 |
-| `imputeformer__MA_K21` | 1.260 | 1.216 | 1.050 | 0.779 |
+| `imputeformer__MA_K56` | 1.252 | 1.222 | 1.045 | 0.772 |
 | `imputeformer__TimesFM` | 1.316 | 1.308 | 1.154 | 0.884 |
 
 **Finding RQ4 (c)**: tre fenomeni di crossover osservabili nel line-plot:
@@ -145,7 +147,7 @@ Per ciascun forecaster, framework applicato sulla sottomatrice ristretta ai suoi
 | Forecaster | k | Friedman best | no_imp pos. | Δrank | Kendall W | Cat. W | Imputer aiuta? |
 |---|:---:|---|:---:|:---:|:---:|---|---|
 | Global Mean | 14 | mediana_glob | 6°/14 | +2.444 | **0.469** | moderate | **SÌ generalizzabile** |
-| MA_K21 | 14 | mediana_glob | 4°/14 | +1.216 | **0.464** | moderate | **SÌ generalizzabile** |
+| MA_K56 | 14 | mediana_glob | 6°/14 | +2.131 | **0.463** | moderate | **SÌ generalizzabile** |
 | DoW Mean | 14 | mediana_glob | 5°/14 | +1.973 | **0.445** | moderate | **SÌ generalizzabile** |
 | **TimesFM** | 14 | imputeformer | 2°/14 | +0.163 | **0.174** | small | **SÌ generalizzabile** |
 | **Chronos-bolt** | 14 | imputeformer | 2°/14 | +1.339 | **0.222** | small | **SÌ generalizzabile** |
@@ -185,6 +187,8 @@ Per verificare che il finding "W ≈ 0 per MLP_M5/LGB_M5" non sia un artefatto d
 
 In questa sezione presentiamo i risultati della matrice 113-celle seguendo una **sequenza logica progressiva**: (1) dati grezzi → (2) framework rigoroso → (3) bridge operativo → (4) confronto delle due viste e implicazioni per il deployment.
 
+> **⚠ Numeri ricalcolati post-K56 (2026-06-24)** — i conteggi Pareto qui sotto sono pre-K56. Valori corretti dai dati attuali (`hpo_matrix_pareto.parquet` + `friedman_nemenyi_ranks.parquet`): **WAPE Pareto = 25** (era 26), **Friedman/mean-rank Pareto = 15** (era 13), **intersezione doubly-optimal = 12** (era 11), **solo-WAPE = 13** (era 15), **solo-Friedman = 3** (era 2). Gli elenchi di celle per archetipo nello Step 4 vanno rigenerati con questi insiemi quando si scrive la sezione Results (deployment).
+
 #### Step 1 — Dati grezzi: WAPE heatmap
 
 WAPE è la metrica direttamente misurata sulle 50K serie di test (ore in-stock, gg 91-97). La heatmap (Fig. `fig_heatmap_general_no_imputeformer.png`) mostra `WAPE_h_med` per ciascuna cella della matrice in unità grezze, **senza applicare alcun framework analitico**.
@@ -192,7 +196,7 @@ WAPE è la metrica direttamente misurata sulle 50K serie di test (ore in-stock, 
 Caratterizzazione qualitativa:
 - Range osservato: WAPE_h_med ∈ [0.97, 1.30]
 - Pattern visivo: famiglia MLP_M5 (colonna) ha WAPE bassi (~0.97-0.98) per molti imputer
-- Naive aggregati (DoW Mean, Global Mean, MA_K21): WAPE moderato (~1.10-1.20) ma generalmente più alti
+- Naive aggregati (DoW Mean, Global Mean, MA_K56): WAPE moderato (~1.10-1.20) ma generalmente più alti
 - Foundation models (Chronos, TimesFM): WAPE medio-alto
 
 Questa è la **fotografia dei dati**. Non rappresenta ancora una decisione.
@@ -203,7 +207,7 @@ Per identificare il best in modo **statisticamente solido**, applichiamo il fram
 
 **(2a) CD diagram** (`fig_cd_diagram.png`) — best cell + equivalence-set in dimensione 1:
 - **Friedman best**: `itransformer__MLP_M5` (mean rank = **22.36** su 113)
-- **Kendall W**: **0.454** (moderate) — ranking generalizzabile cross-serie
+- **Kendall W**: **0.459** (moderate) — ranking generalizzabile cross-serie
 - **CD**: **0.903** rank units (α=0.05)
 - **Equivalence-set**: 2 cells (best + `lgb__MLP_M5`, Δ = 0.51 ≤ CD)
 
@@ -264,7 +268,7 @@ Top case: `timesnet__MLP_M5` (WAPE_h_med = 0.9731, mean rank = 24.34). Ha la **m
 Le altre 14 cells si dividono in:
 - 3 TFT cells con vari imputer (itransformer, linear_interp)
 - 1 Chronos cell (linear_interp)
-- 11 naive aggregati (DoW Mean, MA_K21, Global Mean × vari imputer)
+- 11 naive aggregati (DoW Mean, MA_K56, Global Mean × vari imputer)
 
 Tutte hanno mean rank significativamente più alto del Friedman best (Δ > CD). Il loro vantaggio in WAPE Pareto deriva da shape distribuzionale, non da paired victory.
 
@@ -278,7 +282,7 @@ Sono robust su entrambi i criteri (paired + marginal). Si dividono in 3 archetip
 |---|---|:---:|:---:|:---:|---|
 | **Accuracy-extreme** (TFT) | `dlinear__TFT` | 29.39 | 0.9785 | 0.858 | accuracy KPI |
 | **Balanced** (TFT) | `linear_interp__TFT` | 44.96 | 1.002 | 0.477 | mix accuracy/bias |
-| **Bias-extreme** (naive) | `media_cond__MA_K21` | 65.91 | 1.141 | 0.068 | inventory critica |
+| **Bias-extreme** (naive) | `media_cond__MA_K56` | 65.91 | 1.141 | 0.068 | inventory critica |
 
 ##### 4.4 — Sintesi operativa
 
@@ -303,9 +307,9 @@ Per ogni serie i (i=1..50K), Spearman ρ_i tra `WAPE_recovery` (Traccia A) e `WA
 
 | Forecaster | Famiglia | median ρ | Cliff δ vs 0 | CI 95% | Categoria Romano | Predice? |
 |---|---|:---:|:---:|:---:|---|---|
-| **MA_K21** ★ | naive | +0.79 | **+0.883** | [+0.879, +0.888] | **LARGE** | SÌ (massimo) |
-| **DoW Mean** | naive | +0.81 | **+0.849** | [+0.845, +0.854] | **LARGE** | SÌ |
-| **Global Mean** | naive | +0.80 | **+0.841** | [+0.836, +0.846] | **LARGE** | SÌ |
+| **MA_K56** ★ | naive | +0.76 | **+0.847** | [+0.842, +0.851] | **LARGE** | SÌ |
+| **DoW Mean** | naive | +0.76 | **+0.849** | [+0.845, +0.854] | **LARGE** | SÌ |
+| **Global Mean** | naive | +0.80 | **+0.841** | [+0.836, +0.846] | **LARGE** | SÌ (massimo) |
 | **MLP_M5** | ML+lag | +0.09 | +0.212 | [+0.204, +0.220] | small | debole |
 | **LGB_M5** | ML+lag | +0.08 | +0.171 | [+0.162, +0.179] | small | debole |
 | **Chronos-bolt** | foundation | +0.21 | **+0.153** | [+0.144, +0.161] | **small** | debole |
@@ -338,7 +342,7 @@ Per ciascun forecaster fc:
 
 | Forecaster | Mediana P(concord) | CI95 bootstrap | % coppie > 0.5 | Lettura |
 |---|:---:|:---:|:---:|---|
-| **MA_K21** | **0.804** | [0.772, 0.825] | 83% | recovery predice fortemente |
+| **MA_K56** | **0.822** | [0.785, 0.853] | 82% | recovery predice fortemente |
 | **DoWMean** | **0.816** | [0.788, 0.841] | 87% | predice fortemente |
 | **GlobalMean** | **0.827** | [0.802, 0.850] | 86% | predice fortemente |
 | TimesFM | 0.560 | [0.490, 0.617] | 60% | predice debolmente |
@@ -357,7 +361,7 @@ Il rapporto recovery → forecasting **dipende dal regime di volume** in modo no
 |---|:---:|:---:|:---:|:---:|:---:|---|
 | GlobalMean | 0.83 | **0.94** | 0.91 | 0.81 | 0.67 | **↓ decresce con volume** |
 | DoWMean | 0.82 | 0.91 | 0.89 | 0.80 | 0.68 | ↓ |
-| MA_K21 | 0.80 | 0.92 | 0.88 | 0.77 | 0.65 | ↓ |
+| MA_K56 | 0.82 | 0.93 | 0.89 | 0.79 | 0.66 | ↓ |
 | Chronos-bolt | 0.56 | 0.65 | 0.68 | 0.61 | **0.33** | **↓ crollo in Q4 → inverso** |
 | TimesFM | 0.56 | 0.57 | 0.59 | 0.56 | 0.46 | ↓ debole |
 | MLP_M5 | 0.51 | 0.50 | 0.50 | 0.51 | 0.53 | invariato (~0.5) |
@@ -393,7 +397,7 @@ DYN_i = std(ε_imp_i) / std(ε_obs_i)
 |---|:---:|---|
 | **GlobalMean** | **+0.74** | preferisce fortemente imputer STATICI (alto DYN → peggior rank) |
 | **DoWMean** | **+0.74** | idem |
-| MA_K21 | +0.63 | preferisce statici |
+| MA_K56 | +0.63 | preferisce statici |
 | TimesFM | +0.55 | preferisce moderatamente statici |
 | Chronos-bolt | +0.46 | preferisce moderatamente statici |
 | LGB_M5 | −0.12 | indifferente |
@@ -428,8 +432,8 @@ La preferenza naive per imputer statici è **logica** (i naive usano direttament
 6. **Naive preferiscono imputer statici** (Sez. 2.3): Spearman ρ tra DYNAMICITY ranking e naive ranking ≈ +0.74 — finding nuovo che spiega meccanisticamente perché i naive sono recovery-sensitive (alto-recovery → spesso statico → naive ottimale).
 
 **RQ3 — Identification: qual è il best? (Sezione 1.1)**
-6. **Best globale**: `itransformer__MLP_M5` (mean rank 22.27 su 113 celle), equivalence set di 2 cells entrambe MLP_M5 (CD = 0.903). Kendall W = 0.454 moderate.
-7. **Pareto trade-off (1.1 b)**: 26/113 cells Pareto-optimal. Trade-off strutturale accuracy ↔ bias: ML/DL hanno |WPE| ≥ 0.77, naive aggregati riducono bias pagando in WAPE. Knee = `mediana_glob__dow_mean` (1.101 / 0.190).
+6. **Best globale**: `itransformer__MLP_M5` (mean rank 22.33 su 113 celle), equivalence set di 2 cells entrambe MLP_M5 (CD = 0.903). Kendall W = 0.459 moderate.
+7. **Pareto trade-off (1.1 b)**: 25/113 cells Pareto-optimal (post-K56). Trade-off strutturale accuracy ↔ bias: ML/DL hanno |WPE| ≥ 0.77, naive aggregati riducono bias pagando in WAPE. Knee = `mediana_glob__dow_mean` (1.101 / 0.190).
 
 **RQ4 — Conditions: cambia per regime di volume? (Sezione 1.2)**
 8. **Soft crossover** (1.2 a): famiglia MLP_M5 invariata in ogni Q; imputer cambia (`lgb` in Q1/Q2, `itransformer` in Q3/Q4). Q4 più discriminante (2 equiv), Q1 più saturato (12 equiv).
@@ -464,7 +468,7 @@ Script TOST/threshold-based (43, 44, 47) restano come **supplementary** ma non s
 
 ## Riferimento bibliografico chiave
 
-- **Liu et al. (2025)** — FreshRetailNet-50K: Latent Demand from 50,000 Stores for World-scale Stockout Prediction in Fresh Retail. arXiv:2505.16319.
+- **Wang et al. (2025)** — FreshRetailNet-50K: A Stockout-Annotated Censored Demand Dataset for Latent Demand Recovery and Forecasting in Fresh Retail. arXiv:2505.16319. (Autori: Y. Wang, J. Gu, L. Long, X. Li, L. Shen, Z. Fu, X. Zhou, X. Jiang. Nota: precedentemente citato erroneamente come "Liu et al.")
 - **Du et al. (2023)** — SAITS: Self-Attention-based Imputation for Time Series. NeurIPS.
 - **Zeng et al. (2022)** — DLinear: Are Transformers Effective for Time Series Forecasting? AAAI 2023.
 - **Ansari et al. (2024)** — Chronos: Learning the Language of Time Series. arXiv:2403.07815.

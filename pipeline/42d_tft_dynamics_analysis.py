@@ -177,7 +177,7 @@ print(f'\n  Total time: {time.time() - t0:.0f}s')
 # ----------------------------------------------------------------------
 print('\n2. Cross-reference DYN ranking with each forecaster ranking...')
 forecasters = ['tft', 'mlp_m5lags', 'lgb_m5lags', 'chronos_bolt', 'timesfm',
-               'global_mean', 'dow_mean', 'ma_k21']
+               'global_mean', 'dow_mean', 'ma_k56']
 
 # Build long dyn_df with forecasting ranks per imputer
 dyn_df['recovery'] = dyn_df['imputer'].map(recovery)
