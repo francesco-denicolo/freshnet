@@ -50,7 +50,7 @@ print(f'   Volume thresholds (Q1/Q2/Q3 medians): '
 # ============================================================================
 print('\n2. Loading 95 cells and joining quartile...')
 
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56','croston','sba','tsb'}
 
 def parse_name(name):
     if '__' in name:

@@ -1,0 +1,135 @@
+MASE CHAIN START (Fri Jun 26 15:57:50 CEST 2026)
+=== MASE MLP itransformer (Fri Jun 26 15:57:50 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 418s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.054583, val_WAPE=0.799445
+  Epoch   2: loss=0.048208, val_WAPE=0.799942
+  Epoch   3: loss=0.047985, val_WAPE=0.802104
+  Epoch   4: loss=0.047907, val_WAPE=0.787176
+  Epoch   5: loss=0.047848, val_WAPE=0.787390
+  Epoch   6: loss=0.047811, val_WAPE=0.786262
+  Epoch   7: loss=0.047793, val_WAPE=0.787982
+  Epoch   8: loss=0.047778, val_WAPE=0.800183
+  Epoch   9: loss=0.047776, val_WAPE=0.789097
+  Epoch  10: loss=0.047766, val_WAPE=0.795983
+  Epoch  11: loss=0.047768, val_WAPE=0.787468
+  Epoch  12: loss=0.047759, val_WAPE=0.792964
+  Epoch  13: loss=0.047760, val_WAPE=0.786683
+  Epoch  14: loss=0.047760, val_WAPE=0.785340
+  Epoch  15: loss=0.047762, val_WAPE=0.794147
+  Epoch  16: loss=0.047762, val_WAPE=0.783374
+  Epoch  17: loss=0.047765, val_WAPE=0.789689
+  Epoch  18: loss=0.047757, val_WAPE=0.798031
+  Epoch  19: loss=0.047744, val_WAPE=0.784472
+  Epoch  20: loss=0.047744, val_WAPE=0.787779
+  Epoch  21: loss=0.047754, val_WAPE=0.787995
+  Epoch  22: loss=0.047745, val_WAPE=0.784771
+  Epoch  23: loss=0.047746, val_WAPE=0.791160
+  Epoch  24: loss=0.047750, val_WAPE=0.789101
+  Epoch  25: loss=0.047738, val_WAPE=0.788266
+  Epoch  26: loss=0.047753, val_WAPE=0.796637
+  Early stop (best=16, WAPE=0.783374)
+
+4. Test...
+  MASE saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/mase_itransformer__mlp_m5lags_hpo.parquet | MASE_med=1.7130 RMSSE_med=1.4756
+=== MASE MLP timesnet (Fri Jun 26 16:21:26 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × TimesNet (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 407s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052340, val_WAPE=0.797044
+  Epoch   2: loss=0.048080, val_WAPE=0.799579
+  Epoch   3: loss=0.047933, val_WAPE=0.799984
+  Epoch   4: loss=0.047872, val_WAPE=0.788449
+  Epoch   5: loss=0.047832, val_WAPE=0.787456
+  Epoch   6: loss=0.047826, val_WAPE=0.790137
+  Epoch   7: loss=0.047809, val_WAPE=0.791298
+  Epoch   8: loss=0.047806, val_WAPE=0.800109
+  Epoch   9: loss=0.047807, val_WAPE=0.797232
+  Epoch  10: loss=0.047802, val_WAPE=0.794735
+  Epoch  11: loss=0.047799, val_WAPE=0.792794
+  Epoch  12: loss=0.047803, val_WAPE=0.791216
+  Epoch  13: loss=0.047802, val_WAPE=0.790377
+  Epoch  14: loss=0.047798, val_WAPE=0.792733
+  Epoch  15: loss=0.047792, val_WAPE=0.795206
+  Early stop (best=5, WAPE=0.787456)
+
+4. Test...
+  MASE saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/mase_timesnet__mlp_m5lags_hpo.parquet | MASE_med=1.7366 RMSSE_med=1.4945
+=== MASE LGB mediana_glob (Fri Jun 26 16:37:39 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Mediana globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...

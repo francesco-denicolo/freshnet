@@ -28,7 +28,7 @@ PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
 FIG_DIR = os.path.join(os.path.dirname(__file__), 'figures')
 
-NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56'}
+NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56', 'croston', 'sba', 'tsb'}
 
 def parse_name(n):
     return n.split('__', 1) if '__' in n else ('no_imp', n)

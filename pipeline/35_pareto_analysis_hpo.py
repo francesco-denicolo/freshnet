@@ -45,7 +45,7 @@ FC_LABELS = {
     'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k56':'MA (K=56)',
 }
 # Non-HPO forecasters (use _test_per_series.parquet, not _hpo)
-NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56'}
+NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56','croston','sba','tsb'}
 
 # ============================================================================
 # 1. Load all cells: HPO for tunable forecasters, baseline for non-HPO

@@ -163,3 +163,968 @@ Did not meet early stopping. Best iteration is:
   Epoch  12: loss=0.048031, val_WAPE=0.798223
   Epoch  13: loss=0.048038, val_WAPE=0.796963
   Epoch  14: loss=0.048016, val_WAPE=0.796751
+  Epoch  15: loss=0.048033, val_WAPE=0.802787
+  Epoch  16: loss=0.048012, val_WAPE=0.797665
+  Epoch  17: loss=0.048011, val_WAPE=0.805814
+  Early stop (best=7, WAPE=0.789456)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_forward_fill__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.546)
+=== NV LGB imputeformer (Thu Jun 25 11:35:26 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × ImputeFormer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+=== NV MLP imputeformer (Thu Jun 25 11:56:13 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × ImputeFormer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 399s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052316, val_WAPE=0.795189
+  Epoch   2: loss=0.048046, val_WAPE=0.798609
+  Epoch   3: loss=0.047903, val_WAPE=0.803211
+  Epoch   4: loss=0.047852, val_WAPE=0.784287
+  Epoch   5: loss=0.047827, val_WAPE=0.786598
+  Epoch   6: loss=0.047823, val_WAPE=0.792883
+  Epoch   7: loss=0.047808, val_WAPE=0.786588
+  Epoch   8: loss=0.047814, val_WAPE=0.794195
+  Epoch   9: loss=0.047802, val_WAPE=0.793516
+  Epoch  10: loss=0.047792, val_WAPE=0.800282
+  Epoch  11: loss=0.047795, val_WAPE=0.795338
+  Epoch  12: loss=0.047786, val_WAPE=0.790269
+  Epoch  13: loss=0.047790, val_WAPE=0.799544
+  Epoch  14: loss=0.047788, val_WAPE=0.788308
+  Early stop (best=4, WAPE=0.784287)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_imputeformer__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.559)
+=== NV LGB itransformer (Thu Jun 25 12:12:03 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570619
+[200]	val's l1: 0.0569591
+[300]	val's l1: 0.0569381
+[400]	val's l1: 0.0569216
+[500]	val's l1: 0.0568935
+Did not meet early stopping. Best iteration is:
+[498]	val's l1: 0.0568935
+  Best iter: 498
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_itransformer__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.508)
+=== NV MLP itransformer (Thu Jun 25 12:39:53 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × iTransformer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 417s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051102, val_WAPE=0.790739
+  Epoch   2: loss=0.047990, val_WAPE=0.792283
+  Epoch   3: loss=0.047875, val_WAPE=0.803975
+  Epoch   4: loss=0.047825, val_WAPE=0.782305
+  Epoch   5: loss=0.047800, val_WAPE=0.782661
+  Epoch   6: loss=0.047777, val_WAPE=0.787750
+  Epoch   7: loss=0.047785, val_WAPE=0.785730
+  Epoch   8: loss=0.047774, val_WAPE=0.794504
+  Epoch   9: loss=0.047770, val_WAPE=0.797701
+  Epoch  10: loss=0.047766, val_WAPE=0.785423
+  Epoch  11: loss=0.047765, val_WAPE=0.789779
+  Epoch  12: loss=0.047763, val_WAPE=0.796842
+  Epoch  13: loss=0.047771, val_WAPE=0.791179
+  Epoch  14: loss=0.047759, val_WAPE=0.782584
+  Early stop (best=4, WAPE=0.782305)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_itransformer__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.585)
+=== NV LGB lgb (Thu Jun 25 12:56:02 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × LGB imputer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571054
+[200]	val's l1: 0.0570381
+[300]	val's l1: 0.0570193
+[400]	val's l1: 0.0570084
+[500]	val's l1: 0.0569686
+Did not meet early stopping. Best iteration is:
+[497]	val's l1: 0.0569685
+  Best iter: 497
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_lgb__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.494)
+=== NV MLP lgb (Thu Jun 25 14:38:54 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × LGB imputer (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 415s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052215, val_WAPE=0.800830
+  Epoch   2: loss=0.048256, val_WAPE=0.798441
+  Epoch   3: loss=0.048073, val_WAPE=0.803544
+  Epoch   4: loss=0.048010, val_WAPE=0.787194
+  Epoch   5: loss=0.047970, val_WAPE=0.790332
+  Epoch   6: loss=0.047961, val_WAPE=0.784532
+  Epoch   7: loss=0.047952, val_WAPE=0.785222
+  Epoch   8: loss=0.047946, val_WAPE=0.801908
+  Epoch   9: loss=0.047922, val_WAPE=0.798759
+  Epoch  10: loss=0.047924, val_WAPE=0.800601
+  Epoch  11: loss=0.047920, val_WAPE=0.792592
+  Epoch  12: loss=0.047927, val_WAPE=0.792092
+  Epoch  13: loss=0.047909, val_WAPE=0.792168
+  Epoch  14: loss=0.047904, val_WAPE=0.795733
+  Epoch  15: loss=0.047912, val_WAPE=0.797543
+  Epoch  16: loss=0.047919, val_WAPE=0.794214
+  Early stop (best=6, WAPE=0.784532)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_lgb__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.560)
+=== NV LGB linear_interp (Thu Jun 25 14:55:55 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Linear Interp (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0575729
+[200]	val's l1: 0.057493
+[300]	val's l1: 0.0574664
+Early stopping, best iteration is:
+[368]	val's l1: 0.057456
+  Best iter: 368
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_linear_interp__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.465)
+=== NV MLP linear_interp (Thu Jun 25 15:18:04 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Linear Interp (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 409s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.054022, val_WAPE=0.806829
+  Epoch   2: loss=0.048148, val_WAPE=0.806588
+  Epoch   3: loss=0.047715, val_WAPE=0.815154
+  Epoch   4: loss=0.047606, val_WAPE=0.799157
+  Epoch   5: loss=0.047566, val_WAPE=0.802813
+  Epoch   6: loss=0.047529, val_WAPE=0.795255
+  Epoch   7: loss=0.047501, val_WAPE=0.795149
+  Epoch   8: loss=0.047498, val_WAPE=0.815698
+  Epoch   9: loss=0.047500, val_WAPE=0.799539
+  Epoch  10: loss=0.047490, val_WAPE=0.802691
+  Epoch  11: loss=0.047502, val_WAPE=0.798544
+  Epoch  12: loss=0.047492, val_WAPE=0.800300
+  Epoch  13: loss=0.047476, val_WAPE=0.802971
+  Epoch  14: loss=0.047494, val_WAPE=0.802423
+  Epoch  15: loss=0.047476, val_WAPE=0.797223
+  Epoch  16: loss=0.047467, val_WAPE=0.807066
+  Epoch  17: loss=0.047468, val_WAPE=0.797658
+  Early stop (best=7, WAPE=0.795149)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_linear_interp__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.548)
+=== NV LGB media_cond (Thu Jun 25 15:35:21 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Media condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571902
+[200]	val's l1: 0.0571207
+[300]	val's l1: 0.0570756
+Early stopping, best iteration is:
+[368]	val's l1: 0.0570448
+  Best iter: 368
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_media_cond__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.481)
+=== NV MLP media_cond (Thu Jun 25 15:58:26 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Media condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 406s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.054865, val_WAPE=0.807844
+  Epoch   2: loss=0.048589, val_WAPE=0.807283
+  Epoch   3: loss=0.048208, val_WAPE=0.805674
+  Epoch   4: loss=0.048125, val_WAPE=0.793711
+  Epoch   5: loss=0.048082, val_WAPE=0.793481
+  Epoch   6: loss=0.048051, val_WAPE=0.794480
+  Epoch   7: loss=0.048034, val_WAPE=0.789780
+  Epoch   8: loss=0.048033, val_WAPE=0.800807
+  Epoch   9: loss=0.048023, val_WAPE=0.790639
+  Epoch  10: loss=0.048013, val_WAPE=0.801887
+  Epoch  11: loss=0.048030, val_WAPE=0.794668
+  Epoch  12: loss=0.048005, val_WAPE=0.791869
+  Epoch  13: loss=0.048004, val_WAPE=0.797232
+  Epoch  14: loss=0.048001, val_WAPE=0.792152
+  Epoch  15: loss=0.048019, val_WAPE=0.793655
+  Epoch  16: loss=0.048002, val_WAPE=0.796295
+  Epoch  17: loss=0.047990, val_WAPE=0.794430
+  Early stop (best=7, WAPE=0.789780)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_media_cond__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.533)
+=== NV LGB media_glob (Thu Jun 25 16:16:01 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Media globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0571302
+[200]	val's l1: 0.0570578
+[300]	val's l1: 0.0570202
+[400]	val's l1: 0.0569847
+[500]	val's l1: 0.056956
+Did not meet early stopping. Best iteration is:
+[497]	val's l1: 0.0569551
+  Best iter: 497
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_media_glob__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.477)
+=== NV MLP media_glob (Thu Jun 25 16:43:02 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Media globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 406s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053304, val_WAPE=0.796266
+  Epoch   2: loss=0.048216, val_WAPE=0.803276
+  Epoch   3: loss=0.048067, val_WAPE=0.795617
+  Epoch   4: loss=0.048004, val_WAPE=0.789466
+  Epoch   5: loss=0.047975, val_WAPE=0.789875
+  Epoch   6: loss=0.047949, val_WAPE=0.787294
+  Epoch   7: loss=0.047931, val_WAPE=0.789138
+  Epoch   8: loss=0.047921, val_WAPE=0.797575
+  Epoch   9: loss=0.047915, val_WAPE=0.793730
+  Epoch  10: loss=0.047912, val_WAPE=0.799320
+  Epoch  11: loss=0.047893, val_WAPE=0.791355
+  Epoch  12: loss=0.047909, val_WAPE=0.792505
+  Epoch  13: loss=0.047886, val_WAPE=0.793266
+  Epoch  14: loss=0.047883, val_WAPE=0.793783
+  Epoch  15: loss=0.047887, val_WAPE=0.792472
+  Epoch  16: loss=0.047886, val_WAPE=0.792081
+  Early stop (best=6, WAPE=0.787294)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_media_glob__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.555)
+=== NV LGB mediana_cond (Thu Jun 25 16:59:56 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Mediana condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570618
+[200]	val's l1: 0.0569439
+[300]	val's l1: 0.0569194
+[400]	val's l1: 0.0569129
+Early stopping, best iteration is:
+[436]	val's l1: 0.0568937
+  Best iter: 436
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_mediana_cond__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.489)
+=== NV MLP mediana_cond (Thu Jun 25 17:23:04 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Mediana condizionata (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 408s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.056366, val_WAPE=0.975181
+  Epoch   2: loss=0.048899, val_WAPE=0.804341
+  Epoch   3: loss=0.048359, val_WAPE=0.805438
+  Epoch   4: loss=0.048153, val_WAPE=0.784506
+  Epoch   5: loss=0.048092, val_WAPE=0.788090
+  Epoch   6: loss=0.048084, val_WAPE=0.787116
+  Epoch   7: loss=0.048075, val_WAPE=0.787138
+  Epoch   8: loss=0.048066, val_WAPE=0.809764
+  Epoch   9: loss=0.048054, val_WAPE=0.793956
+  Epoch  10: loss=0.048051, val_WAPE=0.811665
+  Epoch  11: loss=0.048035, val_WAPE=0.795027
+  Epoch  12: loss=0.048042, val_WAPE=0.791027
+  Epoch  13: loss=0.048036, val_WAPE=0.793968
+  Epoch  14: loss=0.048039, val_WAPE=0.795868
+  Early stop (best=4, WAPE=0.784506)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_mediana_cond__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.565)
+=== NV LGB mediana_glob (Thu Jun 25 17:38:47 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Mediana globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0568692
+[200]	val's l1: 0.0568325
+Early stopping, best iteration is:
+[232]	val's l1: 0.0568127
+  Best iter: 232
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_mediana_glob__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.497)
+=== NV MLP mediana_glob (Thu Jun 25 17:55:22 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Mediana globale (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 404s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052209, val_WAPE=0.798454
+  Epoch   2: loss=0.048187, val_WAPE=0.806627
+  Epoch   3: loss=0.048003, val_WAPE=0.799231
+  Epoch   4: loss=0.047952, val_WAPE=0.790497
+  Epoch   5: loss=0.047921, val_WAPE=0.787241
+  Epoch   6: loss=0.047907, val_WAPE=0.787448
+  Epoch   7: loss=0.047882, val_WAPE=0.788833
+  Epoch   8: loss=0.047891, val_WAPE=0.802403
+  Epoch   9: loss=0.047877, val_WAPE=0.795912
+  Epoch  10: loss=0.047887, val_WAPE=0.805042
+  Epoch  11: loss=0.047897, val_WAPE=0.788402
+  Epoch  12: loss=0.047892, val_WAPE=0.790779
+  Epoch  13: loss=0.047885, val_WAPE=0.792701
+  Epoch  14: loss=0.047879, val_WAPE=0.790026
+  Epoch  15: loss=0.047879, val_WAPE=0.795279
+  Early stop (best=5, WAPE=0.787241)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_mediana_glob__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.555)
+=== NV LGB saits (Thu Jun 25 18:11:33 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × SAITS (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569571
+Early stopping, best iteration is:
+[140]	val's l1: 0.0569177
+  Best iter: 140
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_saits__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.501)
+=== NV MLP saits (Thu Jun 25 18:24:11 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × SAITS (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 401s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052345, val_WAPE=0.794182
+  Epoch   2: loss=0.048089, val_WAPE=0.801272
+  Epoch   3: loss=0.047940, val_WAPE=0.800861
+  Epoch   4: loss=0.047880, val_WAPE=0.786598
+  Epoch   5: loss=0.047841, val_WAPE=0.787957
+  Epoch   6: loss=0.047830, val_WAPE=0.788292
+  Epoch   7: loss=0.047815, val_WAPE=0.787961
+  Epoch   8: loss=0.047805, val_WAPE=0.795308
+  Epoch   9: loss=0.047809, val_WAPE=0.795231
+  Epoch  10: loss=0.047794, val_WAPE=0.794077
+  Epoch  11: loss=0.047796, val_WAPE=0.793930
+  Epoch  12: loss=0.047792, val_WAPE=0.789586
+  Epoch  13: loss=0.047798, val_WAPE=0.790709
+  Epoch  14: loss=0.047793, val_WAPE=0.788979
+  Early stop (best=4, WAPE=0.786598)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_saits__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.564)
+=== NV LGB seasonal_naive (Thu Jun 25 18:39:22 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × Seasonal Naive (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570933
+[200]	val's l1: 0.0570246
+Early stopping, best iteration is:
+[239]	val's l1: 0.0569952
+  Best iter: 239
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_seasonal_naive__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.478)
+=== NV MLP seasonal_naive (Thu Jun 25 18:55:39 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × Seasonal Naive (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 398s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.055920, val_WAPE=0.808054
+  Epoch   2: loss=0.048529, val_WAPE=0.804593
+  Epoch   3: loss=0.048250, val_WAPE=0.808593
+  Epoch   4: loss=0.048128, val_WAPE=0.786825
+  Epoch   5: loss=0.048080, val_WAPE=0.785922
+  Epoch   6: loss=0.048064, val_WAPE=0.787076
+  Epoch   7: loss=0.048048, val_WAPE=0.798814
+  Epoch   8: loss=0.048032, val_WAPE=0.803732
+  Epoch   9: loss=0.048033, val_WAPE=0.797373
+  Epoch  10: loss=0.048021, val_WAPE=0.796540
+  Epoch  11: loss=0.048028, val_WAPE=0.792304
+  Epoch  12: loss=0.048030, val_WAPE=0.785627
+  Epoch  13: loss=0.048024, val_WAPE=0.795262
+  Epoch  14: loss=0.048020, val_WAPE=0.795895
+  Epoch  15: loss=0.048016, val_WAPE=0.796679
+  Epoch  16: loss=0.048023, val_WAPE=0.789811
+  Epoch  17: loss=0.048014, val_WAPE=0.792207
+  Epoch  18: loss=0.048015, val_WAPE=0.794277
+  Epoch  19: loss=0.048014, val_WAPE=0.785105
+  Epoch  20: loss=0.048007, val_WAPE=0.789609
+  Epoch  21: loss=0.048010, val_WAPE=0.790527
+  Epoch  22: loss=0.048008, val_WAPE=0.796788
+  Epoch  23: loss=0.048006, val_WAPE=0.800175
+  Epoch  24: loss=0.048008, val_WAPE=0.791055
+  Epoch  25: loss=0.048017, val_WAPE=0.788015
+  Epoch  26: loss=0.048002, val_WAPE=0.800570
+  Epoch  27: loss=0.048018, val_WAPE=0.796986
+  Epoch  28: loss=0.048010, val_WAPE=0.795368
+  Epoch  29: loss=0.048004, val_WAPE=0.789488
+  Early stop (best=19, WAPE=0.785105)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_seasonal_naive__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.544)
+=== NV LGB timesnet (Thu Jun 25 19:20:00 CEST 2026) ===
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × TimesNet (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569906
+[200]	val's l1: 0.0569528
+[300]	val's l1: 0.0569174
+Early stopping, best iteration is:
+[309]	val's l1: 0.0569164
+  Best iter: 309
+  Building test...
+    Computing lags for 350,000 days...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_timesnet__lgb_m5lags_hpo.parquet (350,000 rows, mean q=0.497)
+=== NV MLP timesnet (Thu Jun 25 19:37:44 CEST 2026) ===
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × TimesNet (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 400s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.051912, val_WAPE=0.797073
+  Epoch   2: loss=0.048079, val_WAPE=0.799906
+  Epoch   3: loss=0.047943, val_WAPE=0.799435
+  Epoch   4: loss=0.047881, val_WAPE=0.787253
+  Epoch   5: loss=0.047847, val_WAPE=0.794112
+  Epoch   6: loss=0.047829, val_WAPE=0.796106
+  Epoch   7: loss=0.047827, val_WAPE=0.792059
+  Epoch   8: loss=0.047813, val_WAPE=0.801834
+  Epoch   9: loss=0.047806, val_WAPE=0.798183
+  Epoch  10: loss=0.047797, val_WAPE=0.800945
+  Epoch  11: loss=0.047800, val_WAPE=0.793916
+  Epoch  12: loss=0.047789, val_WAPE=0.792291
+  Epoch  13: loss=0.047798, val_WAPE=0.792721
+  Epoch  14: loss=0.047784, val_WAPE=0.793749
+  Early stop (best=4, WAPE=0.787253)
+
+4. Test...
+  NEWSVENDOR q saved: /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_q_timesnet__mlp_m5lags_hpo.parquet (350,000 rows, mean q=0.570)
+=== NV COST (Thu Jun 25 19:53:36 CEST 2026) ===
+26 cell(s)
+
+                          cell  n_series  cost_r1  cost_r2   cost_r5  cost_r1_obs
+  itransformer__mlp_m5lags_hpo     50000 4.217461 8.375384 20.815588     4.058205
+         saits__mlp_m5lags_hpo     50000 4.218742 8.375670 20.802148     4.053432
+ linear_interp__mlp_m5lags_hpo     50000 4.227357 8.389016 20.881720     4.057405
+  mediana_cond__mlp_m5lags_hpo     50000 4.231366 8.395639 20.893247     4.072340
+  imputeformer__mlp_m5lags_hpo     50000 4.295838 8.511304 21.186286     4.120266
+           lgb__mlp_m5lags_hpo     50000 4.299948 8.538962 21.247981     4.138934
+      timesnet__mlp_m5lags_hpo     50000 4.304561 8.551374 21.216084     4.139986
+seasonal_naive__mlp_m5lags_hpo     50000 4.310619 8.573709 21.346714     4.136815
+       dlinear__mlp_m5lags_hpo     50000 4.318131 8.576577 21.328444     4.146147
+    media_glob__mlp_m5lags_hpo     50000 4.358108 8.625527 21.480448     4.192311
+  mediana_glob__mlp_m5lags_hpo     50000 4.375423 8.670596 21.556526     4.187585
+       dlinear__lgb_m5lags_hpo     50000 4.406199 8.771132 21.881127     4.197756
+  imputeformer__lgb_m5lags_hpo     50000 4.406245 8.773502 21.873752     4.200325
+      timesnet__lgb_m5lags_hpo     50000 4.414719 8.793182 21.929480     4.207741
+         saits__lgb_m5lags_hpo     50000 4.417727 8.794027 21.937147     4.211265
+  itransformer__lgb_m5lags_hpo     50000 4.418117 8.796426 21.946039     4.211655
+    media_cond__mlp_m5lags_hpo     50000 4.443466 8.810619 21.958240     4.269905
+  mediana_glob__lgb_m5lags_hpo     50000 4.447159 8.860269 22.106183     4.224035
+  mediana_cond__lgb_m5lags_hpo     50000 4.447014 8.864178 22.130402     4.213055
+           lgb__lgb_m5lags_hpo     50000 4.450778 8.865238 22.103232     4.235256
+  forward_fill__mlp_m5lags_hpo     50000 4.485715 8.866538 21.999538     4.305294
+    media_cond__lgb_m5lags_hpo     50000 4.492729 8.956809 22.355820     4.255357
+seasonal_naive__lgb_m5lags_hpo     50000 4.523568 9.014733 22.486368     4.304774
+ linear_interp__lgb_m5lags_hpo     50000 4.541121 9.052475 22.590913     4.316567
+  forward_fill__lgb_m5lags_hpo     50000 4.546664 9.059642 22.620637     4.325960
+    media_glob__lgb_m5lags_hpo     50000 4.562290 9.092071 22.687378     4.323053
+
+=== between-imputer spread of newsvendor cost (median per-series, r=2) ===
+  lgb_m5lags: n=13 | spread(max-min)=0.3209 (min 8.7711 [dlinear], max 9.0921 [media_glob])
+  mlp_m5lags: n=13 | spread(max-min)=0.4912 (min 8.3754 [itransformer], max 8.8665 [forward_fill])
+
+saved /Users/utente/Desktop/FreshNetRetail/pipeline/results/newsvendor_cost_summary.parquet
+NV CHAIN DONE (Thu Jun 25 19:53:39 CEST 2026)

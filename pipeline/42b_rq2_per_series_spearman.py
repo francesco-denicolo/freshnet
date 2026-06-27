@@ -59,10 +59,11 @@ def find_parquet(imp, fc):
 # Per-series Spearman per forecaster
 # ---------------------------------------------------------------------
 panels = ['mlp_m5lags','lgb_m5lags','tft','chronos_bolt','timesfm',
-          'global_mean','dow_mean','ma_k56']
+          'global_mean','dow_mean','ma_k56','croston','sba','tsb']
 panel_titles = {'mlp_m5lags':'MLP_M5','lgb_m5lags':'LGB_M5','tft':'TFT',
                 'chronos_bolt':'Chronos-bolt','timesfm':'TimesFM',
-                'global_mean':'GlobalMean','dow_mean':'DoWMean','ma_k56':'MA_K56'}
+                'global_mean':'GlobalMean','dow_mean':'DoWMean','ma_k56':'MA_K56',
+                'croston':'Croston','sba':'SBA','tsb':'TSB'}
 
 results_per_fc = {}
 for fc in panels:

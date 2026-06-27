@@ -24,9 +24,11 @@ IMP_LABEL = {'no_imp': 'No imputation', 'media_glob': 'Mean (global)',
              'lgb': 'LGB imputer', 'dlinear': 'DLinear', 'saits': 'SAITS',
              'itransformer': 'iTransformer', 'timesnet': 'TimesNet',
              'imputeformer': 'ImputeFormer'}
-FC_ORDER = ['global_mean', 'dow_mean', 'ma_k56', 'lgb_nolags', 'mlp_nolags',
+FC_ORDER = ['global_mean', 'dow_mean', 'ma_k56', 'croston', 'sba', 'tsb',
+            'lgb_nolags', 'mlp_nolags',
             'lgb_m5lags', 'mlp_m5lags', 'tft', 'chronos_bolt', 'timesfm']
 FC_SHORT = {'global_mean': 'Global\nMean', 'dow_mean': 'DoW\nMean', 'ma_k56': 'MA\n(K=56)',
+            'croston': 'Cros-\nton', 'sba': 'SBA', 'tsb': 'TSB',
             'lgb_nolags': 'LGB\n(no lag)', 'mlp_nolags': 'MLP\n(no lag)',
             'lgb_m5lags': 'LGB\n(M5)', 'mlp_m5lags': 'MLP\n(M5)', 'tft': 'TFT',
             'chronos_bolt': 'Chronos', 'timesfm': 'TimesFM'}
@@ -42,7 +44,7 @@ pivot = pivot.reindex(index=IMP_ORDER, columns=FC_ORDER)
 vals = pivot.values.astype(float)
 vmin, vmax = 0.97, 1.08
 
-fig, ax = plt.subplots(figsize=(11.5, 9.0))
+fig, ax = plt.subplots(figsize=(14.0, 9.0))
 im = ax.imshow(np.clip(vals, vmin, vmax), cmap='RdYlGn_r', aspect='auto', vmin=vmin, vmax=vmax)
 
 for i, imp in enumerate(IMP_ORDER):
@@ -69,7 +71,7 @@ ax.set_yticklabels([IMP_LABEL[c] for c in IMP_ORDER], fontsize=10.5)
 ax.set_xlabel('Forecaster', fontsize=12, labelpad=8)
 ax.set_ylabel('Imputer', fontsize=12)
 # family separators on the forecaster axis (after naive | after lag-free | after lag-ML | after deep)
-for x in (2.5, 4.5, 6.5, 7.5):
+for x in (2.5, 5.5, 7.5, 9.5, 10.5):
     ax.axvline(x, color='0.25', lw=1.2)
 ax.set_xticks(np.arange(-0.5, len(FC_ORDER), 1), minor=True)
 ax.set_yticks(np.arange(-0.5, len(IMP_ORDER), 1), minor=True)
