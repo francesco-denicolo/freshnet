@@ -156,33 +156,26 @@ if IMP_KEY != 'no_imp':
 # 2. Long format
 print(f'\n[{time.time()-T_START:.0f}s] 2. Long format...')
 n_rows = len(df_full)
-long_data = pd.DataFrame({
-    'store_id': np.repeat(df_full['store_id'].values, N_HOURS),
-    'product_id': np.repeat(df_full['product_id'].values, N_HOURS),
-    'city_id': np.repeat(df_full['city_id'].values, N_HOURS),
-    'day_num': np.repeat(df_full['day_num'].values, N_HOURS),
-    'dow': np.repeat(df_full['dow'].values, N_HOURS),
-    'discount': np.repeat(df_full['discount'].values, N_HOURS),
-    'avg_temperature': np.repeat(df_full['avg_temperature'].values, N_HOURS),
-    'avg_humidity': np.repeat(df_full['avg_humidity'].values, N_HOURS),
-    'precpt': np.repeat(df_full['precpt'].values, N_HOURS),
-    'avg_wind_level': np.repeat(df_full['avg_wind_level'].values, N_HOURS),
-    'holiday_flag': np.repeat(df_full['holiday_flag'].values, N_HOURS),
-    'activity_flag': np.repeat(df_full['activity_flag'].values, N_HOURS),
-    'hour': np.tile(np.arange(H_START, H_END), n_rows),
-    'sales': sales_arr.ravel().astype(np.float32),
-    'stock': stock_arr.ravel().astype(np.int8),
-})
-long_data['time_idx'] = (long_data['day_num'] - 1) * N_HOURS + (long_data['hour'] - H_START)
-for c in ['store_id','product_id','city_id','dow','hour','holiday_flag','activity_flag']:
-    long_data[c] = long_data[c].astype(str).astype('category')
-for c in ['discount','avg_temperature','avg_humidity','precpt','avg_wind_level','sales']:
-    long_data[c] = long_data[c].astype('float32')
-long_data['stock'] = long_data['stock'].astype('int8')
-long_data['day_num'] = long_data['day_num'].astype('int16')
-long_data['time_idx'] = long_data['time_idx'].astype('int32')
+# Memory-efficient long build: categoricals via from_codes (evita ~82M stringhe Python
+# in un colpo -> è ciò che manda in OOM Colab a 12.7 GB di RAM di sistema).
+NH = N_HOURS
+day_rep = np.repeat(df_full['day_num'].values.astype(np.int32), NH)
+hour_code = np.tile(np.arange(NH, dtype=np.int16), n_rows)
+cols = {}
+for c in ['store_id','product_id','city_id','dow','holiday_flag','activity_flag']:
+    cc = df_full[c].astype(str).astype('category')
+    cols[c] = pd.Categorical.from_codes(np.repeat(cc.cat.codes.values, NH), cc.cat.categories)
+    del cc
+cols['hour'] = pd.Categorical.from_codes(hour_code, [str(h) for h in range(H_START, H_END)])
+for c in ['discount','avg_temperature','avg_humidity','precpt','avg_wind_level']:
+    cols[c] = np.repeat(df_full[c].values.astype(np.float32), NH)
+cols['sales'] = sales_arr.ravel().astype(np.float32)
+cols['stock'] = stock_arr.ravel().astype(np.int8)
+cols['day_num'] = day_rep.astype(np.int16)
+cols['time_idx'] = ((day_rep - 1) * NH + hour_code.astype(np.int32)).astype(np.int32)
+long_data = pd.DataFrame(cols)
 print(f'[{time.time()-T_START:.0f}s]   Long: {len(long_data):,} righe')
-del df_full, sales_arr, stock_arr; gc.collect()
+del cols, day_rep, hour_code, df_full, sales_arr, stock_arr; gc.collect()
 
 # 3. TimeSeriesDataSet
 print(f'\n[{time.time()-T_START:.0f}s] 3. TimeSeriesDataSet...')
