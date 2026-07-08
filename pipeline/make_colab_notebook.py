@@ -69,7 +69,7 @@ cells.append(md("## 4. Budget T4 + ripristino output già prodotti (resume)",
 "Budget ridotto per stare nei limiti di tempo del free tier, ma **molto** oltre il cap `hidden<=32`.",
 "Se una sessione precedente ha già prodotto output su Drive, li riportiamo in locale così vengono saltati."))
 cells.append(code(
-"os.environ['SERIES_SUBSAMPLE'] = '15000'  # T4 free 12.7GB: sottocampione stratificato (0=tutte -> OOM)",
+"os.environ['SERIES_SUBSAMPLE'] = '8000'  # T4 free 12.7GB: sottocampione stratificato (0=tutte -> OOM)",
 "os.environ['TFT_HIDDEN_CAP'] = '128'      # T4: hidden fino a 128 (vs 32 sul Mac)",
 "os.environ['TFT_N_TRIALS']   = '30'       # HPO trials",
 "os.environ['TFT_MAX_EPOCHS'] = '12'",
