@@ -24,6 +24,7 @@ IMPUTERS=(no_imp media_glob media_cond mediana_glob mediana_cond \
           dlinear saits itransformer timesnet imputeformer)
 
 echo "######## CLOUD TFT $(date) | mode=$MODE ########"
+echo "config: SERIES_SUBSAMPLE=${SERIES_SUBSAMPLE:-0 (all 50K)} | TFT_HIDDEN_CAP=${TFT_HIDDEN_CAP:-256} | TFT_PRECISION=${TFT_PRECISION:-32-true}"
 $PY -c "import torch; print('CUDA available:', torch.cuda.is_available());
 print('device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
 
