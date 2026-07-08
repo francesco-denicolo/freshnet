@@ -54,6 +54,10 @@ TRAINING_CUTOFF = 83 * N_HOURS - 1
 VAL_CUTOFF = 90 * N_HOURS - 1
 MIN_HOURS_VAL = 34
 MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
+# Subsample delle SERIE (0 = tutte). Su Colab free (~12.7 GB RAM) il TimeSeriesDataSet
+# su 50K serie va OOM: usa es. SERIES_SUBSAMPLE=15000. Cache dedicata per non collidere.
+SERIES_SUBSAMPLE = int(os.getenv('SERIES_SUBSAMPLE', 0))
+SUB_TAG = f'_sub{SERIES_SUBSAMPLE}' if SERIES_SUBSAMPLE > 0 else ''
 
 # --- HPO config (AMPIA) ---
 N_TRIALS = int(os.getenv('TFT_N_TRIALS', 48))
@@ -81,7 +85,7 @@ print('=' * 72)
 # =========================================================================
 # 1. long_data (cache condivisa con la versione CPU, formato identico)
 # =========================================================================
-CACHE_PATH = os.path.join(RESULTS_DIR, 'hpo_tft_long_data_cache.parquet')
+CACHE_PATH = os.path.join(RESULTS_DIR, f'hpo_tft_long_data_cache{SUB_TAG}.parquet')
 if os.path.exists(CACHE_PATH):
     print(f'[{time.time()-T_START:.0f}s] Loading long_data from cache...')
     long_data = pd.read_parquet(CACHE_PATH)
@@ -96,6 +100,13 @@ else:
     date_to_day = {d: i for i, d in enumerate(all_dates)}
     df_full['day_num'] = df_full['dt_parsed'].map(date_to_day)
     df_full['dow'] = df_full['dt_parsed'].dt.dayofweek
+    if SERIES_SUBSAMPLE > 0:
+        keys = df_full[['store_id','product_id']].drop_duplicates()
+        if len(keys) > SERIES_SUBSAMPLE:
+            sel = keys.sample(n=SERIES_SUBSAMPLE, random_state=SEED)
+            df_full = (df_full.merge(sel, on=['store_id','product_id'], how='inner')
+                       .sort_values(['store_id','product_id','dt_parsed']).reset_index(drop=True))
+            print(f'[{time.time()-T_START:.0f}s]   Subsampled to {SERIES_SUBSAMPLE} series -> {len(df_full):,} rows')
     sales_arr = np.array(df_full['hours_sale'].tolist(), dtype=np.float32)[:, H_START:H_END]
     stock_arr = np.array(df_full['hours_stock_status'].tolist(), dtype=np.int8)[:, H_START:H_END]
     n_rows = len(df_full)
@@ -125,8 +136,8 @@ print(f'[{time.time()-T_START:.0f}s] Long_data shape: {long_data.shape}')
 # =========================================================================
 # 2. TimeSeriesDataSet (cache condivisa)
 # =========================================================================
-TSD_TRAIN_CACHE = os.path.join(RESULTS_DIR, 'hpo_tft_tsd_train.pkl')
-TSD_VAL_CACHE = os.path.join(RESULTS_DIR, 'hpo_tft_tsd_val.pkl')
+TSD_TRAIN_CACHE = os.path.join(RESULTS_DIR, f'hpo_tft_tsd_train{SUB_TAG}.pkl')
+TSD_VAL_CACHE = os.path.join(RESULTS_DIR, f'hpo_tft_tsd_val{SUB_TAG}.pkl')
 if os.path.exists(TSD_TRAIN_CACHE) and os.path.exists(TSD_VAL_CACHE):
     print(f'[{time.time()-T_START:.0f}s] Loading TimeSeriesDataSet from cache...')
     _orig = torch.load

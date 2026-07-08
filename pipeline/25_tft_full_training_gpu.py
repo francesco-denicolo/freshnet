@@ -68,7 +68,7 @@ ENCODER_LENGTH = 7 * N_HOURS; PRED_LENGTH = 7 * N_HOURS
 MAX_EPOCHS = int(os.getenv('TFT_MAX_EPOCHS', 30))
 PATIENCE = int(os.getenv('TFT_PATIENCE', 5))
 MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
-SUBSET_SIZE = 50000
+SUBSET_SIZE = int(os.getenv('SERIES_SUBSAMPLE', 0)) or 50000  # su Colab free usa es. 15000
 
 # HP dalla config GPU vincente (obbligatoria: questa è la 'resourcing vera')
 HPO_JSON = os.path.join(RESULTS_DIR, 'hpo_tft_gpu_best.json')
