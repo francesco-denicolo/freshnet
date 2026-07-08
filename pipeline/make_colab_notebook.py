@@ -75,7 +75,7 @@ cells.append(code(
 "os.environ['TFT_MAX_EPOCHS'] = '12'",
 "os.environ['TFT_PATIENCE']   = '3'",
 "os.environ['TFT_MAX_TRAIN']  = '200000'   # window subsample per epoca",
-"os.environ['TFT_PRECISION']  = '16-mixed' # T4: più veloce/meno VRAM. Se vedi NaN -> '32-true'",
+"os.environ['TFT_PRECISION']  = '32-true'  # 16-mixed NON funziona col TFT (overflow fp16 nel mask attention)",
 "",
 "# ripristina da Drive gli output già fatti (HPO db/json + parquet celle)",
 "for f in glob.glob(f'{DRIVE}/results/*'):",
