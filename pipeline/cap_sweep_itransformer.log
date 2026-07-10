@@ -1,0 +1,61 @@
+[34m
+████████╗██╗███╗   ███╗███████╗    ███████╗███████╗██████╗ ██╗███████╗███████╗    █████╗ ██╗
+╚══██╔══╝██║████╗ ████║██╔════╝    ██╔════╝██╔════╝██╔══██╗██║██╔════╝██╔════╝   ██╔══██╗██║
+   ██║   ██║██╔████╔██║█████╗█████╗███████╗█████╗  ██████╔╝██║█████╗  ███████╗   ███████║██║
+   ██║   ██║██║╚██╔╝██║██╔══╝╚════╝╚════██║██╔══╝  ██╔══██╗██║██╔══╝  ╚════██║   ██╔══██║██║
+   ██║   ██║██║ ╚═╝ ██║███████╗    ███████║███████╗██║  ██║██║███████╗███████║██╗██║  ██║██║
+   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝
+ai4ts v0.0.3 - building AI for unified time-series analysis, https://time-series.ai [0m
+
+========================================================================
+  Capacity sweep: iTransformer (hi-cap)  (ore 6-22)
+========================================================================
+  Config: n_steps=510, {'d_model': 128, 'n_heads': 8, 'n_layers': 3, 'd_ffn': 256, 'dropout': 0.1, 'batch_size': 16, 'max_epochs': 40, 'patience': 6, 'lr': 0.001}
+  Output: completed_sales_622/itransformer_hicap.parquet, traccia_a_itransformer_hicap.parquet
+
+1. Caricamento dati...
+  Samples: 150,000, Steps: 510, Features: 6
+
+2. Train/val split...
+  Train: 120,000 samples (40,000 series)
+  Val:   30,000 samples (10,000 series)
+
+3. Training iTransformer (hi-cap) (patience=6, max 40 epochs)...
+  Device: mps
+2026-06-29 11:58:15 [INFO]: Using the given device: mps
+2026-06-29 11:58:15 [INFO]: Model files will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_itransformer_hicap_val/20260629_T115815
+2026-06-29 11:58:15 [INFO]: Tensorboard file will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_itransformer_hicap_val/20260629_T115815/tensorboard
+2026-06-29 11:58:15 [INFO]: Using customized MAE as the training loss function.
+2026-06-29 11:58:15 [INFO]: Using customized MSE as the validation metric function.
+2026-06-29 11:58:15 [INFO]: iTransformer initialized with the given hyperparameters, the number of trainable parameters: 527,102
+  Model params: 527,102
+2026-06-29 12:00:11 [INFO]: Epoch 001 - training loss (MAE): 0.0672, validation MSE: 0.0065
+2026-06-29 12:02:02 [INFO]: Epoch 002 - training loss (MAE): 0.0459, validation MSE: 0.0068
+2026-06-29 12:03:52 [INFO]: Epoch 003 - training loss (MAE): 0.0432, validation MSE: 0.0065
+2026-06-29 12:05:46 [INFO]: Epoch 004 - training loss (MAE): 0.0409, validation MSE: 0.0071
+2026-06-29 12:07:38 [INFO]: Epoch 005 - training loss (MAE): 0.0395, validation MSE: 0.0080
+2026-06-29 12:09:30 [INFO]: Epoch 006 - training loss (MAE): 0.0385, validation MSE: 0.0074
+2026-06-29 12:11:23 [INFO]: Epoch 007 - training loss (MAE): 0.0379, validation MSE: 0.0078
+2026-06-29 12:13:16 [INFO]: Epoch 008 - training loss (MAE): 0.0375, validation MSE: 0.0076
+2026-06-29 12:15:14 [INFO]: Epoch 009 - training loss (MAE): 0.0372, validation MSE: 0.0082
+2026-06-29 12:15:14 [INFO]: Exceeded the training patience. Terminating the training procedure...
+2026-06-29 12:15:14 [INFO]: Finished training. The best model is from epoch#3.
+2026-06-29 12:15:14 [INFO]: Saved the model to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_itransformer_hicap_val/20260629_T115815/iTransformer.pypots
+  Training time: 1019s
+
+4. Predict su tutti i 150,000 samples...
+  Mean imputed: 0.0619, Mean original (non-NaN): 0.0704
+
+5. Valutazione MNAR...
+  MNAR masks: 1,209,105
+  MNAR NaN aggiunti: 1,209,105
+  iTransformer (hi-cap): WAPE_recovery=0.8317, WPE_recovery=-0.4727
+
+6. Salvataggio completed_sales...
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/../data/completed_sales_622/itransformer_hicap.parquet
+  Media imputata (stockout): 0.0305
+  Media S_obs (in-stock):    0.0704
+
+========================================================================
+  DONE — iTransformer (hi-cap)
+========================================================================

@@ -1,0 +1,19 @@
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06
+[SMOKE] MAX_EPOCHS=2
+=== MLP-M5 seed sweep × itransformer | seeds=[900, 901] | device=mps ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets (once)...
+  Train: 4,100,000
+  Val: 350,000
+  Test: 350,000
+  Built in 431s
+
+3. Seed loop...
+  seed 900: best_ep=2 val_WAPE=0.784077 test_med_WAPE=0.9789  (76s)
+  seed 901: best_ep=2 val_WAPE=0.787584 test_med_WAPE=0.9839  (70s)
+
+DONE MLP seed sweep

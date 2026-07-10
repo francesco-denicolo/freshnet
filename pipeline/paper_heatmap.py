@@ -42,10 +42,15 @@ print(f'Friedman best: {best_cell} | equiv set: {sorted(equiv)} | cells: {len(ma
 pivot = mat.pivot(index='imputer', columns='forecaster', values='wape_h_med')
 pivot = pivot.reindex(index=IMP_ORDER, columns=FC_ORDER)
 vals = pivot.values.astype(float)
-vmin, vmax = 0.97, 1.08
+# Two-slope colour scale: fine resolution in the competitive band (0.97-1.08) AND
+# distinguishable detail in the high tail (up to ~1.40) instead of clipping it flat.
+import matplotlib.colors as mcolors
+vmin, vcenter = 0.97, 1.08
+vmax = float(np.nanmax(vals)); vmax = max(vmax, vcenter + 0.02)
+norm = mcolors.TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
 
 fig, ax = plt.subplots(figsize=(14.0, 9.0))
-im = ax.imshow(np.clip(vals, vmin, vmax), cmap='RdYlGn_r', aspect='auto', vmin=vmin, vmax=vmax)
+im = ax.imshow(vals, cmap='RdYlGn_r', aspect='auto', norm=norm)
 
 for i, imp in enumerate(IMP_ORDER):
     for j, fc in enumerate(FC_ORDER):
@@ -56,7 +61,8 @@ for i, imp in enumerate(IMP_ORDER):
             continue
         cell = f'{imp}__{fc}'
         is_best, is_equiv = cell == best_cell, cell in equiv
-        txtcol = 'white' if (v > 1.045 or v < 0.978) else 'black'
+        _rgba = plt.cm.RdYlGn_r(norm(v)); _lum = 0.299*_rgba[0]+0.587*_rgba[1]+0.114*_rgba[2]
+        txtcol = 'white' if _lum < 0.5 else 'black'
         ax.text(j, i, f'{v:.3f}', ha='center', va='center', fontsize=9.5,
                 color=txtcol, fontweight='bold' if (is_best or is_equiv) else 'normal')
         if is_best:

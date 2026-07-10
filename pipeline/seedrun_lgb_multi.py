@@ -1,7 +1,8 @@
 """
-08d_lgb_single.py — LGB M5-lags per un singolo imputer (ore 6-22)
-==================================================================
-Usage: freshnet/bin/python notebooks_622/08d_lgb_single.py <imputer_key>
+seedrun_lgb_multi.py — seed sweep for LGB-M5 on ONE imputer cell, building the
+dataset once and looping over many seeds (each seed = re-train the booster only).
+Usage:  SEEDS="0,1,...,19" [HPO_VARIANT=1] [SMOKE=1] python seedrun_lgb_multi.py <imputer_key>
+Outputs one seedrun_<cell>_seed<S>_test_per_series.parquet per seed (skips existing).
 """
 import sys, os, gc, time, functools
 import numpy as np, pandas as pd
@@ -15,17 +16,18 @@ DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 COMPLETED_DIR = os.path.join(DATA_DIR, 'completed_sales_622')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
 
-SEED=42; np.random.seed(SEED)
+SEEDS = [int(x) for x in os.getenv('SEEDS', '0,1,2,3,4,5').split(',')]
+SMOKE = os.getenv('SMOKE') == '1'
+N_ROUNDS = 10 if SMOKE else 500
 H_START,H_END=6,23; N_HOURS=H_END-H_START
 HOURS_RANGE=np.arange(H_START,H_END,dtype=np.int32)
-CONT_FEATURES=['discount','avg_temperature','avg_humidity',
-               'precpt','avg_wind_level','holiday_flag','activity_flag']
+CONT_FEATURES=['discount','avg_temperature','avg_humidity','precpt','avg_wind_level','holiday_flag','activity_flag']
 CAT_FEATURES=['store_id','product_id','city_id','dow','hour']
 LAG_NAMES=['lag_1d','lag_7d','lag_14d','rmean_7d','rmean_14d','rstd_7d',
            'lag_dow','rmean_dow','daily_total_lag1','daily_total_rmean7','momentum_1d_7d']
 LGB_PARAMS={'objective':'regression_l1','metric':'mae','num_leaves':31,'learning_rate':0.1,
             'feature_fraction':0.8,'bagging_fraction':0.3,'bagging_freq':1,
-            'min_child_samples':500,'max_bin':127,'verbose':-1,'num_threads':-1,'seed':SEED}
+            'min_child_samples':500,'max_bin':127,'verbose':-1,'num_threads':-1,'seed':0}
 
 if os.getenv('HPO_VARIANT') == '1':
     import json
@@ -36,41 +38,23 @@ if os.getenv('HPO_VARIANT') == '1':
     print(f'[HPO] LGB_PARAMS overridden: {hpo}')
 
 IMP_KEY=sys.argv[1]
-IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
-            'mediana_cond':'Mediana condizionata','mediana_glob':'Mediana globale',
-            'lgb':'LGB imputer',
-            'dlinear':'DLinear',
-            'forward_fill':'Forward Fill',
-            'seasonal_naive':'Seasonal Naive',
-            'linear_interp':'Linear Interp',
-            'saits':'SAITS',
-            'itransformer':'iTransformer',
-            'timesnet':'TimesNet',
-            'csdi':'CSDI',
-            'imputeformer':'ImputeFormer'}
-cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
-out_path=os.path.join(RESULTS_DIR,f'{cell_key}_test_per_series.parquet')
-if os.path.exists(out_path): print(f'SKIP: {out_path}'); sys.exit(0)
+SUFFIX='_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
+cell_key=f'{IMP_KEY}__lgb_m5lags'+SUFFIX
+print(f'=== LGB-M5 seed sweep × {IMP_KEY} | seeds={SEEDS} | rounds={N_ROUNDS} ===')
 
-print(f'=== LGB M5 × {IMP_LABELS.get(IMP_KEY, IMP_KEY)} (ore 6-22) ===')
-
-# Load
+# ---------------------------------------------------------------- load + build (once)
 print('\n1. Loading...')
 df_train_hf=pd.read_parquet(os.path.join(DATA_DIR,'frn50k_train.parquet'))
 df_eval=pd.read_parquet(os.path.join(DATA_DIR,'frn50k_eval.parquet'))
-df_train_hf['dt_parsed']=pd.to_datetime(df_train_hf['dt'])
-df_eval['dt_parsed']=pd.to_datetime(df_eval['dt'])
+df_train_hf['dt_parsed']=pd.to_datetime(df_train_hf['dt']); df_eval['dt_parsed']=pd.to_datetime(df_eval['dt'])
 df_full=pd.concat([df_train_hf,df_eval],ignore_index=True)
 df_full=df_full.sort_values(['store_id','product_id','dt_parsed']).reset_index(drop=True)
-all_dates=sorted(df_full['dt_parsed'].unique())
-date_to_day={d:i+1 for i,d in enumerate(all_dates)}
-df_full['day_num']=df_full['dt_parsed'].map(date_to_day)
-df_full['dow']=df_full['dt_parsed'].dt.dayofweek
+all_dates=sorted(df_full['dt_parsed'].unique()); date_to_day={d:i+1 for i,d in enumerate(all_dates)}
+df_full['day_num']=df_full['dt_parsed'].map(date_to_day); df_full['dow']=df_full['dt_parsed'].dt.dayofweek
 sales_orig=np.array(df_full['hours_sale'].tolist(),dtype=np.float32)[:,H_START:H_END]
 stock_orig=np.array(df_full['hours_stock_status'].tolist(),dtype=np.float32)[:,H_START:H_END]
 del df_train_hf,df_eval
 
-# Align completed_sales
 df_cs=pd.read_parquet(os.path.join(COMPLETED_DIR,f'{IMP_KEY}.parquet'))
 cs_sales=np.array(df_cs['hours_sale'].tolist(),dtype=np.float32)
 completed_full=sales_orig.copy()
@@ -82,13 +66,11 @@ for i in range(len(df_full)):
     if k in km: completed_full[i]=cs_sales[km[k]]
 del df_cs,cs_sales,cs_keys,full_keys,km; gc.collect()
 
-# Series cache (lags from completed_sales)
 print('  Building series cache...')
 series_cache={}
 for (sid,pid),grp in df_full.groupby(['store_id','product_id'],sort=False):
     gs=grp.sort_values('day_num'); idx=gs.index.values
-    series_cache[(sid,pid)]={'days':gs['day_num'].values,'dows':gs['dow'].values,
-                              'sales':completed_full[idx]}
+    series_cache[(sid,pid)]={'days':gs['day_num'].values,'dows':gs['dow'].values,'sales':completed_full[idx]}
 del completed_full; gc.collect()
 print(f'  {len(series_cache):,} series')
 
@@ -124,8 +106,7 @@ def build_lgb_ds(split):
     sd=sales_orig[idx_s]; sk=stock_orig[idx_s]
     nh=nd*N_HOURS; hrs=np.tile(HOURS_RANGE,nd)
     sh=np.repeat(sids,N_HOURS); ph=np.repeat(pids,N_HOURS)
-    ch=np.repeat(cids,N_HOURS); dh=np.repeat(dows,N_HOURS)
-    coh=np.repeat(conts,N_HOURS,axis=0)
+    ch=np.repeat(cids,N_HOURS); dh=np.repeat(dows,N_HOURS); coh=np.repeat(conts,N_HOURS,axis=0)
     y=sd.ravel().astype(np.float32); sf=sk.ravel().astype(np.float32)
     fd={'store_id':sh,'product_id':ph,'city_id':ch,'dow':dh,'hour':hrs}
     for j,c in enumerate(CONT_FEATURES): fd[c]=coh[:,j]
@@ -134,11 +115,11 @@ def build_lgb_ds(split):
     for ri in range(nd):
         if (ri+1)%500000==0: print(f'      ... {ri+1:,}/{nd:,}')
         sid,pid,d,dv=sids[ri],pids[ri],dnums[ri],dows[ri]
-        sc=series_cache[(sid,pid)]
+        scc=series_cache[(sid,pid)]
         ad=d-1 if split=='train' else (83 if split=='val' else 90)
-        am=sc['days']<=ad; K=int(am.sum()); hs=ri*N_HOURS
+        am=scc['days']<=ad; K=int(am.sum()); hs=ri*N_HOURS
         if K>0:
-            lg=clags(sc['sales'][am],sc['dows'][am],dv,K)
+            lg=clags(scc['sales'][am],scc['dows'][am],dv,K)
             for n in LAG_NAMES: la[n][hs:hs+N_HOURS]=lg[n]
     for n in LAG_NAMES: fd[n]=la[n]
     del la
@@ -146,51 +127,47 @@ def build_lgb_ds(split):
     for c in CAT_FEATURES: X[c]=X[c].astype('category')
     return X,y,sf,sh,ph
 
-# Train
-print('\n2. Building train...')
+print('\n2. Building datasets (once)...')
 t0=time.time()
 Xtr,ytr,_,_,_=build_lgb_ds('train'); print(f'  Train: {len(Xtr):,}')
-print('  Building val...')
+ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True); del Xtr,ytr; gc.collect()
 Xva,yva,_,_,_=build_lgb_ds('val'); print(f'  Val: {len(Xva):,}')
-print('  Training...')
-ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True)
-lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=True)
-model=lgb.train(LGB_PARAMS,ltr,num_boost_round=500,valid_sets=[lva],valid_names=['val'],
-                callbacks=[lgb.early_stopping(30),lgb.log_evaluation(100)])
-print(f'  Best iter: {model.best_iteration}')
-del Xtr,ytr,ltr,lva,Xva; gc.collect()
+lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=True); del Xva,yva; gc.collect()
+Xte,yte,ste,site,pite=build_lgb_ds('test'); print(f'  Test: {len(Xte):,}')
+del df_full,sales_orig,stock_orig,series_cache; gc.collect()
+print(f'  Built in {time.time()-t0:.0f}s')
 
-print('  Building test...')
-Xte,yte,ste,site,pite=build_lgb_ds('test')
-preds=np.clip(model.predict(Xte),0,None)
+def eval_and_save(preds, out_path):
+    nd=len(preds)//N_HOURS
+    dft=pd.DataFrame({'sid':site,'pid':pite,'day_idx':np.repeat(np.arange(nd),N_HOURS),
+                      'pred':preds.astype(np.float64),'obs':yte.astype(np.float64),'stock':ste})
+    recs=[]
+    for (sid,pid),grp in dft.groupby(['sid','pid'],sort=False):
+        ig=grp['stock'].values==0
+        sao_s=np.abs(grp['obs'].values[ig]).sum(); sae_s=np.abs(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
+        se_s=(grp['pred'].values[ig]-grp['obs'].values[ig]).sum(); so_s=grp['obs'].values[ig].sum()
+        hw=sae_s/sao_s if sao_s>0 else np.nan; hwp=se_s/so_s if so_s!=0 else np.nan
+        sd2,ao2,se2,so2=0.,0.,0.,0.
+        for di,dg in grp.groupby('day_idx',sort=False):
+            dm=dg['stock'].values==0
+            if dm.any():
+                pv,ov=dg['pred'].values[dm].sum(),dg['obs'].values[dm].sum(); sd2+=abs(pv-ov);ao2+=abs(ov);se2+=pv-ov;so2+=ov
+        recs.append({'store_id':sid,'product_id':pid,'hourly_wape':hw,'hourly_wpe':hwp,
+                     'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan})
+    ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    return ps['hourly_wape'].dropna().median()
 
-# Eval
-ins=ste==0; ph,oh=preds[ins],yte[ins]
-pooled={'hourly_wape':np.abs(ph-oh).sum()/np.abs(oh).sum(),
-        'hourly_wpe':(ph-oh).sum()/oh.sum()}
-nd=len(preds)//N_HOURS
-dft=pd.DataFrame({'sid':site,'pid':pite,'day_idx':np.repeat(np.arange(nd),N_HOURS),
-                   'pred':preds.astype(np.float64),'obs':yte.astype(np.float64),'stock':ste})
-recs=[]
-for (sid,pid),grp in dft.groupby(['sid','pid'],sort=False):
-    ig=grp['stock'].values==0
-    sao_s=np.abs(grp['obs'].values[ig]).sum()
-    sae_s=np.abs(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
-    se_s=(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
-    so_s=grp['obs'].values[ig].sum()
-    hw=sae_s/sao_s if sao_s>0 else np.nan; hwp=se_s/so_s if so_s!=0 else np.nan
-    sd2,ao2,se2,so2,nv=0.,0.,0.,0.,0
-    for di,dg in grp.groupby('day_idx',sort=False):
-        dm=dg['stock'].values==0
-        if dm.any():
-            pv,ov=dg['pred'].values[dm].sum(),dg['obs'].values[dm].sum()
-            sd2+=abs(pv-ov);ao2+=abs(ov);se2+=pv-ov;so2+=ov;nv+=1
-    recs.append({'store_id':sid,'product_id':pid,'hourly_wape':hw,'hourly_wpe':hwp,
-                 'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan})
-ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
-med={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
-
-print(f'\n  WAPE_h pool={pooled["hourly_wape"]:.4f}, med={med["hourly_wape"]:.4f}')
-print(f'  WPE_h pool={pooled["hourly_wpe"]:.4f}, time={time.time()-t0:.0f}s')
-print(f'  Salvato: {out_path}')
-print('DONE')
+# ---------------------------------------------------------------- seed loop
+print('\n3. Seed loop...')
+for seed in SEEDS:
+    out_path=os.path.join(RESULTS_DIR,f'seedrun_{cell_key}_seed{seed}_test_per_series.parquet')
+    if os.path.exists(out_path): print(f'  seed {seed}: SKIP (exists)'); continue
+    ts=time.time()
+    params=dict(LGB_PARAMS); params['seed']=seed
+    model=lgb.train(params,ltr,num_boost_round=N_ROUNDS,valid_sets=[lva],valid_names=['val'],
+                    callbacks=[lgb.early_stopping(30),lgb.log_evaluation(0)])
+    preds=np.clip(model.predict(Xte),0,None)
+    med=eval_and_save(preds,out_path)
+    print(f'  seed {seed}: best_iter={model.best_iteration} test_med_WAPE={med:.4f}  ({time.time()-ts:.0f}s)')
+    del model,preds; gc.collect()
+print('\nDONE LGB seed sweep')

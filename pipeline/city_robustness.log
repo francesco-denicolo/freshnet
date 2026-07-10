@@ -1,0 +1,21 @@
+cells: 119
+common series: 50000
+series after dropna: 49939
+cities: 18 | City0 share: 0.516
+
+(a) Per-series Friedman, City 0 vs rest:
+  [City 0] N= 25751  best=itransformer__mlp_m5lags    W=0.454  CD=1.020  #equiv=2  top3=['itransformer__mlp_m5lags', 'dlinear_hicap__mlp_m5lags', 'lgb__mlp_m5lags']
+  [other 17 cities] N= 24188  best=itransformer__mlp_m5lags    W=0.486  CD=1.052  #equiv=5  top3=['itransformer__mlp_m5lags', 'lgb__mlp_m5lags', 'dlinear_hicap__mlp_m5lags']
+
+(b) City-blocked Friedman (N=18 cities):
+  N(cities)=18  best=dlinear_hicap__mlp_m5lags  W=0.986  CD=38.57  #within-CD=40
+  top-8 by city-block mean rank:
+    dlinear_hicap__mlp_m5lags    3.28
+    saits_hicap__mlp_m5lags      3.56
+    itransformer__mlp_m5lags     3.83
+    lgb__mlp_m5lags              4.56
+    mediana_glob__mlp_m5lags     6.67
+    seasonal_naive__mlp_m5lags   7.11
+    itransformer_hicap__mlp_m5lags 7.44
+    mediana_cond__mlp_m5lags     8.11
+  forecaster of top-12: ['mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags', 'mlp_m5lags']

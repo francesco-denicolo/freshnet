@@ -1,0 +1,170 @@
+[34m
+████████╗██╗███╗   ███╗███████╗    ███████╗███████╗██████╗ ██╗███████╗███████╗    █████╗ ██╗
+╚══██╔══╝██║████╗ ████║██╔════╝    ██╔════╝██╔════╝██╔══██╗██║██╔════╝██╔════╝   ██╔══██╗██║
+   ██║   ██║██╔████╔██║█████╗█████╗███████╗█████╗  ██████╔╝██║█████╗  ███████╗   ███████║██║
+   ██║   ██║██║╚██╔╝██║██╔══╝╚════╝╚════██║██╔══╝  ██╔══██╗██║██╔══╝  ╚════██║   ██╔══██║██║
+   ██║   ██║██║ ╚═╝ ██║███████╗    ███████║███████╗██║  ██║██║███████╗███████║██╗██║  ██║██║
+   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝
+ai4ts v0.0.3 - building AI for unified time-series analysis, https://time-series.ai [0m
+
+========================================================================
+  SALVAGE: SAITS hi-cap predict-only (CPU)
+  Loading: /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_saits_hicap_val/20260629_T224029/SAITS.pypots
+========================================================================
+
+1. Caricamento dati...
+  Samples: 150,000, Steps: 510, Features: 6
+
+2. Costruzione + load modello SAITS (CPU)...
+2026-06-30 08:50:46 [WARNING]: ‼️ saving_path not given. Model files and tensorboard file will not be saved.
+  Params: 799,828
+
+3. Predict su tutti i samples (CPU)...
+    0/150,000
+    6,400/150,000
+    12,800/150,000
+    19,200/150,000
+    25,600/150,000
+    32,000/150,000
+    38,400/150,000
+    44,800/150,000
+    51,200/150,000
+    57,600/150,000
+    64,000/150,000
+    70,400/150,000
+    76,800/150,000
+    83,200/150,000
+    89,600/150,000
+    96,000/150,000
+    102,400/150,000
+    108,800/150,000
+    115,200/150,000
+    121,600/150,000
+    128,000/150,000
+    134,400/150,000
+    140,800/150,000
+    147,200/150,000
+  Predict time: 944s, mean imputed: 0.0646
+
+4. Valutazione MNAR...
+    0/150,000
+    6,400/150,000
+    12,800/150,000
+    19,200/150,000
+    25,600/150,000
+    32,000/150,000
+    38,400/150,000
+    44,800/150,000
+    51,200/150,000
+    57,600/150,000
+    64,000/150,000
+    70,400/150,000
+    76,800/150,000
+    83,200/150,000
+    89,600/150,000
+    96,000/150,000
+    102,400/150,000
+    108,800/150,000
+    115,200/150,000
+    121,600/150,000
+    128,000/150,000
+    134,400/150,000
+    140,800/150,000
+    147,200/150,000
+  SAITS (hi-cap): WAPE_recovery=0.7903, WPE_recovery=-0.4777
+
+5. Salvataggio completed_sales...
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/../data/completed_sales_622/saits_hicap.parquet
+
+DONE — SAITS hi-cap salvaged
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × saits_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 423s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053833, val_WAPE=0.799845
+  Epoch   2: loss=0.048181, val_WAPE=0.799904
+  Epoch   3: loss=0.047969, val_WAPE=0.795706
+  Epoch   4: loss=0.047904, val_WAPE=0.785778
+  Epoch   5: loss=0.047876, val_WAPE=0.784114
+  Epoch   6: loss=0.047863, val_WAPE=0.785042
+  Epoch   7: loss=0.047843, val_WAPE=0.784779
+  Epoch   8: loss=0.047842, val_WAPE=0.802169
+  Epoch   9: loss=0.047839, val_WAPE=0.795275
+  Epoch  10: loss=0.047825, val_WAPE=0.790632
+  Epoch  11: loss=0.047826, val_WAPE=0.793692
+  Epoch  12: loss=0.047815, val_WAPE=0.787836
+  Epoch  13: loss=0.047812, val_WAPE=0.786328
+  Epoch  14: loss=0.047802, val_WAPE=0.789066
+  Epoch  15: loss=0.047804, val_WAPE=0.790799
+  Early stop (best=5, WAPE=0.784114)
+
+4. Test...
+
+  WAPE_h pool=0.7696, med=0.9764
+  WPE_h pool=-0.5613
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/saits_hicap__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × saits_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0570604
+[200]	val's l1: 0.0569695
+[300]	val's l1: 0.0569374
+[400]	val's l1: 0.0569255
+Early stopping, best iteration is:
+[407]	val's l1: 0.0569122
+  Best iter: 407
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7874, med=0.9819
+  WPE_h pool=-0.6128, time=1427s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/saits_hicap__lgb_m5lags_hpo_test_per_series.parquet
+DONE
+[salvage2] finished at Tue Jun 30 10:05:05 CEST 2026.

@@ -1,0 +1,35 @@
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB-M5 seed sweep × itransformer | seeds=[900, 901] | rounds=10 ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets (once)...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+    Computing lags for 350,000 days...
+  Test: 5,950,000
+  Built in 263s
+
+3. Seed loop...
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[10]	val's l1: 0.0585276
+  seed 900: best_iter=10 test_med_WAPE=0.9919  (64s)
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[10]	val's l1: 0.0585182
+  seed 901: best_iter=10 test_med_WAPE=0.9903  (38s)
+
+DONE LGB seed sweep

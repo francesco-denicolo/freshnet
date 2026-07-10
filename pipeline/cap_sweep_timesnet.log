@@ -1,0 +1,32 @@
+[34m
+████████╗██╗███╗   ███╗███████╗    ███████╗███████╗██████╗ ██╗███████╗███████╗    █████╗ ██╗
+╚══██╔══╝██║████╗ ████║██╔════╝    ██╔════╝██╔════╝██╔══██╗██║██╔════╝██╔════╝   ██╔══██╗██║
+   ██║   ██║██╔████╔██║█████╗█████╗███████╗█████╗  ██████╔╝██║█████╗  ███████╗   ███████║██║
+   ██║   ██║██║╚██╔╝██║██╔══╝╚════╝╚════██║██╔══╝  ██╔══██╗██║██╔══╝  ╚════██║   ██╔══██║██║
+   ██║   ██║██║ ╚═╝ ██║███████╗    ███████║███████╗██║  ██║██║███████╗███████║██╗██║  ██║██║
+   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝
+ai4ts v0.0.3 - building AI for unified time-series analysis, https://time-series.ai [0m
+
+========================================================================
+  Capacity sweep: TimesNet (hi-cap)  (ore 6-22)
+========================================================================
+  Config: n_steps=510, {'d_model': 32, 'n_layers': 2, 'd_ffn': 64, 'top_k': 2, 'n_kernels': 3, 'dropout': 0.1, 'batch_size': 64, 'max_epochs': 15, 'patience': 3, 'lr': 0.001}
+  Output: completed_sales_622/timesnet_hicap.parquet, traccia_a_timesnet_hicap.parquet
+
+1. Caricamento dati...
+  Samples: 150,000, Steps: 510, Features: 6
+
+2. Train/val split...
+  Train: 120,000 samples (40,000 series)
+  Val:   30,000 samples (10,000 series)
+
+3. Training TimesNet (hi-cap) (patience=3, max 15 epochs)...
+  Device: cpu
+2026-06-29 15:46:41 [INFO]: Using the given device: cpu
+2026-06-29 15:46:41 [INFO]: Model files will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_timesnet_hicap_val/20260629_T154641
+2026-06-29 15:46:41 [INFO]: Tensorboard file will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_timesnet_hicap_val/20260629_T154641/tensorboard
+2026-06-29 15:46:41 [INFO]: Using customized MAE as the training loss function.
+2026-06-29 15:46:41 [INFO]: Using customized MSE as the validation metric function.
+2026-06-29 15:46:41 [INFO]: TimesNet initialized with the given hyperparameters, the number of trainable parameters: 288,198
+  Model params: 288,198
+2026-06-29 16:43:40 [INFO]: Epoch 001 - training loss (MAE): 0.0379, validation MSE: 0.0021

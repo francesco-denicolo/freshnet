@@ -16,7 +16,9 @@ RATIOS = [1.0, 2.0, 5.0]
 def cost(q, y, cu, co=1.0):
     return co*np.clip(q-y, 0, None) + cu*np.clip(y-q, 0, None)
 
-yref = pd.read_parquet(f'{RES}/newsvendor_yref.parquet')   # store_id, product_id, day_idx, y_star, y_obs
+REF = os.getenv('NV_REF', 'newsvendor_yref.parquet')
+yref = pd.read_parquet(f'{RES}/{REF}')   # store_id, product_id, day_idx, y_star, y_obs
+REF_TAG = REF.replace('newsvendor_yref', '').replace('.parquet', '') or '_condmedian'
 pat = sys.argv[1] if len(sys.argv) > 1 else 'newsvendor_q_*.parquet'
 files = sorted(glob.glob(os.path.join(RES, pat)))
 print(f'{len(files)} cell(s)\n')
@@ -56,6 +58,6 @@ for fc, g in df.groupby('forecaster'):
           f'(min {v.min():.4f} [{g.loc[g.cost_r2.idxmin(),"imputer"]}], '
           f'max {v.max():.4f} [{g.loc[g.cost_r2.idxmax(),"imputer"]}])')
 
-out = f'{RES}/newsvendor_cost_summary.parquet'
+out = f'{RES}/newsvendor_cost_summary{REF_TAG}.parquet'
 df.to_parquet(out, index=False)
 print(f'\nsaved {out}')

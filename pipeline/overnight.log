@@ -1,0 +1,208 @@
+######## OVERNIGHT BATCH START Tue Jul  7 22:39:48 CEST 2026 ########
+==== [1/4] censored-aware LGB (taus=0.5,0.6,0.7,0.8,0.9) Tue Jul  7 22:39:48 CEST 2026 ====
+=== Censored-aware LGB-M5 (no imputer, quantile loss) | taus=[0.5, 0.6, 0.7, 0.8, 0.9] | rounds=500 ===
+
+1. Loading (raw censored series)...
+  Building series cache (lags from CENSORED series)...
+  50,000 series
+
+2. Building datasets (once)...
+    Computing lags for 4,100,000 days...
+      ... 1,000,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+    Computing lags for 350,000 days...
+  Test: 5,950,000
+  Built in 263s
+
+3. Quantile sweep (censored-aware, direct)...
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[86]	val's quantile: 0.0284339
+  tau=0.5: best_iter=86  WAPE_med=0.9806  WPE_med=-0.8850  (346s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[109]	val's quantile: 0.0313962
+  tau=0.6: best_iter=109  WAPE_med=0.9746  WPE_med=-0.6407  (399s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[188]	val's quantile: 0.0320507
+  tau=0.7: best_iter=188  WAPE_med=1.0482  WPE_med=-0.0874  (593s)
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[500]	val's quantile: 0.0288395
+  tau=0.8: best_iter=500  WAPE_med=1.3147  WPE_med=0.5805  (1282s)
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[494]	val's quantile: 0.0209094
+  tau=0.9: best_iter=494  WAPE_med=1.9002  WPE_med=1.5048  (1277s)
+
+DONE censored-aware LGB sweep
+==== [2/4] censored-aware MLP (taus=0.5,0.6,0.7,0.8,0.9) Tue Jul  7 23:49:33 CEST 2026 ====
+=== Censored-aware MLP-M5 (no imputer, pinball loss) | taus=[0.5, 0.6, 0.7, 0.8, 0.9] | device=mps ===
+
+1. Loading (raw censored series)...
+  Building series cache (censored series)...
+  50,000 series
+
+2. Building datasets (once)...
+  Train 4,100,000 Val 350,000 Test 350,000 — built in 397s
+
+3. Quantile (pinball) sweep, censored-aware direct...
+  tau=0.5: best_ep=4  WAPE_med=0.9833  WPE_med=-0.9167  (472s)
+  tau=0.6: best_ep=18  WAPE_med=0.9629  WPE_med=-0.6793  (927s)
+  tau=0.7: best_ep=16  WAPE_med=0.9972  WPE_med=-0.2051  (862s)
+  tau=0.8: best_ep=3  WAPE_med=1.2207  WPE_med=0.4294  (434s)
+  tau=0.9: best_ep=3  WAPE_med=1.8004  WPE_med=1.3791  (436s)
+
+DONE censored-aware MLP sweep
+==== [3/4] seed sweep LGB (20 seeds) Wed Jul  8 00:48:52 CEST 2026 ====
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB-M5 seed sweep × itransformer | seeds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] | rounds=500 ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets (once)...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+    Computing lags for 350,000 days...
+  Test: 5,950,000
+  Built in 258s
+
+3. Seed loop...
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[238]	val's l1: 0.0568566
+  seed 0: best_iter=238 test_med_WAPE=0.9854  (729s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[183]	val's l1: 0.0568098
+  seed 1: best_iter=183 test_med_WAPE=0.9780  (552s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[180]	val's l1: 0.0569091
+  seed 2: best_iter=180 test_med_WAPE=0.9806  (223s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[143]	val's l1: 0.0569248
+  seed 3: best_iter=143 test_med_WAPE=0.9863  (415s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[84]	val's l1: 0.056892
+  seed 4: best_iter=84 test_med_WAPE=0.9818  (315s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[214]	val's l1: 0.0568649
+  seed 5: best_iter=214 test_med_WAPE=0.9828  (263s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[210]	val's l1: 0.0567572
+  seed 6: best_iter=210 test_med_WAPE=0.9831  (289s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[347]	val's l1: 0.0568311
+  seed 7: best_iter=347 test_med_WAPE=0.9827  (886s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[212]	val's l1: 0.056985
+  seed 8: best_iter=212 test_med_WAPE=0.9865  (258s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[270]	val's l1: 0.0568111
+  seed 9: best_iter=270 test_med_WAPE=0.9830  (323s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[269]	val's l1: 0.0568393
+  seed 10: best_iter=269 test_med_WAPE=0.9824  (719s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[158]	val's l1: 0.0569047
+  seed 11: best_iter=158 test_med_WAPE=0.9863  (207s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[151]	val's l1: 0.0568743
+  seed 12: best_iter=151 test_med_WAPE=0.9805  (195s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[247]	val's l1: 0.0567831
+  seed 13: best_iter=247 test_med_WAPE=0.9815  (313s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[227]	val's l1: 0.0568037
+  seed 14: best_iter=227 test_med_WAPE=0.9811  (278s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[298]	val's l1: 0.0568627
+  seed 15: best_iter=298 test_med_WAPE=0.9806  (374s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[235]	val's l1: 0.0568825
+  seed 16: best_iter=235 test_med_WAPE=0.9801  (676s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[210]	val's l1: 0.0569525
+  seed 17: best_iter=210 test_med_WAPE=0.9813  (605s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[337]	val's l1: 0.0567328
+  seed 18: best_iter=337 test_med_WAPE=0.9812  (616s)
+Training until validation scores don't improve for 30 rounds
+Early stopping, best iteration is:
+[173]	val's l1: 0.0568483
+  seed 19: best_iter=173 test_med_WAPE=0.9820  (520s)
+
+DONE LGB seed sweep
+==== [4/4] seed sweep MLP (20 seeds) Wed Jul  8 03:19:38 CEST 2026 ====
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06
+=== MLP-M5 seed sweep × itransformer | seeds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] | device=mps ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets (once)...
+  Train: 4,100,000
+  Val: 350,000
+  Test: 350,000
+  Built in 404s
+
+3. Seed loop...
+  seed 0: best_ep=22 val_WAPE=0.783583 test_med_WAPE=0.9778  (998s)
+  seed 1: best_ep=4 val_WAPE=0.783625 test_med_WAPE=0.9824  (438s)
+  seed 2: best_ep=9 val_WAPE=0.781217 test_med_WAPE=0.9712  (605s)
+  seed 3: best_ep=9 val_WAPE=0.778275 test_med_WAPE=0.9698  (610s)
+  seed 4: best_ep=5 val_WAPE=0.783706 test_med_WAPE=0.9722  (482s)
+  seed 5: best_ep=10 val_WAPE=0.783524 test_med_WAPE=0.9727  (640s)
+  seed 6: best_ep=13 val_WAPE=0.782711 test_med_WAPE=0.9750  (737s)
+  seed 7: best_ep=9 val_WAPE=0.786432 test_med_WAPE=0.9892  (610s)
+  seed 8: best_ep=12 val_WAPE=0.781551 test_med_WAPE=0.9699  (702s)
+  seed 9: best_ep=7 val_WAPE=0.777655 test_med_WAPE=0.9736  (533s)
+  seed 10: best_ep=21 val_WAPE=0.780144 test_med_WAPE=0.9671  (970s)
+  seed 11: best_ep=22 val_WAPE=0.781456 test_med_WAPE=0.9720  (1009s)
+  seed 12: best_ep=9 val_WAPE=0.782356 test_med_WAPE=0.9735  (598s)
+  seed 13: best_ep=7 val_WAPE=0.782037 test_med_WAPE=0.9691  (539s)
+  seed 14: best_ep=3 val_WAPE=0.783937 test_med_WAPE=0.9798  (413s)
+  seed 15: best_ep=10 val_WAPE=0.783901 test_med_WAPE=0.9728  (635s)
+  seed 16: best_ep=8 val_WAPE=0.784072 test_med_WAPE=0.9760  (569s)
+  seed 17: best_ep=12 val_WAPE=0.780335 test_med_WAPE=0.9791  (733s)
+  seed 18: best_ep=15 val_WAPE=0.782631 test_med_WAPE=0.9720  (821s)
+  seed 19: best_ep=10 val_WAPE=0.781243 test_med_WAPE=0.9724  (657s)
+
+DONE MLP seed sweep
+######## OVERNIGHT BATCH DONE Wed Jul  8 07:08:42 CEST 2026 ########

@@ -51,9 +51,9 @@ ax[1].set_title('(b) Stock-out rate by hour of day')
 plt.tight_layout(); plt.savefig(f'{OUT}/eda_01_hourly_sales_stockout.png'); plt.close()
 print('Fig1 done. operational stockout rate (6-22): %.4f' % SS[:,H0:H1].mean())
 
-# ---------- per-series aggregates (operational window for stockout; sale_amount days 1-83 for volume) ----------
-df['vol83'] = df['sale_amount']
-vol = (df[df['day']<=83].groupby(['store_id','product_id'])['sale_amount'].sum())
+# ---------- per-series aggregates (operational window 6-22 for BOTH volume and stockout) ----------
+df['opvol'] = HS[:, H0:H1].sum(axis=1)
+vol = (df[df['day']<=83].groupby(['store_id','product_id'])['opvol'].sum())
 # stockout rate per series over operational hours
 so_op = SS[:, H0:H1]
 df['so_cnt'] = so_op.sum(axis=1); df['so_tot'] = (H1-H0)
@@ -137,7 +137,7 @@ hol = df.groupby('holiday_flag')['instock_sales'].mean()
 fig, ax = plt.subplots(1, 3, figsize=(13,4.2))
 ax[0].bar(range(len(dd)), dd.values, color='#2c7fb8'); ax[0].set_xticks(range(len(dd))); ax[0].set_xticklabels(dd.index, rotation=30, ha='right')
 ax[0].set_title('(a) Mean daily sales vs discount'); ax[0].set_xlabel('Discount range'); ax[0].set_ylabel('Mean daily sales')
-ax[1].bar(['non-holiday','holiday'], hol.values, color=['#2c7fb8','#d95f0e']); ax[1].set_title('(b) Holiday effect'); ax[1].set_ylabel('Mean daily sales')
+ax[1].bar(['non-holiday','holiday'], hol.values, color=['#2c7fb8','#d95f0e']); ax[1].set_title('(b) Mean daily sales vs holiday flag'); ax[1].set_ylabel('Mean daily sales')
 ax[2].plot(range(len(tt)), tt.values, 'o-', color='#2c7fb8'); ax[2].set_xticks(range(len(tt))); ax[2].set_xticklabels(tt.index, rotation=30, ha='right')
 ax[2].set_title('(c) Mean daily sales vs temperature'); ax[2].set_xlabel('Temperature range (°C)')
 plt.tight_layout(); plt.savefig(f'{OUT}/eda_08_covariates.png'); plt.close()

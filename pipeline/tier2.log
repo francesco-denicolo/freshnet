@@ -1,0 +1,40 @@
+1. Loading base data...
+  building series cache (static fields)...
+  50,000 series, t=23s
+
+2. Train on itransformer...
+  built 4,100,000/350,000, t=412s
+  ep1 valWAPE=0.79234
+  ep2 valWAPE=0.79100
+  ep3 valWAPE=0.80293
+  ep4 valWAPE=0.78318
+  ep5 valWAPE=0.78141
+  ep6 valWAPE=0.78305
+  ep7 valWAPE=0.79687
+  ep8 valWAPE=0.79726
+  ep9 valWAPE=0.79246
+  ep10 valWAPE=0.80454
+  ep11 valWAPE=0.78860
+  ep12 valWAPE=0.78941
+  ep13 valWAPE=0.80746
+  ep14 valWAPE=0.78966
+  ep15 valWAPE=0.78887
+
+3. Cross-apply model[itransformer] to each imputer's test features...
+  features=itransformer    model[itransformer]_WAPE=0.9809  native(model[itransformer])=0.9794  diff=+0.0015
+  features=mediana_glob    model[itransformer]_WAPE=0.9826  native(model[mediana_glob])=0.9840  diff=-0.0014
+  features=media_glob      model[itransformer]_WAPE=0.9712  native(model[media_glob])=0.9793  diff=-0.0081
+  features=saits           model[itransformer]_WAPE=0.9867  native(model[saits])=0.9790  diff=+0.0077
+  features=dlinear         model[itransformer]_WAPE=0.9817  native(model[dlinear])=0.9777  diff=+0.0041
+  features=forward_fill    model[itransformer]_WAPE=0.9872  native(model[forward_fill])=0.9764  diff=+0.0108
+  features=timesnet        model[itransformer]_WAPE=0.9851  native(model[timesnet])=0.9731  diff=+0.0120
+  features=lgb             model[itransformer]_WAPE=0.9833  native(model[lgb])=0.9759  diff=+0.0074
+  features=imputeformer    model[itransformer]_WAPE=0.9888  native(model[imputeformer])=0.9817  diff=+0.0070
+  features=seasonal_naive  model[itransformer]_WAPE=0.9742  native(model[seasonal_naive])=0.9811  diff=-0.0069
+  features=linear_interp   model[itransformer]_WAPE=0.9733  native(model[linear_interp])=0.9999  diff=-0.0266
+  features=media_cond      model[itransformer]_WAPE=0.9712  native(model[media_cond])=0.9894  diff=-0.0181
+  features=mediana_cond    model[itransformer]_WAPE=0.9787  native(model[mediana_cond])=0.9773  diff=+0.0015
+
+cross-apply WAPE: min=0.9712 max=0.9888 spread=0.0175
+mean |crossapply - native| = 0.0087
+saved, t=1389s

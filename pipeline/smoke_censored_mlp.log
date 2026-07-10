@@ -1,0 +1,14 @@
+=== Censored-aware MLP-M5 (no imputer, pinball loss) | taus=[0.5, 0.8] | device=mps ===
+
+1. Loading (raw censored series)...
+  Building series cache (censored series)...
+  50,000 series
+
+2. Building datasets (once)...
+  Train 4,100,000 Val 350,000 Test 350,000 — built in 412s
+
+3. Quantile (pinball) sweep, censored-aware direct...
+  tau=0.5: best_ep=1  WAPE_med=0.9879  WPE_med=-0.9043  (79s)
+  tau=0.8: best_ep=2  WAPE_med=1.2119  WPE_med=0.4072  (72s)
+
+DONE censored-aware MLP sweep

@@ -1,0 +1,93 @@
+[overnight] waiting for DLinear LGB cell to exist...
+[overnight] DLinear done at Mon Jun 29 22:39:56 CEST 2026. Launching SAITS hi-cap under caffeinate.
+[34m
+████████╗██╗███╗   ███╗███████╗    ███████╗███████╗██████╗ ██╗███████╗███████╗    █████╗ ██╗
+╚══██╔══╝██║████╗ ████║██╔════╝    ██╔════╝██╔════╝██╔══██╗██║██╔════╝██╔════╝   ██╔══██╗██║
+   ██║   ██║██╔████╔██║█████╗█████╗███████╗█████╗  ██████╔╝██║█████╗  ███████╗   ███████║██║
+   ██║   ██║██║╚██╔╝██║██╔══╝╚════╝╚════██║██╔══╝  ██╔══██╗██║██╔══╝  ╚════██║   ██╔══██║██║
+   ██║   ██║██║ ╚═╝ ██║███████╗    ███████║███████╗██║  ██║██║███████╗███████║██╗██║  ██║██║
+   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝
+ai4ts v0.0.3 - building AI for unified time-series analysis, https://time-series.ai [0m
+
+========================================================================
+  Capacity sweep: SAITS (hi-cap)  (ore 6-22)
+========================================================================
+  Config: n_steps=510, {'d_model': 128, 'n_heads': 8, 'n_layers': 3, 'd_ffn': 256, 'dropout': 0.1, 'batch_size': 16, 'max_epochs': 40, 'patience': 6, 'lr': 0.001}
+  Output: completed_sales_622/saits_hicap.parquet, traccia_a_saits_hicap.parquet
+
+1. Caricamento dati...
+  Samples: 150,000, Steps: 510, Features: 6
+
+2. Train/val split...
+  Train: 120,000 samples (40,000 series)
+  Val:   30,000 samples (10,000 series)
+
+3. Training SAITS (hi-cap) (patience=6, max 40 epochs)...
+  Device: mps
+2026-06-29 22:40:29 [INFO]: Using the given device: mps
+2026-06-29 22:40:29 [INFO]: Model files will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_saits_hicap_val/20260629_T224029
+2026-06-29 22:40:29 [INFO]: Tensorboard file will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_saits_hicap_val/20260629_T224029/tensorboard
+2026-06-29 22:40:29 [INFO]: Using customized MAE as the training loss function.
+2026-06-29 22:40:29 [INFO]: Using customized MSE as the validation metric function.
+2026-06-29 22:40:29 [INFO]: SAITS initialized with the given hyperparameters, the number of trainable parameters: 799,828
+  Model params: 799,828
+2026-06-29 23:12:49 [INFO]: Epoch 001 - training loss (MAE): 0.0661, validation MSE: 0.0095
+2026-06-29 23:44:45 [INFO]: Epoch 002 - training loss (MAE): 0.0407, validation MSE: 0.0116
+2026-06-30 00:17:09 [INFO]: Epoch 003 - training loss (MAE): 0.0386, validation MSE: 0.0082
+2026-06-30 00:49:55 [INFO]: Epoch 004 - training loss (MAE): 0.0373, validation MSE: 0.0084
+2026-06-30 01:22:50 [INFO]: Epoch 005 - training loss (MAE): 0.0365, validation MSE: 0.0123
+2026-06-30 01:56:00 [INFO]: Epoch 006 - training loss (MAE): 0.0361, validation MSE: 0.0122
+2026-06-30 02:29:04 [INFO]: Epoch 007 - training loss (MAE): 0.0358, validation MSE: 0.0121
+2026-06-30 03:01:54 [INFO]: Epoch 008 - training loss (MAE): 0.0356, validation MSE: 0.0111
+2026-06-30 03:34:47 [INFO]: Epoch 009 - training loss (MAE): 0.0354, validation MSE: 0.0092
+2026-06-30 03:34:47 [INFO]: Exceeded the training patience. Terminating the training procedure...
+2026-06-30 03:34:47 [INFO]: Finished training. The best model is from epoch#3.
+2026-06-30 03:34:47 [INFO]: Saved the model to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_saits_hicap_val/20260629_T224029/SAITS.pypots
+  Training time: 17658s
+
+4. Predict su tutti i 150,000 samples...
+Traceback (most recent call last):
+  File "/Users/utente/Desktop/FreshNetRetail/pipeline/cap_sweep_imputer.py", line 237, in <module>
+    res = model.predict({'X': X_all[start:end]})
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/imputation/saits/model.py", line 314, in predict
+    result_dict = super().predict(
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/imputation/base.py", line 341, in predict
+    results = self.model(inputs, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/imputation/saits/core.py", line 88, in forward
+    ) = self.encoder(X, missing_mask, diagonal_attention_mask)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/nn/modules/saits/backbone.py", line 107, in forward
+    enc_output, second_DMSA_attn_weights = encoder_layer(enc_output, attn_mask)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/nn/modules/transformer/layers.py", line 143, in forward
+    enc_output, attn_weights = self.slf_attn(
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/nn/modules/transformer/attention.py", line 212, in forward
+    v, attn_weights = self.attention_operator(q, k, v, attn_mask, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/pypots/nn/modules/transformer/attention.py", line 110, in forward
+    attn = F.softmax(attn, dim=-1)
+  File "/Users/utente/Desktop/FreshNetRetail/freshnet/lib/python3.9/site-packages/torch/nn/functional.py", line 2137, in softmax
+    ret = input.softmax(dim)
+RuntimeError: MPS backend out of memory (MPS allocated: 17.89 GiB, other allocations: 768.00 KiB, max allowed: 18.13 GiB). Tried to allocate 127.00 MiB on private pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).
+[overnight] SAITS pipeline finished at Tue Jun 30 03:34:58 CEST 2026.

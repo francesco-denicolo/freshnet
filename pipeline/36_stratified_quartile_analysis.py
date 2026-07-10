@@ -33,11 +33,8 @@ df['day_num'] = df.groupby(['store_id','product_id']).cumcount() + 1
 
 # Training period: days 1-83
 df_train = df[df.day_num <= 83]
-vol = df_train.groupby(['store_id','product_id'])['sale_amount'].sum().reset_index()
-vol.columns = ['store_id','product_id','volume']
-
-# Assign quartiles
-vol['quartile'] = pd.qcut(vol['volume'], q=4, labels=['Q1','Q2','Q3','Q4']).astype(str)
+# Volume quartiles on the OPERATIONAL window (6-22), shared across all scripts
+vol = pd.read_parquet(os.path.join(os.path.dirname(__file__), 'results', 'series_quartile_op.parquet'))
 print(f'   {len(vol):,} series, quartile sizes: '
       f'{vol.quartile.value_counts().sort_index().to_dict()}')
 print(f'   Volume thresholds (Q1/Q2/Q3 medians): '

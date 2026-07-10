@@ -1,0 +1,156 @@
+[34m
+████████╗██╗███╗   ███╗███████╗    ███████╗███████╗██████╗ ██╗███████╗███████╗    █████╗ ██╗
+╚══██╔══╝██║████╗ ████║██╔════╝    ██╔════╝██╔════╝██╔══██╗██║██╔════╝██╔════╝   ██╔══██╗██║
+   ██║   ██║██╔████╔██║█████╗█████╗███████╗█████╗  ██████╔╝██║█████╗  ███████╗   ███████║██║
+   ██║   ██║██║╚██╔╝██║██╔══╝╚════╝╚════██║██╔══╝  ██╔══██╗██║██╔══╝  ╚════██║   ██╔══██║██║
+   ██║   ██║██║ ╚═╝ ██║███████╗    ███████║███████╗██║  ██║██║███████╗███████║██╗██║  ██║██║
+   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝
+ai4ts v0.0.3 - building AI for unified time-series analysis, https://time-series.ai [0m
+
+========================================================================
+  Capacity sweep: DLinear (hi-cap)  (ore 6-22)
+========================================================================
+  Config: n_steps=510, {'d_model': 256, 'moving_avg': 17, 'individual': False, 'batch_size': 128, 'max_epochs': 40, 'patience': 5, 'lr': 0.001}
+  Output: completed_sales_622/dlinear_hicap.parquet, traccia_a_dlinear_hicap.parquet
+
+1. Caricamento dati...
+  Samples: 150,000, Steps: 510, Features: 6
+
+2. Train/val split...
+  Train: 120,000 samples (40,000 series)
+  Val:   30,000 samples (10,000 series)
+
+3. Training DLinear (hi-cap) (patience=5, max 40 epochs)...
+  Device: mps
+2026-06-29 17:45:09 [INFO]: Using the given device: mps
+2026-06-29 17:45:09 [INFO]: Model files will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_dlinear_hicap_val/20260629_T174509
+2026-06-29 17:45:09 [INFO]: Tensorboard file will be saved to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_dlinear_hicap_val/20260629_T174509/tensorboard
+2026-06-29 17:45:09 [INFO]: Using customized MAE as the training loss function.
+2026-06-29 17:45:09 [INFO]: Using customized MSE as the validation metric function.
+2026-06-29 17:45:09 [INFO]: DLinear initialized with the given hyperparameters, the number of trainable parameters: 530,960
+  Model params: 530,960
+2026-06-29 17:46:19 [INFO]: Epoch 001 - training loss (MAE): 0.0915, validation MSE: 0.0050
+2026-06-29 17:47:50 [INFO]: Epoch 002 - training loss (MAE): 0.0625, validation MSE: 0.0048
+2026-06-29 17:48:52 [INFO]: Epoch 003 - training loss (MAE): 0.0484, validation MSE: 0.0062
+2026-06-29 17:49:54 [INFO]: Epoch 004 - training loss (MAE): 0.0434, validation MSE: 0.0067
+2026-06-29 17:50:56 [INFO]: Epoch 005 - training loss (MAE): 0.0422, validation MSE: 0.0066
+2026-06-29 17:52:00 [INFO]: Epoch 006 - training loss (MAE): 0.0418, validation MSE: 0.0052
+2026-06-29 17:53:08 [INFO]: Epoch 007 - training loss (MAE): 0.0417, validation MSE: 0.0043
+2026-06-29 17:54:18 [INFO]: Epoch 008 - training loss (MAE): 0.0414, validation MSE: 0.0038
+2026-06-29 17:55:30 [INFO]: Epoch 009 - training loss (MAE): 0.0400, validation MSE: 0.0033
+2026-06-29 17:56:43 [INFO]: Epoch 010 - training loss (MAE): 0.0400, validation MSE: 0.0031
+2026-06-29 17:57:58 [INFO]: Epoch 011 - training loss (MAE): 0.0400, validation MSE: 0.0033
+2026-06-29 17:59:12 [INFO]: Epoch 012 - training loss (MAE): 0.0398, validation MSE: 0.0032
+2026-06-29 18:00:26 [INFO]: Epoch 013 - training loss (MAE): 0.0396, validation MSE: 0.0034
+2026-06-29 18:01:38 [INFO]: Epoch 014 - training loss (MAE): 0.0395, validation MSE: 0.0032
+2026-06-29 18:02:49 [INFO]: Epoch 015 - training loss (MAE): 0.0395, validation MSE: 0.0034
+2026-06-29 18:02:49 [INFO]: Exceeded the training patience. Terminating the training procedure...
+2026-06-29 18:02:49 [INFO]: Finished training. The best model is from epoch#10.
+2026-06-29 18:02:49 [INFO]: Saved the model to /Users/utente/Desktop/FreshNetRetail/pipeline/results/pypots_dlinear_hicap_val/20260629_T174509/DLinear.pypots
+  Training time: 1060s
+
+4. Predict su tutti i 150,000 samples...
+  Mean imputed: 0.0603, Mean original (non-NaN): 0.0704
+
+5. Valutazione MNAR...
+  MNAR masks: 1,209,105
+  MNAR NaN aggiunti: 1,209,105
+  DLinear (hi-cap): WAPE_recovery=0.9337, WPE_recovery=-0.6837
+
+6. Salvataggio completed_sales...
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/../data/completed_sales_622/dlinear_hicap.parquet
+  Media imputata (stockout): 0.0228
+  Media S_obs (in-stock):    0.0704
+
+========================================================================
+  DONE — DLinear (hi-cap)
+========================================================================
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × dlinear_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 432s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.052034, val_WAPE=0.799809
+  Epoch   2: loss=0.047991, val_WAPE=0.799590
+  Epoch   3: loss=0.047801, val_WAPE=0.798432
+  Epoch   4: loss=0.047734, val_WAPE=0.786708
+  Epoch   5: loss=0.047707, val_WAPE=0.784310
+  Epoch   6: loss=0.047703, val_WAPE=0.783176
+  Epoch   7: loss=0.047689, val_WAPE=0.787692
+  Epoch   8: loss=0.047690, val_WAPE=0.797222
+  Epoch   9: loss=0.047685, val_WAPE=0.797347
+  Epoch  10: loss=0.047684, val_WAPE=0.788834
+  Epoch  11: loss=0.047684, val_WAPE=0.791412
+  Epoch  12: loss=0.047681, val_WAPE=0.791110
+  Epoch  13: loss=0.047688, val_WAPE=0.790584
+  Epoch  14: loss=0.047685, val_WAPE=0.788668
+  Epoch  15: loss=0.047688, val_WAPE=0.792619
+  Epoch  16: loss=0.047687, val_WAPE=0.788600
+  Early stop (best=6, WAPE=0.783176)
+
+4. Test...
+
+  WAPE_h pool=0.7695, med=0.9724
+  WPE_h pool=-0.5480
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/dlinear_hicap__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × dlinear_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0569026
+[200]	val's l1: 0.0568464
+Early stopping, best iteration is:
+[220]	val's l1: 0.0568423
+  Best iter: 220
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7861, med=0.9814
+  WPE_h pool=-0.5948, time=10073s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/dlinear_hicap__lgb_m5lags_hpo_test_per_series.parquet
+DONE

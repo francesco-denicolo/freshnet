@@ -1,0 +1,30 @@
+=== Censored-aware LGB-M5 (no imputer, quantile loss) | taus=[0.5, 0.8] | rounds=10 ===
+
+1. Loading (raw censored series)...
+  Building series cache (lags from CENSORED series)...
+  50,000 series
+
+2. Building datasets (once)...
+    Computing lags for 4,100,000 days...
+      ... 1,000,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+    Computing lags for 350,000 days...
+  Test: 5,950,000
+  Built in 262s
+
+3. Quantile sweep (censored-aware, direct)...
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[10]	val's quantile: 0.0291364
+  tau=0.5: best_iter=10  WAPE_med=0.9879  WPE_med=-0.9241  (70s)
+Training until validation scores don't improve for 30 rounds
+Did not meet early stopping. Best iteration is:
+[10]	val's quantile: 0.0304808
+  tau=0.8: best_iter=10  WAPE_med=1.3786  WPE_med=0.6548  (56s)
+
+DONE censored-aware LGB sweep

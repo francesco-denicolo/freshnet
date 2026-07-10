@@ -78,15 +78,17 @@ print('saved fig_rq2_concordance')
 
 # ---------------------------------------------------------------- RQ4 crossover
 st = pd.read_parquet(f'{RES}/hpo_stratified_quartile.parquet')
+mg = pd.read_parquet(f'{RES}/hpo_matrix_pareto.parquet').set_index('cell')['wape_h_med']
 FAM = {'Naive':['global_mean','dow_mean','ma_k56'],'Intermittent':['croston','sba','tsb'],
-       'Lag-ML':['lgb_m5lags','mlp_m5lags'],'TFT':['tft'],'Foundation':['chronos_bolt','timesfm']}
-FAMC = {'Naive':'#4c72b0','Intermittent':'#55a868','Lag-ML':'#c44e52','TFT':'#8172b3','Foundation':'#ccb974'}
+       'Lag-ML':['lgb_m5lags','mlp_m5lags'],'TFT':['tft'],
+       'Chronos':['chronos_bolt'],'TimesFM':['timesfm']}
+FAMC = {'Naive':'#4c72b0','Intermittent':'#55a868','Lag-ML':'#c44e52','TFT':'#8172b3',
+        'Chronos':'#ccb974','TimesFM':'#937860'}
 fig, ax = plt.subplots(figsize=(7.6, 5.2)); xs = np.arange(len(QS))
 for fam, fcs in FAM.items():
-    ys = []
-    for q in QS:
-        sub = st[(st.quartile==q) & (st.forecaster.isin(fcs))]
-        ys.append(sub.wape_h_med.min() if len(sub) else np.nan)
+    cells = [c for c in mg.index if any(c.endswith('__' + f) for f in fcs)]
+    # best cell of the family IN EACH QUARTILE (imputer may change across quartiles)
+    ys = [st[(st.quartile == q) & (st.cell.isin(cells))].wape_h_med.min() for q in QS]
     ax.plot(xs, ys, marker='o', lw=2, label=fam, color=FAMC[fam])
 ax.set_xticks(xs); ax.set_xticklabels([f'{q}\n(vol {b})' for q,b in zip(QS,['low','','','high'])])
 ax.set_ylabel('Median WAPE (best cell of family)'); ax.set_xlabel('Volume quartile')
@@ -104,14 +106,19 @@ def pareto(df,xc,yc):
     for i in range(len(df)):
         d=((x<=x[i])&(y<=y[i])&((x<x[i])|(y<y[i]))); d[i]=False; k.append(not d.any())
     return np.array(k)
-m['p_rank']=pareto(m,'mean_rank','abs_wpe_med'); m['p_wape']=m['pareto']
-m['both']=m.p_rank & m.p_wape
-best=fr.sort_values('mean_rank').iloc[0]['cell']
+m['is_tft']=m.cell.str.endswith('__tft')   # TFT excluded from deployment (Sec 4.2)
+mnt=m[~m.is_tft].reset_index(drop=True)
+mnt['p_rank']=pareto(mnt,'mean_rank','abs_wpe_med'); mnt['p_wape']=pareto(mnt,'wape_h_med','abs_wpe_med')
+mnt['both']=mnt.p_rank & mnt.p_wape
+m=m.merge(mnt[['cell','p_rank','p_wape','both']], on='cell', how='left')
+for c in ['p_rank','p_wape','both']: m[c]=m[c].fillna(False)
+best=fr[~fr.cell.str.endswith('__tft')].merge(m[['cell']],on='cell').sort_values('mean_rank').iloc[0]['cell']
 fig, ax = plt.subplots(figsize=(7.6, 5.6))
-ax.scatter(m.mean_rank, m.abs_wpe_med, s=14, c='0.8', label='other cells', zorder=1)
+oth=m[~m.is_tft & ~m.p_rank]; ax.scatter(oth.mean_rank, oth.abs_wpe_med, s=14, c='0.8', label='other cells', zorder=1)
+tf=m[m.is_tft]; ax.scatter(tf.mean_rank, tf.abs_wpe_med, s=26, marker='x', c='0.55', label='TFT (excluded)', zorder=1)
 fo=m[m.p_rank & ~m.both]; ax.scatter(fo.mean_rank, fo.abs_wpe_med, s=40, facecolor='none', edgecolor='#c44e52', label='paired-rank frontier only', zorder=2)
 bo=m[m.both]; ax.scatter(bo.mean_rank, bo.abs_wpe_med, s=55, c='#55a868', edgecolor='k', lw=0.5, label='doubly Pareto-optimal', zorder=3)
-bb=m[m.cell==best]; ax.scatter(bb.mean_rank, bb.abs_wpe_med, s=220, marker='*', c='gold', edgecolor='k', lw=0.8, label='Friedman best', zorder=4)
+bb=m[m.cell==best]; ax.scatter(bb.mean_rank, bb.abs_wpe_med, s=220, marker='*', c='gold', edgecolor='k', lw=0.8, label='best (non-TFT, Friedman)', zorder=4)
 ax.set_xlabel('Mean rank (lower = better, paired)'); ax.set_ylabel('Median $|\\mathrm{WPE}|$ (bias)')
 ax.set_title('Deployment view: paired-rank vs marginal optimality', fontsize=12)
 ax.legend(fontsize=8.5, loc='upper right'); ax.grid(alpha=0.3)

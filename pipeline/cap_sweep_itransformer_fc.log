@@ -1,0 +1,90 @@
+[HPO] hidden=[128, 64] dropout=0.0 lr=3.508e-03 bs=1024 wd=1.60e-06 emb_scale=2.0 -> emb_dims={'store_id': 64, 'product_id': 64, 'city_id': 16, 'dow': 8}
+=== MLP M5 × itransformer_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building datasets...
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Train: 4,100,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Val: 350,000
+    ... 10,000/50,000
+    ... 20,000/50,000
+    ... 30,000/50,000
+    ... 40,000/50,000
+    ... 50,000/50,000
+  Test: 350,000
+  Built in 419s
+
+3. Training...
+  168,361 params
+  Epoch   1: loss=0.053217, val_WAPE=0.797931
+  Epoch   2: loss=0.048118, val_WAPE=0.795026
+  Epoch   3: loss=0.047932, val_WAPE=0.803715
+  Epoch   4: loss=0.047864, val_WAPE=0.782473
+  Epoch   5: loss=0.047838, val_WAPE=0.783258
+  Epoch   6: loss=0.047830, val_WAPE=0.789343
+  Epoch   7: loss=0.047816, val_WAPE=0.788577
+  Epoch   8: loss=0.047806, val_WAPE=0.801984
+  Epoch   9: loss=0.047803, val_WAPE=0.795743
+  Epoch  10: loss=0.047798, val_WAPE=0.798257
+  Epoch  11: loss=0.047806, val_WAPE=0.788260
+  Epoch  12: loss=0.047799, val_WAPE=0.788441
+  Epoch  13: loss=0.047800, val_WAPE=0.789866
+  Epoch  14: loss=0.047797, val_WAPE=0.788908
+  Early stop (best=4, WAPE=0.782473)
+
+4. Test...
+
+  WAPE_h pool=0.7691, med=0.9788
+  WPE_h pool=-0.5403
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/itransformer_hicap__mlp_m5lags_hpo_test_per_series.parquet
+DONE
+[HPO] LGB_PARAMS overridden: {'num_leaves': 110, 'learning_rate': 0.18389571429885973, 'min_child_samples': 166, 'bagging_fraction': 0.2, 'feature_fraction': 0.6}
+=== LGB M5 × itransformer_hicap (ore 6-22) ===
+
+1. Loading...
+  Building series cache...
+  50,000 series
+
+2. Building train...
+    Computing lags for 4,100,000 days...
+      ... 500,000/4,100,000
+      ... 1,000,000/4,100,000
+      ... 1,500,000/4,100,000
+      ... 2,000,000/4,100,000
+      ... 2,500,000/4,100,000
+      ... 3,000,000/4,100,000
+      ... 3,500,000/4,100,000
+      ... 4,000,000/4,100,000
+  Train: 69,700,000
+  Building val...
+    Computing lags for 350,000 days...
+  Val: 5,950,000
+  Training...
+Training until validation scores don't improve for 30 rounds
+[100]	val's l1: 0.0568971
+[200]	val's l1: 0.0568538
+[300]	val's l1: 0.0568144
+[400]	val's l1: 0.0567665
+[500]	val's l1: 0.056735
+Did not meet early stopping. Best iteration is:
+[480]	val's l1: 0.0567347
+  Best iter: 480
+  Building test...
+    Computing lags for 350,000 days...
+
+  WAPE_h pool=0.7847, med=0.9849
+  WPE_h pool=-0.5987, time=6979s
+  Salvato: /Users/utente/Desktop/FreshNetRetail/pipeline/results/itransformer_hicap__lgb_m5lags_hpo_test_per_series.parquet
+DONE

@@ -83,9 +83,8 @@ df_tr = pd.read_parquet('/Users/utente/Desktop/FreshNetRetail/data/frn50k_train.
 df_tr['dt_parsed'] = pd.to_datetime(df_tr['dt'])
 df_tr = df_tr.sort_values(['store_id','product_id','dt_parsed']).reset_index(drop=True)
 df_tr['day_num'] = df_tr.groupby(['store_id','product_id']).cumcount() + 1
-vol = (df_tr[df_tr.day_num <= 83]
-       .groupby(['store_id','product_id'])['sale_amount'].sum().reset_index())
-vol['quartile'] = pd.qcut(vol['sale_amount'], q=4, labels=['Q1','Q2','Q3','Q4']).astype(str)
+
+vol = pd.read_parquet(os.path.join(os.path.dirname(__file__), 'results', 'series_quartile_op.parquet'))
 quart_map = vol.set_index(['store_id','product_id'])['quartile']
 del df_tr
 

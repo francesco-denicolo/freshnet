@@ -19,7 +19,9 @@ def parse(n):
 # --- replicate script 45 cell loading ---
 per={}; seen=set()
 for f in sorted(glob.glob(f'{RES}/*_hpo_test_per_series.parquet')):
-    n=os.path.basename(f).replace('_hpo_test_per_series.parquet',''); per[n]=pd.read_parquet(f); seen.add(n)
+    n=os.path.basename(f).replace('_hpo_test_per_series.parquet','')
+    if 'hicap' in n: continue  # exclude capacity-sweep robustness cells (not in the 155-cell matrix)
+    per[n]=pd.read_parquet(f); seen.add(n)
 for f in sorted(glob.glob(f'{RES}/*_test_per_series.parquet')):
     fn=os.path.basename(f)
     if '_hpo_test_per_series' in fn: continue
