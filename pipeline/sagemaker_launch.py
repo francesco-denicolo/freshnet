@@ -57,9 +57,21 @@ def main():
     job = f"tft-gpu-{time.strftime('%Y%m%d-%H%M%S')}"
     max_run = a.max_hours * 3600
 
+    # Metriche estratte dallo stdout via regex -> CloudWatch + tab "Metrics" della console
+    # SageMaker. I pattern corrispondono a ciò che stampano gli script:
+    #   HPO   : "[Trial 3] val_WAPE_med=0.9891 ..."
+    #   celle : "WAPE pool=0.8797 | WAPE med=0.9850 | WPE pool=-0.69 | WPE med=-0.79"
+    metric_defs = [
+        {'Name': 'val:wape_med',   'Regex': r'val_WAPE_med=([0-9\.]+)'},
+        {'Name': 'test:wape_pool', 'Regex': r'WAPE pool=([0-9\.]+)'},
+        {'Name': 'test:wape_med',  'Regex': r'WAPE med=([0-9\.]+)'},
+        {'Name': 'test:wpe_med',   'Regex': r'WPE med=([-+0-9\.]+)'},
+    ]
+
     kw = dict(
         TrainingJobName=job,
-        AlgorithmSpecification={'TrainingImage': a.image, 'TrainingInputMode': 'File'},
+        AlgorithmSpecification={'TrainingImage': a.image, 'TrainingInputMode': 'File',
+                                'MetricDefinitions': metric_defs},
         RoleArn=a.role,
         InputDataConfig=[{
             'ChannelName': 'input',
@@ -92,8 +104,10 @@ def main():
     print(f'  input     : {a.input}')
     print(f'  checkpoint: {a.checkpoints}   (resume automatico)')
     print(f'  output    : {a.output}{job}/output/model.tar.gz')
-    print(f'\nStato:  python pipeline/sagemaker_launch.py --status {job}')
-    print(f'Log  :  aws logs tail /aws/sagemaker/TrainingJobs --log-stream-name-prefix {job} --follow')
+    print(f'  metriche  : {", ".join(m["Name"] for m in metric_defs)}  -> CloudWatch')
+    print(f'\nStato   :  python pipeline/sagemaker_launch.py --status {job}')
+    print(f'Log     :  aws logs tail /aws/sagemaker/TrainingJobs --log-stream-name-prefix {job} --follow')
+    print(f'Registry:  python pipeline/sagemaker_register.py --job {job}   (a job Completed)')
 
 
 if __name__ == '__main__':
