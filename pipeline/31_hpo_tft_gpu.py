@@ -85,7 +85,12 @@ print('=' * 72)
 # =========================================================================
 # 1. long_data (cache condivisa con la versione CPU, formato identico)
 # =========================================================================
-CACHE_PATH = os.path.join(RESULTS_DIR, f'hpo_tft_long_data_cache{SUB_TAG}.parquet')
+# Cache pesanti (long_data ~3GB, TimeSeriesDataSet): di default in RESULTS_DIR, ma su
+# SageMaker vanno su disco locale (TFT_CACHE_DIR=/tmp/...) per non finire nei checkpoint
+# sincronizzati su S3. Lo studio Optuna resta invece in RESULTS_DIR (serve al resume).
+CACHE_DIR = os.getenv('TFT_CACHE_DIR', RESULTS_DIR)
+os.makedirs(CACHE_DIR, exist_ok=True)
+CACHE_PATH = os.path.join(CACHE_DIR, f'hpo_tft_long_data_cache{SUB_TAG}.parquet')
 if os.path.exists(CACHE_PATH):
     print(f'[{time.time()-T_START:.0f}s] Loading long_data from cache...')
     long_data = pd.read_parquet(CACHE_PATH)
@@ -136,8 +141,8 @@ print(f'[{time.time()-T_START:.0f}s] Long_data shape: {long_data.shape}')
 # =========================================================================
 # 2. TimeSeriesDataSet (cache condivisa)
 # =========================================================================
-TSD_TRAIN_CACHE = os.path.join(RESULTS_DIR, f'hpo_tft_tsd_train{SUB_TAG}.pkl')
-TSD_VAL_CACHE = os.path.join(RESULTS_DIR, f'hpo_tft_tsd_val{SUB_TAG}.pkl')
+TSD_TRAIN_CACHE = os.path.join(CACHE_DIR, f'hpo_tft_tsd_train{SUB_TAG}.pkl')
+TSD_VAL_CACHE = os.path.join(CACHE_DIR, f'hpo_tft_tsd_val{SUB_TAG}.pkl')
 if os.path.exists(TSD_TRAIN_CACHE) and os.path.exists(TSD_VAL_CACHE):
     print(f'[{time.time()-T_START:.0f}s] Loading TimeSeriesDataSet from cache...')
     _orig = torch.load

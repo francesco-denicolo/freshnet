@@ -32,19 +32,26 @@ RUN pip install --upgrade pip \
 # --- Codice (solo script; dati/output montati a runtime) ---------------------
 COPY pipeline/ /app/pipeline/
 
-# Utente non-root con uid 1000 (= utente 'ubuntu' su EC2 => i volumi montati
-# restano scrivibili senza problemi di permessi).
-RUN useradd -m -u 1000 appuser \
-    && mkdir -p /app/data /app/pipeline/results \
-    && chown -R appuser:appuser /app
-USER appuser
-ENV HOME=/home/appuser
+# NB: non fissiamo USER nell'immagine.
+#  - SageMaker esegue il container come root e deve poter scrivere in /opt/ml.
+#  - Su EC2 la sicurezza non-root è garantita a runtime da run_docker_tft.sh
+#    (--user $(id -u):$(id -g)), quindi nulla viene scritto come root sui volumi.
+RUN mkdir -p /app/data /app/pipeline/results /opt/ml \
+    && chmod -R a+rwX /app /opt/ml
+
+# Entrypoint SageMaker Training: il job invoca `docker run <image> train`,
+# che con ENTRYPOINT tini diventa `tini -- train` => serve `train` nel PATH.
+COPY pipeline/sagemaker_train.sh /usr/local/bin/train
+RUN chmod +x /usr/local/bin/train
 
 # Default: HPO ampia (hidden fino a 256), niente subsample (50K piene), fp32.
-# Override a runtime con -e (vedi run_docker_tft.sh).
+# Override: -e su EC2, oppure HyperParameters del training job su SageMaker.
 ENV PY=python \
     TFT_HIDDEN_CAP=256 \
     TFT_PRECISION=32-true
 
+# Doppia modalità:
+#   docker run <image>          -> CMD: pipeline diretta (EC2, volumi montati)
+#   docker run <image> train    -> /usr/local/bin/train (SageMaker)
 ENTRYPOINT ["tini", "--"]
 CMD ["bash", "pipeline/run_cloud_tft.sh", "all"]
