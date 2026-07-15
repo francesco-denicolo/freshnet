@@ -28,7 +28,10 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--image', help='URI immagine ECR (obbligatorio per lanciare)')
     p.add_argument('--role', help='ARN del SageMaker execution role (obbligatorio per lanciare)')
-    p.add_argument('--instance', default='ml.g4dn.2xlarge')
+    # 64 GB: il picco RAM misurato scala a ~26 GB sulle 50K serie (0.36 GB/1K serie,
+    # estrapolato da 8K->11.1 GB e 15K->13.6 GB). Su 32 GB il margine sarebbe ~19%:
+    # troppo tirato per un job non presidiato, e SageMaker NON autoscala in caso di OOM.
+    p.add_argument('--instance', default='ml.g4dn.4xlarge')
     p.add_argument('--input', default=f's3://{BUCKET}/tft-input/')
     p.add_argument('--output', default=f's3://{BUCKET}/tft-output/')
     p.add_argument('--checkpoints', default=f's3://{BUCKET}/tft-checkpoints/')
