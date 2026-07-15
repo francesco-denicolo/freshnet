@@ -67,7 +67,11 @@ H_START, H_END = 6, 23; N_HOURS = H_END - H_START
 ENCODER_LENGTH = 7 * N_HOURS; PRED_LENGTH = 7 * N_HOURS
 MAX_EPOCHS = int(os.getenv('TFT_MAX_EPOCHS', 30))
 PATIENCE = int(os.getenv('TFT_PATIENCE', 5))
-MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
+# Budget di training delle CELLE, distinto da quello dell'HPO. L'HPO gira magro perché
+# deve solo ORDINARE le configurazioni (tutti i trial vedono gli stessi dati => confronto
+# pulito); le celle invece producono i numeri del paper, quindi vogliono un training
+# ricco: con 100K finestre su 50K serie si allenerebbero su ~2 finestre per serie.
+MAX_TRAIN_SAMPLES = int(os.getenv('TFT_CELL_MAX_TRAIN', os.getenv('TFT_MAX_TRAIN', 400_000)))
 SUBSET_SIZE = int(os.getenv('SERIES_SUBSAMPLE', 0)) or 50000  # su Colab free usa es. 15000
 
 # HP dalla config GPU vincente (obbligatoria: questa è la 'resourcing vera')

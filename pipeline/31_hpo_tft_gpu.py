@@ -191,12 +191,36 @@ else:
 
 # Sottocampiona le serie di validazione: Lightning valida a OGNI epoca, quindi su 50K
 # serie il costo si moltiplica per il numero di epoche e domina il trial.
+# Il campione è STRATIFICATO per quartile di volume: il volume è la dimensione attorno
+# a cui ruota l'analisi (RQ4), quindi le quattro fasce devono pesare uguale nel criterio
+# che sceglie la configurazione. Fallback su uniforme se la stratificazione non è
+# applicabile: meglio un campione uniforme che un job da ore che crasha qui.
 N_VAL = len(validation)
 if MAX_VAL_SERIES and N_VAL > MAX_VAL_SERIES:
-    rng_v = np.random.RandomState(SEED)
-    val_idx = rng_v.choice(N_VAL, MAX_VAL_SERIES, replace=False)
-    validation_sub = torch.utils.data.Subset(validation, val_idx.tolist())
-    print(f'[{time.time()-T_START:.0f}s]   Validation subsampled: {N_VAL:,} -> {MAX_VAL_SERIES:,} serie')
+    val_idx = None
+    try:
+        dec = validation.decoded_index.reset_index(drop=True)
+        dec['pos'] = np.arange(len(dec))
+        dec['store_id'] = dec['store_id'].astype(int)
+        dec['product_id'] = dec['product_id'].astype(int)
+        strat = pd.read_parquet(os.path.join(RESULTS_DIR, 'stratification.parquet'))[
+            ['store_id', 'product_id', 'vol_bin']]
+        m = dec.merge(strat, on=['store_id', 'product_id'], how='inner')
+        per_q = MAX_VAL_SERIES // m['vol_bin'].nunique()
+        val_idx = (m.groupby('vol_bin', group_keys=False)
+                     .apply(lambda g: g.sample(min(len(g), per_q), random_state=SEED))['pos']
+                     .to_numpy())
+        counts = m[m['pos'].isin(val_idx)]['vol_bin'].value_counts().to_dict()
+        print(f'[{time.time()-T_START:.0f}s]   Validation stratificata per volume: '
+              f'{N_VAL:,} -> {len(val_idx):,} serie {counts}')
+    except Exception as e:
+        print(f'[{time.time()-T_START:.0f}s]   Stratificazione non riuscita ({e}); uso campione uniforme')
+        val_idx = None
+    if val_idx is None:
+        val_idx = np.random.RandomState(SEED).choice(N_VAL, MAX_VAL_SERIES, replace=False)
+        print(f'[{time.time()-T_START:.0f}s]   Validation subsampled (uniforme): '
+              f'{N_VAL:,} -> {MAX_VAL_SERIES:,} serie')
+    validation_sub = torch.utils.data.Subset(validation, [int(i) for i in val_idx])
 else:
     validation_sub = validation
 

@@ -42,7 +42,9 @@ def main():
     # I default dello script HPO (48 trial / 30 epoche / 400K) valgono ~50-60h: fuori limite.
     p.add_argument('--trials', default='24', help='trial HPO (ognuno = un training completo)')
     p.add_argument('--epochs', default='12', help='epoche max per trial e per cella')
-    p.add_argument('--max-train', default='200000', help='finestre campionate per epoca')
+    p.add_argument('--max-train', default='200000', help='finestre per epoca durante l HPO (ranking)')
+    p.add_argument('--cell-max-train', default='400000',
+                   help='finestre per epoca nelle 14 celle (risultati del paper): piu ricco dell HPO')
     p.add_argument('--mode', default='all', choices=['all', 'hpo', 'cells'])
     p.add_argument('--max-hours', type=int, default=48)
     p.add_argument('--volume-gb', type=int, default=100)
@@ -102,7 +104,8 @@ def main():
             'TFT_HIDDEN_CAP': a.hidden_cap,      # spazio: tetto della ricerca
             'TFT_N_TRIALS': str(a.trials),       # budget: quante config provare
             'TFT_MAX_EPOCHS': str(a.epochs),     # budget: durata di ogni trial/cella
-            'TFT_MAX_TRAIN': str(a.max_train),   # budget: finestre per epoca
+            'TFT_MAX_TRAIN': str(a.max_train),          # budget HPO: finestre/epoca
+            'TFT_CELL_MAX_TRAIN': str(a.cell_max_train), # budget CELLE: piu ricco
             'TFT_PRECISION': '32-true',          # vincolo numerico (fp16 -> overflow)
             'TFT_MODE': a.mode,
             'SERIES_SUBSAMPLE': str(a.subsample),
@@ -117,7 +120,8 @@ def main():
     print(f'Lanciato: {job}')
     print(f'  istanza   : {a.instance}{"  (SPOT)" if a.spot else ""}')
     print(f'  ricerca   : hidden<= {a.hidden_cap} (spazio) | {a.trials} trial x {a.epochs} epoche '
-          f'x {a.max_train} finestre (budget) | max {a.max_hours}h')
+          f'x {a.max_train} finestre (budget HPO) | max {a.max_hours}h')
+    print(f'  celle     : {a.cell_max_train} finestre/epoca (piu ricco: producono i risultati)')
     print(f'  input     : {a.input}')
     print(f'  checkpoint: {a.checkpoints}   (resume automatico)')
     print(f'  output    : {a.output}{job}/output/model.tar.gz')
