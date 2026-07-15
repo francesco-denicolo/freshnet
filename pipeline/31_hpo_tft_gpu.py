@@ -54,11 +54,12 @@ TRAINING_CUTOFF = 83 * N_HOURS - 1
 VAL_CUTOFF = 90 * N_HOURS - 1
 MIN_HOURS_VAL = 34
 MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
-# Serie di validazione usate DURANTE l'HPO. La validazione serve solo a ORDINARE le
-# configurazioni, non a produrre i numeri del paper (quelli escono dalle 14 celle, su
-# tutte le 50K). Lightning valida a OGNI epoca: su 50K serie x 12 epoche il costo domina
-# il trial. Un campione stratificato-per-caso di 8K basta per il ranking.
-MAX_VAL_SERIES = int(os.getenv('TFT_MAX_VAL_SERIES', 8_000))
+# NB: il sottocampionamento delle serie di validazione è stato rimosso. Avvolgere il
+# TimeSeriesDataSet in torch.utils.data.Subset rompe model.predict(), che pretende un
+# TimeSeriesDataSet vero ("dataset behind dataloader must be TimeSeriesDataSet"), e
+# poggiava comunque su un'ipotesi non verificata (che il costo del trial fosse la
+# validazione). Prima si misura con fit=/val=, poi semmai si sottocampiona filtrando il
+# dataframe PRIMA di costruire il TSD, così resta un TimeSeriesDataSet.
 # Budget VRAM: hidden*batch <= 65536 è il valore PROVATO sulla T4
 # (hidden=32 x batch=2048 gira; hidden=128 x batch=2048 -> CUDA OOM).
 VRAM_BUDGET = int(os.getenv('TFT_VRAM_BUDGET', 65_536))
@@ -189,41 +190,6 @@ if N_TRAINING > MAX_TRAIN_SAMPLES:
 else:
     training_sub = training
 
-# Sottocampiona le serie di validazione: Lightning valida a OGNI epoca, quindi su 50K
-# serie il costo si moltiplica per il numero di epoche e domina il trial.
-# Il campione è STRATIFICATO per quartile di volume: il volume è la dimensione attorno
-# a cui ruota l'analisi (RQ4), quindi le quattro fasce devono pesare uguale nel criterio
-# che sceglie la configurazione. Fallback su uniforme se la stratificazione non è
-# applicabile: meglio un campione uniforme che un job da ore che crasha qui.
-N_VAL = len(validation)
-if MAX_VAL_SERIES and N_VAL > MAX_VAL_SERIES:
-    val_idx = None
-    try:
-        dec = validation.decoded_index.reset_index(drop=True)
-        dec['pos'] = np.arange(len(dec))
-        dec['store_id'] = dec['store_id'].astype(int)
-        dec['product_id'] = dec['product_id'].astype(int)
-        strat = pd.read_parquet(os.path.join(RESULTS_DIR, 'stratification.parquet'))[
-            ['store_id', 'product_id', 'vol_bin']]
-        m = dec.merge(strat, on=['store_id', 'product_id'], how='inner')
-        per_q = MAX_VAL_SERIES // m['vol_bin'].nunique()
-        val_idx = (m.groupby('vol_bin', group_keys=False)
-                     .apply(lambda g: g.sample(min(len(g), per_q), random_state=SEED))['pos']
-                     .to_numpy())
-        counts = m[m['pos'].isin(val_idx)]['vol_bin'].value_counts().to_dict()
-        print(f'[{time.time()-T_START:.0f}s]   Validation stratificata per volume: '
-              f'{N_VAL:,} -> {len(val_idx):,} serie {counts}')
-    except Exception as e:
-        print(f'[{time.time()-T_START:.0f}s]   Stratificazione non riuscita ({e}); uso campione uniforme')
-        val_idx = None
-    if val_idx is None:
-        val_idx = np.random.RandomState(SEED).choice(N_VAL, MAX_VAL_SERIES, replace=False)
-        print(f'[{time.time()-T_START:.0f}s]   Validation subsampled (uniforme): '
-              f'{N_VAL:,} -> {MAX_VAL_SERIES:,} serie')
-    validation_sub = torch.utils.data.Subset(validation, [int(i) for i in val_idx])
-else:
-    validation_sub = validation
-
 # =========================================================================
 # 3. Val stock mask (una volta)
 # =========================================================================
@@ -291,8 +257,7 @@ def objective(trial):
 
     train_loader = DataLoader(training_sub, batch_size=batch_size, shuffle=True,
                               num_workers=0, collate_fn=training._collate_fn)
-    val_loader = DataLoader(validation_sub, batch_size=batch_size * 2, shuffle=False,
-                            num_workers=0, collate_fn=validation._collate_fn)
+    val_loader = validation.to_dataloader(train=False, batch_size=batch_size * 2, num_workers=0)
 
     tft = TemporalFusionTransformer.from_dataset(
         training, learning_rate=lr, hidden_size=hidden_size, attention_head_size=n_heads,
@@ -334,8 +299,14 @@ study = optuna.create_study(
     sampler=optuna.samplers.TPESampler(seed=SEED, n_startup_trials=8),
     pruner=optuna.pruners.MedianPruner(n_startup_trials=8, n_warmup_steps=3, interval_steps=1),
     storage=STORAGE, study_name=STUDY_NAME, load_if_exists=True)
-print(f'  Existing trials: {len(study.trials)} | remaining: {max(0, N_TRIALS - len(study.trials))}')
-remaining = max(0, N_TRIALS - len(study.trials))
+# Conta come "fatti" solo i trial NON in stato RUNNING. Un trial interrotto (stop del job,
+# interruzione Spot, crash) resta nel DB come RUNNING per sempre: contarlo eroderebbe il
+# budget di ricerca a ogni riavvio senza che nulla lo segnali. Ci è già successo.
+_running = [t for t in study.trials if t.state == optuna.trial.TrialState.RUNNING]
+_done = len(study.trials) - len(_running)
+remaining = max(0, N_TRIALS - _done)
+print(f'  Trial nel DB: {len(study.trials)} (di cui {len(_running)} orfani RUNNING, non contati) '
+      f'| fatti: {_done} | remaining: {remaining}')
 if remaining > 0:
     study.optimize(objective, n_trials=remaining, gc_after_trial=True)
 
