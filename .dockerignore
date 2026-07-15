@@ -1,0 +1,20 @@
+# Tieni piccolo il build context: NON mandare dati, venv, output, git, cache.
+data/
+freshnet/
+freshnet_timesfm/
+baseline_paper/
+configs/
+.claude/
+.git/
+pipeline/results/
+pipeline/figures/
+pipeline/tft_gpu_checkpoints/
+pipeline/tft_checkpoints/
+**/__pycache__/
+*.parquet
+*.ckpt
+*.npy
+*.pkl
+*.db
+*.log
+*.ipynb_checkpoints
