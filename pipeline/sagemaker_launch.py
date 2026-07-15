@@ -36,9 +36,15 @@ def main():
     p.add_argument('--output', default=f's3://{BUCKET}/tft-output/')
     p.add_argument('--checkpoints', default=f's3://{BUCKET}/tft-checkpoints/')
     p.add_argument('--subsample', default='0', help='SERIES_SUBSAMPLE (0 = tutte le serie)')
+    # SPAZIO di ricerca (dove cercare): il tetto, non la dimensione scelta — la sceglie Optuna.
     p.add_argument('--hidden-cap', default='256')
+    # BUDGET di ricerca (quanto cercare): non restringe lo spazio, solo lo sforzo.
+    # I default dello script HPO (48 trial / 30 epoche / 400K) valgono ~50-60h: fuori limite.
+    p.add_argument('--trials', default='24', help='trial HPO (ognuno = un training completo)')
+    p.add_argument('--epochs', default='12', help='epoche max per trial e per cella')
+    p.add_argument('--max-train', default='200000', help='finestre campionate per epoca')
     p.add_argument('--mode', default='all', choices=['all', 'hpo', 'cells'])
-    p.add_argument('--max-hours', type=int, default=24)
+    p.add_argument('--max-hours', type=int, default=48)
     p.add_argument('--volume-gb', type=int, default=100)
     p.add_argument('--spot', action='store_true', help='managed spot training')
     p.add_argument('--status', help='mostra lo stato di un job esistente ed esci')
@@ -89,9 +95,15 @@ def main():
         ResourceConfig={'InstanceType': a.instance, 'InstanceCount': 1,
                         'VolumeSizeInGB': a.volume_gb},
         CheckpointConfig={'S3Uri': a.checkpoints, 'LocalPath': '/opt/ml/checkpoints'},
+        # NB: "HyperParameters" è il canale di configurazione generico di SageMaker, non
+        # gli iperparametri del TFT (head_dim, heads, dropout, lr, batch, wd): quelli li
+        # trova Optuna dentro al job e finiscono in hpo_tft_gpu_best.json.
         HyperParameters={
-            'TFT_HIDDEN_CAP': a.hidden_cap,
-            'TFT_PRECISION': '32-true',
+            'TFT_HIDDEN_CAP': a.hidden_cap,      # spazio: tetto della ricerca
+            'TFT_N_TRIALS': str(a.trials),       # budget: quante config provare
+            'TFT_MAX_EPOCHS': str(a.epochs),     # budget: durata di ogni trial/cella
+            'TFT_MAX_TRAIN': str(a.max_train),   # budget: finestre per epoca
+            'TFT_PRECISION': '32-true',          # vincolo numerico (fp16 -> overflow)
             'TFT_MODE': a.mode,
             'SERIES_SUBSAMPLE': str(a.subsample),
         },
@@ -104,6 +116,8 @@ def main():
     sm.create_training_job(**kw)
     print(f'Lanciato: {job}')
     print(f'  istanza   : {a.instance}{"  (SPOT)" if a.spot else ""}')
+    print(f'  ricerca   : hidden<= {a.hidden_cap} (spazio) | {a.trials} trial x {a.epochs} epoche '
+          f'x {a.max_train} finestre (budget) | max {a.max_hours}h')
     print(f'  input     : {a.input}')
     print(f'  checkpoint: {a.checkpoints}   (resume automatico)')
     print(f'  output    : {a.output}{job}/output/model.tar.gz')
