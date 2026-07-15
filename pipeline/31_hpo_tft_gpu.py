@@ -54,6 +54,14 @@ TRAINING_CUTOFF = 83 * N_HOURS - 1
 VAL_CUTOFF = 90 * N_HOURS - 1
 MIN_HOURS_VAL = 34
 MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
+# Serie di validazione usate DURANTE l'HPO. La validazione serve solo a ORDINARE le
+# configurazioni, non a produrre i numeri del paper (quelli escono dalle 14 celle, su
+# tutte le 50K). Lightning valida a OGNI epoca: su 50K serie x 12 epoche il costo domina
+# il trial. Un campione stratificato-per-caso di 8K basta per il ranking.
+MAX_VAL_SERIES = int(os.getenv('TFT_MAX_VAL_SERIES', 8_000))
+# Budget VRAM: hidden*batch <= 65536 è il valore PROVATO sulla T4
+# (hidden=32 x batch=2048 gira; hidden=128 x batch=2048 -> CUDA OOM).
+VRAM_BUDGET = int(os.getenv('TFT_VRAM_BUDGET', 65_536))
 # Subsample delle SERIE (0 = tutte). Su Colab free (~12.7 GB RAM) il TimeSeriesDataSet
 # su 50K serie va OOM: usa es. SERIES_SUBSAMPLE=15000. Cache dedicata per non collidere.
 SERIES_SUBSAMPLE = int(os.getenv('SERIES_SUBSAMPLE', 0))
@@ -181,6 +189,17 @@ if N_TRAINING > MAX_TRAIN_SAMPLES:
 else:
     training_sub = training
 
+# Sottocampiona le serie di validazione: Lightning valida a OGNI epoca, quindi su 50K
+# serie il costo si moltiplica per il numero di epoche e domina il trial.
+N_VAL = len(validation)
+if MAX_VAL_SERIES and N_VAL > MAX_VAL_SERIES:
+    rng_v = np.random.RandomState(SEED)
+    val_idx = rng_v.choice(N_VAL, MAX_VAL_SERIES, replace=False)
+    validation_sub = torch.utils.data.Subset(validation, val_idx.tolist())
+    print(f'[{time.time()-T_START:.0f}s]   Validation subsampled: {N_VAL:,} -> {MAX_VAL_SERIES:,} serie')
+else:
+    validation_sub = validation
+
 # =========================================================================
 # 3. Val stock mask (una volta)
 # =========================================================================
@@ -200,17 +219,22 @@ def compute_wape_med_val(model, val_loader):
     preds = np.clip(res.output.cpu().numpy(), 0, None)
     truths = res.y[0].cpu().numpy()
     idx_df = res.index
-    wapes = []
-    for i in range(len(idx_df)):
-        sid, pid = int(idx_df.iloc[i]['store_id']), int(idx_df.iloc[i]['product_id'])
-        if (sid, pid) not in val_stock_by_serie: continue
-        stk = val_stock_by_serie[(sid, pid)]
-        if len(stk) < PRED_LENGTH: continue
-        in_stock = stk == 0
-        if in_stock.sum() < MIN_HOURS_VAL: continue
-        p_in, t_in = preds[i][in_stock], truths[i][in_stock]
-        wapes.append(np.abs(p_in - t_in).sum() / max(np.abs(t_in).sum(), 1e-8))
-    return float(np.median(wapes)) if wapes else float('nan')
+    # Vettorizzato: il vecchio loop con idx_df.iloc[i] su decine di migliaia di righe
+    # costava minuti da solo. Qui si itera su array numpy per costruire la maschera,
+    # poi WAPE si calcola in blocco.
+    sids = idx_df['store_id'].to_numpy().astype(np.int64)
+    pids = idx_df['product_id'].to_numpy().astype(np.int64)
+    mask = np.zeros(preds.shape, dtype=bool)
+    for i in range(len(sids)):
+        stk = val_stock_by_serie.get((int(sids[i]), int(pids[i])))
+        if stk is not None and len(stk) >= PRED_LENGTH:
+            mask[i] = (stk[:PRED_LENGTH] == 0)
+    valid = mask.sum(axis=1) >= MIN_HOURS_VAL
+    if not valid.any():
+        return float('nan')
+    num = np.abs((preds - truths) * mask).sum(axis=1)
+    den = np.maximum(np.abs(truths * mask).sum(axis=1), 1e-8)
+    return float(np.median((num / den)[valid]))
 
 # =========================================================================
 # 4. Optuna objective (spazio AMPIO, nessun cap a 32)
@@ -222,7 +246,6 @@ def objective(trial):
     hidden_size = head_dim * n_heads
     dropout = trial.suggest_float('dropout', 0.0, 0.3, step=0.05)
     lr = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
-    batch_size = trial.suggest_categorical('batch_size', [512, 1024, 2048])
     weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
 
     # unico vincolo: rispetta il budget 'ampia' (hidden <= HIDDEN_CAP). NON per OOM, per costo.
@@ -230,12 +253,22 @@ def objective(trial):
         print(f'\n[Trial {trial.number}] SKIP hidden={hidden_size} > cap {HIDDEN_CAP}')
         raise optuna.TrialPruned()
 
+    # Batch DERIVATO, non cercato: su una GPU fissa si usa il più grande che entra.
+    # Cercarlo insieme a hidden produce combinazioni che vanno in CUDA OOM (è ciò che
+    # ha ucciso il run precedente: hidden=128 x batch=2048 su una T4 da 15 GB).
+    batch_size = 128
+    for b in (2048, 1024, 512, 256, 128):
+        if hidden_size * b <= VRAM_BUDGET:
+            batch_size = b
+            break
+
     print(f'\n[Trial {trial.number}] head_dim={head_dim} heads={n_heads} hidden={hidden_size} '
-          f'dropout={dropout:.2f} lr={lr:.1e} batch={batch_size} wd={weight_decay:.1e}')
+          f'dropout={dropout:.2f} lr={lr:.1e} batch={batch_size} (derivato) wd={weight_decay:.1e}')
 
     train_loader = DataLoader(training_sub, batch_size=batch_size, shuffle=True,
                               num_workers=0, collate_fn=training._collate_fn)
-    val_loader = validation.to_dataloader(train=False, batch_size=batch_size * 2, num_workers=0)
+    val_loader = DataLoader(validation_sub, batch_size=batch_size * 2, shuffle=False,
+                            num_workers=0, collate_fn=validation._collate_fn)
 
     tft = TemporalFusionTransformer.from_dataset(
         training, learning_rate=lr, hidden_size=hidden_size, attention_head_size=n_heads,
@@ -249,15 +282,22 @@ def objective(trial):
         max_epochs=MAX_EPOCHS, accelerator=ACCEL, devices=DEVICES, precision=PRECISION,
         callbacks=[pruning_cb, early_stop], gradient_clip_val=0.1,
         enable_checkpointing=False, enable_progress_bar=False, logger=False, deterministic=False)
+    # Strumentazione: separa fit e valutazione, così si vede DOVE va il tempo invece
+    # di stimarlo a occhio.
+    t_fit0 = time.time()
     try:
         trainer.fit(tft, train_loader, val_loader)
     except optuna.TrialPruned:
-        print(f'[Trial {trial.number}] PRUNED at epoch {trainer.current_epoch}')
+        print(f'[Trial {trial.number}] PRUNED at epoch {trainer.current_epoch} '
+              f'(fit={time.time()-t_fit0:.0f}s)')
         raise
+    t_fit = time.time() - t_fit0
 
+    t_val0 = time.time()
     val_wape = compute_wape_med_val(tft, val_loader)
-    print(f'[Trial {trial.number}] val_WAPE_med={val_wape:.4f} '
-          f'epoch~{trainer.current_epoch} elapsed={time.time()-t_trial:.0f}s')
+    t_val = time.time() - t_val0
+    print(f'[Trial {trial.number}] val_WAPE_med={val_wape:.4f} epoch~{trainer.current_epoch} '
+          f'fit={t_fit:.0f}s val={t_val:.0f}s elapsed={time.time()-t_trial:.0f}s')
     del tft, trainer, train_loader, val_loader; gc.collect()
     if ACCEL == 'gpu': torch.cuda.empty_cache()
     return val_wape
