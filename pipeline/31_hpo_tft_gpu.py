@@ -30,6 +30,20 @@ try:
 except ImportError:
     from optuna.integration import PyTorchLightningPruningCallback
 
+# --- Strumento di misura memoria: stampa RSS del processo + RAM di sistema a ogni passo
+#     chiave. Serve a DIAGNOSTICARE quale allocazione fa esplodere la RAM di sistema, non
+#     a stimarla. Zero effetto sul risultato. ---
+try:
+    import psutil
+    _PROC = psutil.Process()
+    def mem(tag):
+        rss = _PROC.memory_info().rss / 1e9
+        vm = psutil.virtual_memory()
+        print(f'[MEM {tag}] proc_rss={rss:.1f}GB | sys_used={vm.used/1e9:.1f}/{vm.total/1e9:.1f}GB '
+              f'({vm.percent:.0f}%)', flush=True)
+except Exception:
+    def mem(tag): pass
+
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'results')
@@ -149,6 +163,7 @@ else:
     long_data.to_parquet(CACHE_PATH, index=False)
     del df_train, df_eval, df_full; gc.collect()
 print(f'[{time.time()-T_START:.0f}s] Long_data shape: {long_data.shape}')
+mem('after long_data')
 
 # =========================================================================
 # 2. TimeSeriesDataSet (cache condivisa)
@@ -190,6 +205,7 @@ if N_TRAINING > MAX_TRAIN_SAMPLES:
     idx_subset = rng.choice(N_TRAINING, MAX_TRAIN_SAMPLES, replace=False)
     training_sub = torch.utils.data.Subset(training, idx_subset.tolist())
     print(f'[{time.time()-T_START:.0f}s]   Subsampled training to {MAX_TRAIN_SAMPLES:,}')
+    mem('after TSD + subsample (baseline)')
 else:
     training_sub = training
 
@@ -258,25 +274,32 @@ def objective(trial):
     print(f'\n[Trial {trial.number}] head_dim={head_dim} heads={n_heads} hidden={hidden_size} '
           f'dropout={dropout:.2f} lr={lr:.1e} batch={batch_size} (derivato) wd={weight_decay:.1e}')
 
+    mem(f'T{trial.number} start')
     train_loader = DataLoader(training_sub, batch_size=batch_size, shuffle=True,
                               num_workers=0, collate_fn=training._collate_fn)
     val_loader = validation.to_dataloader(train=False, batch_size=batch_size * 2, num_workers=0)
+    mem(f'T{trial.number} after loaders')
 
     tft = TemporalFusionTransformer.from_dataset(
         training, learning_rate=lr, hidden_size=hidden_size, attention_head_size=n_heads,
         dropout=dropout, hidden_continuous_size=min(hidden_size, 16),
         output_size=1, loss=MAE(), log_interval=0,
         reduce_on_plateau_patience=2, optimizer='adam', weight_decay=weight_decay)
+    mem(f'T{trial.number} after model')
 
     pruning_cb = PyTorchLightningPruningCallback(trial, monitor='val_loss')
     early_stop = EarlyStopping(monitor='val_loss', patience=PATIENCE, mode='min', min_delta=1e-4)
+    class _MemCb(pl.Callback):
+        def on_train_epoch_end(self, tr, pl_m): mem(f'T{trial.number} ep{tr.current_epoch} train_end')
+        def on_validation_epoch_end(self, tr, pl_m): mem(f'T{trial.number} ep{tr.current_epoch} val_end')
     trainer = pl.Trainer(
         max_epochs=MAX_EPOCHS, accelerator=ACCEL, devices=DEVICES, precision=PRECISION,
-        callbacks=[pruning_cb, early_stop], gradient_clip_val=0.1,
+        callbacks=[pruning_cb, early_stop, _MemCb()], gradient_clip_val=0.1,
         enable_checkpointing=False, enable_progress_bar=False, logger=False, deterministic=False)
     # Strumentazione: separa fit e valutazione, così si vede DOVE va il tempo invece
     # di stimarlo a occhio.
     t_fit0 = time.time()
+    mem(f'T{trial.number} before fit')
     try:
         trainer.fit(tft, train_loader, val_loader)
     except optuna.TrialPruned:
