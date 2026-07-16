@@ -64,8 +64,11 @@ MAX_TRAIN_SAMPLES = int(os.getenv('TFT_MAX_TRAIN', 400_000))
 # (hidden=32 x batch=2048 gira; hidden=128 x batch=2048 -> CUDA OOM).
 VRAM_BUDGET = int(os.getenv('TFT_VRAM_BUDGET', 65_536))
 # Subsample delle SERIE (0 = tutte). Su Colab free (~12.7 GB RAM) il TimeSeriesDataSet
-# su 50K serie va OOM: usa es. SERIES_SUBSAMPLE=15000. Cache dedicata per non collidere.
-SERIES_SUBSAMPLE = int(os.getenv('SERIES_SUBSAMPLE', 0))
+# su 50K serie va OOM: usa es. HPO_SUBSAMPLE=15000. Cache dedicata per non collidere.
+# HPO_SUBSAMPLE riduce le serie SOLO nell'HPO (serve a ordinare le config, non a produrre
+# i numeri del paper): le celle (script 25) restano su 50K. Fallback su SERIES_SUBSAMPLE
+# per retro-compatibilità.
+SERIES_SUBSAMPLE = int(os.getenv('HPO_SUBSAMPLE', os.getenv('SERIES_SUBSAMPLE', 0)))
 SUB_TAG = f'_sub{SERIES_SUBSAMPLE}' if SERIES_SUBSAMPLE > 0 else ''
 
 # --- HPO config (AMPIA) ---

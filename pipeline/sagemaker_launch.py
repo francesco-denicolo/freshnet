@@ -35,7 +35,9 @@ def main():
     p.add_argument('--input', default=f's3://{BUCKET}/tft-input/')
     p.add_argument('--output', default=f's3://{BUCKET}/tft-output/')
     p.add_argument('--checkpoints', default=f's3://{BUCKET}/tft-checkpoints/')
-    p.add_argument('--subsample', default='0', help='SERIES_SUBSAMPLE (0 = tutte le serie)')
+    p.add_argument('--subsample', default='0', help='SERIES_SUBSAMPLE celle (0 = tutte le serie)')
+    p.add_argument('--hpo-subsample', default='0',
+                   help='serie usate SOLO nell HPO (0 = tutte); le celle restano su --subsample')
     # SPAZIO di ricerca (dove cercare): il tetto, non la dimensione scelta — la sceglie Optuna.
     p.add_argument('--hidden-cap', default='256')
     # BUDGET di ricerca (quanto cercare): non restringe lo spazio, solo lo sforzo.
@@ -108,7 +110,8 @@ def main():
             'TFT_CELL_MAX_TRAIN': str(a.cell_max_train), # budget CELLE: piu ricco
             'TFT_PRECISION': '32-true',          # vincolo numerico (fp16 -> overflow)
             'TFT_MODE': a.mode,
-            'SERIES_SUBSAMPLE': str(a.subsample),
+            'SERIES_SUBSAMPLE': str(a.subsample),   # celle: serie usate per i risultati
+            'HPO_SUBSAMPLE': str(a.hpo_subsample),  # HPO: serie usate solo per ordinare le config
         },
         StoppingCondition={'MaxRuntimeInSeconds': max_run},
     )
@@ -121,7 +124,8 @@ def main():
     print(f'  istanza   : {a.instance}{"  (SPOT)" if a.spot else ""}')
     print(f'  ricerca   : hidden<= {a.hidden_cap} (spazio) | {a.trials} trial x {a.epochs} epoche '
           f'x {a.max_train} finestre (budget HPO) | max {a.max_hours}h')
-    print(f'  celle     : {a.cell_max_train} finestre/epoca (piu ricco: producono i risultati)')
+    print(f'  celle     : {a.cell_max_train} finestre/epoca | serie={a.subsample if a.subsample!="0" else "50K"} (producono i risultati)')
+    print(f'  HPO serie : {a.hpo_subsample if a.hpo_subsample!="0" else "50K"} (solo ranking config)')
     print(f'  input     : {a.input}')
     print(f'  checkpoint: {a.checkpoints}   (resume automatico)')
     print(f'  output    : {a.output}{job}/output/model.tar.gz')
