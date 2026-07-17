@@ -82,10 +82,14 @@ with open(HPO_JSON) as f:
     hpo = json.load(f)['best_params']
 head_dim = int(hpo['head_dim']); ATTENTION_HEADS = int(hpo['attention_heads'])
 HIDDEN_SIZE = head_dim * ATTENTION_HEADS
-DROPOUT = float(hpo['dropout']); LR = float(hpo['lr'])
-BATCH_SIZE = int(hpo['batch_size']); WEIGHT_DECAY = float(hpo['weight_decay'])
+DROPOUT = float(hpo['dropout']); LR = float(hpo['lr']); WEIGHT_DECAY = float(hpo['weight_decay'])
+# Il batch NON è nel best.json: l'HPO lo deriva dal budget VRAM (non lo cerca), quindi qui
+# lo deriviamo allo stesso modo -- hidden*batch <= 65536, valore provato sulla T4.
+VRAM_BUDGET = int(os.getenv('TFT_VRAM_BUDGET', 65_536))
+BATCH_SIZE = int(hpo.get('batch_size', 0)) or next(
+    (b for b in (2048, 1024, 512, 256, 128) if HIDDEN_SIZE * b <= VRAM_BUDGET), 128)
 print(f'[HPO-GPU] head_dim={head_dim} heads={ATTENTION_HEADS} hidden={HIDDEN_SIZE} '
-      f'dropout={DROPOUT} lr={LR:.3e} bs={BATCH_SIZE} wd={WEIGHT_DECAY:.2e}')
+      f'dropout={DROPOUT} lr={LR:.3e} bs={BATCH_SIZE} (derivato) wd={WEIGHT_DECAY:.2e}')
 
 IMP_KEY = sys.argv[1] if len(sys.argv) > 1 else 'no_imp'
 IMP_LABELS = {
