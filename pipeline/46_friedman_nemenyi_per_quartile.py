@@ -40,10 +40,12 @@ print('1. Loading cells...')
 per_series = {}
 seen = set()
 for f in sorted(glob.glob(f'{RESULTS_DIR}/*_hpo_test_per_series.parquet')):
+    if any(_x in os.path.basename(f) for _x in ('censored', '_hicap')): continue  # ausiliarie fuori matrice
     name = os.path.basename(f).replace('_hpo_test_per_series.parquet', '')
     per_series[name] = pd.read_parquet(f)
     seen.add(name)
 for f in sorted(glob.glob(f'{RESULTS_DIR}/*_test_per_series.parquet')):
+    if any(_x in os.path.basename(f) for _x in ('censored', '_hicap')): continue  # ausiliarie fuori matrice
     fn = os.path.basename(f)
     if '_hpo_test_per_series' in fn:
         continue

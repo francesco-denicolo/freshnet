@@ -63,7 +63,9 @@ per_series = {}
 seen_cells = set()
 
 # Load HPO files first (for forecasters that have HP to tune)
-hpo_files = sorted(glob.glob(f'{RESULTS_DIR}/*_hpo_test_per_series.parquet'))
+_AUX = ('censored', '_hicap')   # celle ausiliarie (§4.5 censored-aware, App.A capacity): fuori dalla matrice
+hpo_files = [f for f in sorted(glob.glob(f'{RESULTS_DIR}/*_hpo_test_per_series.parquet'))
+             if not any(x in os.path.basename(f) for x in _AUX)]
 for f in hpo_files:
     name = os.path.basename(f).replace('_hpo_test_per_series.parquet', '')
     imp, fc = parse_name(name)
@@ -78,7 +80,8 @@ for f in hpo_files:
     })
 
 # Load non-HPO cells for chronos_bolt and naive forecasters
-non_hpo_files = sorted(glob.glob(f'{RESULTS_DIR}/*_test_per_series.parquet'))
+non_hpo_files = [f for f in sorted(glob.glob(f'{RESULTS_DIR}/*_test_per_series.parquet'))
+                 if not any(x in os.path.basename(f) for x in _AUX)]
 for f in non_hpo_files:
     fn = os.path.basename(f)
     if '_hpo_test_per_series' in fn:
