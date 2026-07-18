@@ -106,19 +106,15 @@ def pareto(df,xc,yc):
     for i in range(len(df)):
         d=((x<=x[i])&(y<=y[i])&((x<x[i])|(y<y[i]))); d[i]=False; k.append(not d.any())
     return np.array(k)
-m['is_tft']=m.cell.str.endswith('__tft')   # TFT excluded from deployment (Sec 4.2)
-mnt=m[~m.is_tft].reset_index(drop=True)
-mnt['p_rank']=pareto(mnt,'mean_rank','abs_wpe_med'); mnt['p_wape']=pareto(mnt,'wape_h_med','abs_wpe_med')
-mnt['both']=mnt.p_rank & mnt.p_wape
-m=m.merge(mnt[['cell','p_rank','p_wape','both']], on='cell', how='left')
-for c in ['p_rank','p_wape','both']: m[c]=m[c].fillna(False)
-best=fr[~fr.cell.str.endswith('__tft')].merge(m[['cell']],on='cell').sort_values('mean_rank').iloc[0]['cell']
+m=m.reset_index(drop=True)   # TFT is a first-class resourced forecaster (Sec 4.2)
+m['p_rank']=pareto(m,'mean_rank','abs_wpe_med'); m['p_wape']=pareto(m,'wape_h_med','abs_wpe_med')
+m['both']=m.p_rank & m.p_wape
+best=fr.merge(m[['cell']],on='cell').sort_values('mean_rank').iloc[0]['cell']
 fig, ax = plt.subplots(figsize=(7.6, 5.6))
-oth=m[~m.is_tft & ~m.p_rank]; ax.scatter(oth.mean_rank, oth.abs_wpe_med, s=14, c='0.8', label='other cells', zorder=1)
-tf=m[m.is_tft]; ax.scatter(tf.mean_rank, tf.abs_wpe_med, s=26, marker='x', c='0.55', label='TFT (excluded)', zorder=1)
+oth=m[~m.p_rank]; ax.scatter(oth.mean_rank, oth.abs_wpe_med, s=14, c='0.8', label='other cells', zorder=1)
 fo=m[m.p_rank & ~m.both]; ax.scatter(fo.mean_rank, fo.abs_wpe_med, s=40, facecolor='none', edgecolor='#c44e52', label='paired-rank frontier only', zorder=2)
 bo=m[m.both]; ax.scatter(bo.mean_rank, bo.abs_wpe_med, s=55, c='#55a868', edgecolor='k', lw=0.5, label='doubly Pareto-optimal', zorder=3)
-bb=m[m.cell==best]; ax.scatter(bb.mean_rank, bb.abs_wpe_med, s=220, marker='*', c='gold', edgecolor='k', lw=0.8, label='best (non-TFT, Friedman)', zorder=4)
+bb=m[m.cell==best]; ax.scatter(bb.mean_rank, bb.abs_wpe_med, s=220, marker='*', c='gold', edgecolor='k', lw=0.8, label='best (Friedman)', zorder=4)
 ax.set_xlabel('Mean rank (lower = better, paired)'); ax.set_ylabel('Median $|\\mathrm{WPE}|$ (bias)')
 ax.set_title('Deployment view: paired-rank vs marginal optimality', fontsize=12)
 ax.legend(fontsize=8.5, loc='upper right'); ax.grid(alpha=0.3)

@@ -13,7 +13,6 @@ OUT = '/Users/utente/Desktop/MDPI_Overleaf/figures/fig_censored_direct.png'
 
 # ---- two-stage matrix cells (median WAPE, median |WPE|) ----
 mat = pd.read_parquet(f'{RES}/hpo_matrix_pareto.parquet')[['cell','wape_h_med','abs_wpe_med']]
-mat = mat[~mat.cell.str.endswith('__tft')]                      # TFT excluded (non-competitive)
 def pareto(x, y):
     k=[]
     for i in range(len(x)):
