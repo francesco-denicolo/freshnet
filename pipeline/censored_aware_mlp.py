@@ -47,6 +47,12 @@ all_dates=sorted(df_full['dt_parsed'].unique()); date_to_day={d:i+1 for i,d in e
 df_full['day_num']=df_full['dt_parsed'].map(date_to_day); df_full['dow']=df_full['dt_parsed'].dt.dayofweek
 sales_orig=np.array(df_full['hours_sale'].tolist(),dtype=np.float32)[:,H_START:H_END]
 stock_orig=np.array(df_full['hours_stock_status'].tolist(),dtype=np.float32)[:,H_START:H_END]
+# per-hour stock-out frequency f(h) on training days -> principled censored-quantile tau(h)
+_trm=(df_full['day_num'].values<=90)
+FH=stock_orig[_trm].mean(0)                       # (17,) f(h)
+TAU_H_VEC=(0.5+0.5*FH).astype(np.float32)         # latent-median recovery under point-mass-at-0 censoring
+TAU_H_MODE=os.getenv('TAU_H')=='1'
+print(f'  f(h) range: {FH.min():.3f}-{FH.max():.3f}  ->  tau(h) range: {TAU_H_VEC.min():.3f}-{TAU_H_VEC.max():.3f}')
 del df_train_hf,df_eval
 
 print('  Building series cache (censored series)...')
@@ -169,10 +175,13 @@ def eval_and_save(model,out_path):
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
 print('\n3. Quantile (pinball) sweep, censored-aware direct...')
-for tau in TAUS:
-    tsx=f'{tau:.2f}'.rstrip('0').rstrip('.')
-    out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_q{tsx}{SUFFIX}_test_per_series.parquet')
-    if os.path.exists(out_path) and not os.getenv('EXPORT_Q'): print(f'  tau={tau}: SKIP'); continue
+if TAU_H_MODE:
+    TAU_ITEMS=[('tauh', torch.tensor(TAU_H_VEC).to(DEVICE))]   # principled censored-quantile tau(h)
+else:
+    TAU_ITEMS=[(f'q{("%.2f"%t).rstrip("0").rstrip(".")}', float(t)) for t in TAUS]
+for tag, tau in TAU_ITEMS:
+    out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_test_per_series.parquet')
+    if os.path.exists(out_path) and not os.getenv('EXPORT_Q'): print(f'  {tag}: SKIP'); continue
     t1=time.time(); torch.manual_seed(42); np.random.seed(42)
     model=MLP(nc,nl).to(DEVICE); loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True)
     opt=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
@@ -194,7 +203,7 @@ for tau in TAUS:
         if ni>=PATIENCE: break
     if bs: model.load_state_dict(bs); model.to(DEVICE)
     wm,pm=eval_and_save(model,out_path)
-    print(f'  tau={tau}: best_ep={be}  WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
+    print(f'  {tag}: best_ep={be}  WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
     del model,loader,opt,bs; gc.collect()
     if DEVICE=='mps': torch.mps.empty_cache()
 print('\nDONE censored-aware MLP sweep')
