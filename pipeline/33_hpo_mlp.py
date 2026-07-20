@@ -37,8 +37,10 @@ CARDINALITIES = {'store_id':898,'product_id':865,'city_id':18,'dow':7}
 MIN_HOURS_VAL = 34
 N_TRIALS = 45
 MAX_EPOCHS = 100; PATIENCE = 10
-STUDY_NAME = 'hpo_mlp'
-STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_mlp.db'
+TUNE_IMPUTER = os.getenv('TUNE_IMPUTER', '')          # '' = raw censored basis (paper); e.g. 'itransformer' for the co-adaptation check
+TAG = f'_{TUNE_IMPUTER}' if TUNE_IMPUTER else ''
+STUDY_NAME = 'hpo_mlp' + TAG
+STORAGE = f'sqlite:///{RESULTS_DIR}/hpo_mlp{TAG}.db'
 
 # --- Smoke test mode (env: HPO_SMOKE=1) ---
 if os.getenv('HPO_SMOKE') == '1':
@@ -57,18 +59,18 @@ print('=' * 72)
 # =========================================================================
 # 1. Build dataset PER-DAY (cache)
 # =========================================================================
-CACHE_TR_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_cat.npy')
-CACHE_TR_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_cont.npy')
-CACHE_TR_LAG = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_lag.npy')
-CACHE_TR_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_train_y.npy')
-CACHE_VA_CAT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_cat.npy')
-CACHE_VA_CONT = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_cont.npy')
-CACHE_VA_LAG = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_lag.npy')
-CACHE_VA_Y = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_y.npy')
-CACHE_VA_STK = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_stk.npy')
-CACHE_VA_SIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_sids.npy')
-CACHE_VA_PIDS = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_val_pids.npy')
-CACHE_NORM = os.path.join(RESULTS_DIR, 'hpo_mlp_perday_norm.npz')
+CACHE_TR_CAT = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_train_cat.npy')
+CACHE_TR_CONT = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_train_cont.npy')
+CACHE_TR_LAG = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_train_lag.npy')
+CACHE_TR_Y = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_train_y.npy')
+CACHE_VA_CAT = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_cat.npy')
+CACHE_VA_CONT = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_cont.npy')
+CACHE_VA_LAG = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_lag.npy')
+CACHE_VA_Y = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_y.npy')
+CACHE_VA_STK = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_stk.npy')
+CACHE_VA_SIDS = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_sids.npy')
+CACHE_VA_PIDS = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_val_pids.npy')
+CACHE_NORM = os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_perday_norm.npz')
 
 ALL_CACHES = [CACHE_TR_CAT, CACHE_TR_CONT, CACHE_TR_LAG, CACHE_TR_Y,
               CACHE_VA_CAT, CACHE_VA_CONT, CACHE_VA_LAG, CACHE_VA_Y,
@@ -165,6 +167,24 @@ if not all(os.path.exists(p) for p in ALL_CACHES):
     df_full['dow'] = df_full['dt_parsed'].dt.dayofweek
     sales_all = np.array(df_full['hours_sale'].tolist(), dtype=np.float32)[:, H_START:H_END]
     stock_all = np.array(df_full['hours_stock_status'].tolist(), dtype=np.float32)[:, H_START:H_END]
+
+    # Co-adaptation control (referee): optionally tune on an IMPUTED basis instead of the
+    # raw censored series. TUNE_IMPUTER=itransformer replaces the sales that feed the lags
+    # (and the target) with that imputer's completed series; the in-stock val target is
+    # unchanged (imputers only fill stock-out hours), so config selection stays comparable.
+    if TUNE_IMPUTER:
+        print(f'[{time.time()-T_START:.0f}s]   TUNE_IMPUTER={TUNE_IMPUTER}: applying completed series to lags/targets...')
+        _cs = pd.read_parquet(os.path.join(DATA_DIR, 'completed_sales_622', f'{TUNE_IMPUTER}.parquet'))
+        _cs['dt_parsed'] = pd.to_datetime(_cs['dt'])
+        _cs = _cs.sort_values(['store_id', 'product_id', 'dt_parsed']).reset_index(drop=True)
+        _arr = np.array(_cs['hours_sale'].tolist(), np.float32)
+        if _arr.shape[1] == 24: _arr = _arr[:, H_START:H_END]
+        _km = dict(zip((_cs['store_id'].astype(str) + '_' + _cs['product_id'].astype(str) + '_' + _cs['dt']).values, range(len(_cs))))
+        _fk = (df_full['store_id'].astype(str) + '_' + df_full['product_id'].astype(str) + '_' + df_full['dt']).values
+        for _i in range(len(df_full)):
+            _k = _fk[_i]
+            if _k in _km: sales_all[_i] = _arr[_km[_k]]
+        del _cs, _arr, _km, _fk
 
     print(f'[{time.time()-T_START:.0f}s]   Building series cache...')
     series_cache = {}
@@ -363,7 +383,7 @@ if remaining > 0:
 # =========================================================================
 best = study.best_trial
 print(f'\nBest trial: #{best.number}, val_WAPE_med={best.value:.4f}, params={best.params}')
-with open(os.path.join(RESULTS_DIR, 'hpo_mlp_best.json'), 'w') as f:
+with open(os.path.join(RESULTS_DIR, f'hpo_mlp{TAG}_best.json'), 'w') as f:
     json.dump({'best_trial': best.number, 'best_value': best.value,
                'best_params': best.params, 'n_trials': len(study.trials)}, f, indent=2)
 study.trials_dataframe().to_parquet(os.path.join(RESULTS_DIR, 'hpo_mlp_trials.parquet'), index=False)
