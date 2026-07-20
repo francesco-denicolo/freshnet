@@ -160,13 +160,19 @@ def eval_and_save(model,out_path):
                      'hourly_wpe':eh/oh2 if oh2!=0 else np.nan,'daily_wape':sd2/aod if aod>0 else np.nan,
                      'daily_wpe':ed/od if od!=0 else np.nan})
     ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    if os.getenv('EXPORT_Q'):
+        cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
+        qrows=[(sid,pid,j,float(preds[i].sum())) for (sid,pid),idxs in sm.items() for j,i in enumerate(idxs)]
+        qdf=pd.DataFrame(qrows,columns=['store_id','product_id','day_idx','q'])
+        qdf.to_parquet(os.path.join(RESULTS_DIR,f'newsvendor_q_{cell}.parquet'),index=False)
+        print(f'  newsvendor q saved: newsvendor_q_{cell}.parquet (mean q={qdf.q.mean():.3f})')
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
 print('\n3. Quantile (pinball) sweep, censored-aware direct...')
 for tau in TAUS:
     tsx=f'{tau:.2f}'.rstrip('0').rstrip('.')
     out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_q{tsx}{SUFFIX}_test_per_series.parquet')
-    if os.path.exists(out_path): print(f'  tau={tau}: SKIP'); continue
+    if os.path.exists(out_path) and not os.getenv('EXPORT_Q'): print(f'  tau={tau}: SKIP'); continue
     t1=time.time(); torch.manual_seed(42); np.random.seed(42)
     model=MLP(nc,nl).to(DEVICE); loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True)
     opt=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
