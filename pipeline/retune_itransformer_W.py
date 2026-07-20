@@ -33,9 +33,11 @@ for d in (dt, de): d['dt_parsed'] = pd.to_datetime(d['dt'])
 df = pd.concat([dt, de], ignore_index=True).sort_values(['store_id','product_id','dt_parsed']).reset_index(drop=True)
 del dt, de
 keys_all = df[['store_id','product_id']].drop_duplicates().reset_index(drop=True)
-rng = np.random.RandomState(0); sel = rng.choice(len(keys_all), min(SUB, len(keys_all)), replace=False)
-ksub = keys_all.iloc[sel]
-df = df.merge(ksub, on=['store_id','product_id']).reset_index(drop=True)
+if SUB <= 0 or SUB >= len(keys_all):
+    print(f'  using ALL {len(keys_all)} series (SUB={SUB})')
+else:
+    rng = np.random.RandomState(0); sel = rng.choice(len(keys_all), SUB, replace=False)
+    df = df.merge(keys_all.iloc[sel], on=['store_id','product_id']).reset_index(drop=True)
 alld = sorted(df['dt_parsed'].unique()); df['day_num'] = df['dt_parsed'].map({d:i+1 for i,d in enumerate(alld)})
 df['dow'] = df['dt_parsed'].dt.dayofweek
 sales_o = np.array(df['hours_sale'].tolist(), np.float32)[:, H0:H1]
@@ -164,10 +166,13 @@ lm=np.nanmean(lf,0); ls=np.nanstd(lf,0)+1e-6
 cotr_n,ltr_n = normalize(cotr,ltr,cm,cs,lm,ls)
 va = build('val', sc_it); cov_n,lv_n = normalize(va[1],va[2],cm,cs,lm,ls)
 VA=(va[0],cov_n,lv_n,va[3],va[4],va[5],va[6])
-SPACE=[{'hid':h,'drop':dr,'lr':lr,'bs':bs,'wd':1e-6,'emb':em}
-       for h,dr,lr,bs,em in [([128,64],0.0,3.5e-3,1024,2.0),([256,128],0.1,8e-4,1024,1.5),
-                              ([128,64],0.1,1e-3,4096,1.0),([256,128],0.0,2e-3,1024,2.0),
-                              ([128],0.0,3e-3,1024,1.5),([256,128,64],0.1,1e-3,1024,1.5)]]
+SPACE=[{'hid':h,'drop':dr,'lr':lr,'bs':bs,'wd':wd,'emb':em}
+       for h,dr,lr,bs,em,wd in [([128,64],0.0,3.5e-3,1024,2.0,1e-6),([256,128],0.1,8e-4,1024,1.5,1e-6),
+                              ([128,64],0.1,1e-3,4096,1.0,1e-5),([256,128],0.0,2e-3,1024,2.0,1e-6),
+                              ([128],0.0,3e-3,1024,1.5,1e-6),([256,128,64],0.1,1e-3,1024,1.5,1e-5),
+                              ([64,32],0.0,3e-3,1024,2.0,1e-6),([256],0.05,1.5e-3,1024,1.5,1e-6),
+                              ([128,64],0.2,2e-3,1024,2.0,1e-4),([256,128],0.1,5e-4,4096,1.0,1e-6),
+                              ([128,128,64],0.1,1e-3,1024,1.5,1e-5),([128,64],0.0,5e-3,4096,2.0,1e-6)]]
 best_cfg=None; best_w=1e9
 for i,cfg in enumerate(SPACE):
     w,_=train_eval(cfg,(ctr,cotr_n,ltr_n,ytr),VA)
