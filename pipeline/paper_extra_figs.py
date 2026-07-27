@@ -41,12 +41,17 @@ for y,lab in [(0.1,'negligible'),(0.3,'small'),(0.5,'moderate')]:
     ax[0].axhline(y, ls=':', c='0.6', lw=0.9); ax[0].text(len(ORDER)-0.4, y+0.005, lab, fontsize=7, ha='right', color='0.4')
 ax[0].set_xticks(xs); ax[0].set_xticklabels([LAB[f] for f in ORDER], rotation=40, ha='right', fontsize=9)
 ax[0].set_ylabel("Kendall's $W$"); ax[0].set_title('(a) Imputer-effect strength per forecaster (global)', fontsize=11)
-for q in QS:
+qcols = ['#c6dbef', '#6baed6', '#2171b5', '#08306b']  # light->dark blue = Q1->Q4 (increasing volume)
+bw = 0.2
+for j, q in enumerate(QS):
     gq = fps[fps.level==q].set_index('forecaster')
-    ax[1].plot(xs, [gq.loc[f,'kendall_W'] for f in ORDER], marker='o', ms=4, label=q)
-ax[1].set_xticks(xs); ax[1].set_xticklabels([LAB[f] for f in ORDER], rotation=40, ha='right', fontsize=9)
-ax[1].set_ylabel("Kendall's $W$"); ax[1].set_title('(b) By volume quartile', fontsize=11); ax[1].legend(fontsize=8, title='Quartile')
+    ax[1].bar(xs + (j - 1.5) * bw, [gq.loc[f, 'kendall_W'] for f in ORDER], bw,
+              label=q, color=qcols[j], edgecolor='white', linewidth=0.3)
 ax[1].axhline(0.1, ls=':', c='0.6', lw=0.9)
+ax[1].text(len(ORDER) - 0.4, 0.105, 'negligible', fontsize=7, ha='right', color='0.4')
+ax[1].set_xticks(xs); ax[1].set_xticklabels([LAB[f] for f in ORDER], rotation=40, ha='right', fontsize=9)
+ax[1].set_ylabel("Kendall's $W$"); ax[1].set_title('(b) By volume quartile', fontsize=11)
+ax[1].legend(fontsize=8, title='Quartile', ncol=4, columnspacing=0.8, handlelength=1.1)
 leg = [Patch(fc=GC[k], label=k) for k in ['naive','intermittent','lag-ML','deep','foundation']]
 ax[0].legend(handles=leg, fontsize=7.5, loc='upper right')
 plt.tight_layout(); plt.savefig(f'{OUT}/fig_rq1_kendallw.png', dpi=200, bbox_inches='tight'); plt.close()
