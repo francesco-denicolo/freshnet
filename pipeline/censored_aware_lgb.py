@@ -111,8 +111,8 @@ print('\n2. Building datasets (once)...')
 t0=time.time()
 Xtr,ytr,_,_,_=build_ds('train'); print(f'  Train: {len(Xtr):,}')
 ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True); del Xtr,ytr; gc.collect()
-Xva,yva,_,_,_=build_ds('val'); print(f'  Val: {len(Xva):,}')
-lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=True); del Xva,yva; gc.collect()
+Xva,yva,sva,siva,piva=build_ds('val'); print(f'  Val: {len(Xva):,}')
+lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=False); gc.collect()
 Xte,yte,ste,site,pite=build_ds('test'); print(f'  Test: {len(Xte):,}')
 del df_full,sales_orig,stock_orig,series_cache; gc.collect()
 print(f'  Built in {time.time()-t0:.0f}s')
@@ -137,17 +137,32 @@ def eval_and_save(preds, out_path):
     ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
+def eval_val_save(preds_val, tag):
+    """Per-series in-stock VALIDATION hourly WAPE, for selecting tau on the Sec 3.7 criterion."""
+    nd=len(preds_val)//N_HOURS
+    dft=pd.DataFrame({'sid':siva,'pid':piva,'pred':preds_val.astype(np.float64),
+                      'obs':yva.astype(np.float64),'stock':sva})
+    recs=[]
+    for (sid,pid),grp in dft.groupby(['sid','pid'],sort=False):
+        ig=grp['stock'].values==0
+        sao=np.abs(grp['obs'].values[ig]).sum(); sae=np.abs(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
+        recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sae/sao if sao>0 else np.nan,'n_instock':int(ig.sum())})
+    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_lgb_m5_q{tag}{SUFFIX}_VAL_per_series.parquet'),index=False)
+    return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
+
 print('\n3. Quantile sweep (censored-aware, direct)...')
 for tau in TAUS:
     ts=f'{tau:.2f}'.rstrip('0').rstrip('.')
     out_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}_test_per_series.parquet')
-    if os.path.exists(out_path): print(f'  tau={tau}: SKIP (exists)'); continue
+    val_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}_VAL_per_series.parquet')
+    if os.path.exists(out_path) and os.path.exists(val_path): print(f'  tau={tau}: SKIP (exists)'); continue
     t1=time.time()
     params=dict(LGB_BASE); params['objective']='quantile'; params['alpha']=tau
     model=lgb.train(params,ltr,num_boost_round=N_ROUNDS,valid_sets=[lva],valid_names=['val'],
                     callbacks=[lgb.early_stopping(30),lgb.log_evaluation(0)])
     preds=np.clip(model.predict(Xte),0,None)
     wm,pm=eval_and_save(preds,out_path)
-    print(f'  tau={tau}: best_iter={model.best_iteration}  WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
+    vm=eval_val_save(np.clip(model.predict(Xva),0,None),ts)
+    print(f'  tau={tau}: best_iter={model.best_iteration}  VAL_WAPE_med={vm:.4f}  TEST_WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
     del model,preds; gc.collect()
 print('\nDONE censored-aware LGB sweep')

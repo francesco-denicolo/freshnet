@@ -174,6 +174,24 @@ def eval_and_save(model,out_path):
         print(f'  newsvendor q saved: newsvendor_q_{cell}.parquet (mean q={qdf.q.mean():.3f})')
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
+def eval_val_save(model, tag):
+    """Per-series in-stock VALIDATION hourly WAPE, for selecting tau on the Sec 3.7 criterion."""
+    model.eval(); ap=[]
+    with torch.no_grad():
+        for s in range(0,len(vc),10000):
+            e=min(s+10000,len(vc)); ap.append(model(vc[s:e],vco[s:e],vl[s:e]).cpu().numpy())
+    preds=np.concatenate(ap); sm={}
+    for i in range(len(va['store_ids'])): sm.setdefault((va['store_ids'][i],va['product_ids'][i]),[]).append(i)
+    recs=[]
+    for (sid,pid),idxs in sm.items():
+        sh,aoh,nh=0.,0.,0
+        for i in idxs:
+            m=vi[i]
+            sh+=np.abs(preds[i,m]-va['targets'][i,m]).sum(); aoh+=np.abs(va['targets'][i,m]).sum(); nh+=int(m.sum())
+        recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sh/aoh if aoh>0 else np.nan,'n_instock':nh})
+    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_VAL_per_series.parquet'),index=False)
+    return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
+
 print('\n3. Quantile (pinball) sweep, censored-aware direct...')
 if TAU_H_MODE:
     TAU_ITEMS=[('tauh', torch.tensor(TAU_H_VEC).to(DEVICE))]   # principled censored-quantile tau(h)
@@ -181,7 +199,8 @@ else:
     TAU_ITEMS=[(f'q{("%.2f"%t).rstrip("0").rstrip(".")}', float(t)) for t in TAUS]
 for tag, tau in TAU_ITEMS:
     out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_test_per_series.parquet')
-    if os.path.exists(out_path) and not os.getenv('EXPORT_Q'): print(f'  {tag}: SKIP'); continue
+    val_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_VAL_per_series.parquet')
+    if os.path.exists(out_path) and os.path.exists(val_path) and not os.getenv('EXPORT_Q'): print(f'  {tag}: SKIP'); continue
     t1=time.time(); torch.manual_seed(42); np.random.seed(42)
     model=MLP(nc,nl).to(DEVICE); loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True)
     opt=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
@@ -203,7 +222,8 @@ for tag, tau in TAU_ITEMS:
         if ni>=PATIENCE: break
     if bs: model.load_state_dict(bs); model.to(DEVICE)
     wm,pm=eval_and_save(model,out_path)
-    print(f'  {tag}: best_ep={be}  WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
+    vm=eval_val_save(model,tag)
+    print(f'  {tag}: best_ep={be}  VAL_WAPE_med={vm:.4f}  TEST_WAPE_med={wm:.4f}  WPE_med={pm:.4f}  ({time.time()-t1:.0f}s)')
     del model,loader,opt,bs; gc.collect()
     if DEVICE=='mps': torch.mps.empty_cache()
 print('\nDONE censored-aware MLP sweep')
