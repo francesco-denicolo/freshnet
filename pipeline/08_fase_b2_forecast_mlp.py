@@ -32,7 +32,7 @@ WEIGHT_DECAY=0.0; DROPOUT=0.0
 
 if os.getenv('HPO_VARIANT') == '1':
     import json
-    with open(os.path.join(RESULTS_DIR, 'hpo_mlp_best.json')) as f:
+    with open(os.path.join(RESULTS_DIR, os.getenv('MLP_CONFIG', 'hpo_mlp_best.json'))) as f:
         hpo = json.load(f)['best_params']
     HIDDEN = json.loads(hpo['hidden'])
     DROPOUT = float(hpo['dropout'])
@@ -57,7 +57,7 @@ IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
               'timesnet':'TimesNet',
               'csdi':'CSDI',
               'imputeformer':'ImputeFormer'}
-cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
+cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '') + os.getenv('CELL_SUFFIX', '')
 out_path = os.path.join(RESULTS_DIR, f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path} exists'); sys.exit(0)
 
