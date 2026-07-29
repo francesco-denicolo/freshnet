@@ -39,6 +39,15 @@ recovery = {
     'seasonal_naive': 1.0638,   # 14_fase_b1_imputation_classic.py
     'forward_fill':   1.1878,   # 14_fase_b1_imputation_classic.py
 }
+if os.getenv('TEST_MASK') == '1':
+    # #6a-ii: use the held-out TEST-mask recovery instead of the val-mask values above
+    import glob as _g
+    recovery = {}
+    for _f in sorted(_g.glob(f'{RESULTS_DIR}/traccia_a_*_test.parquet')):
+        _k = os.path.basename(_f).replace('traccia_a_', '').replace('_test.parquet', '')
+        recovery[_k] = float(pd.read_parquet(_f).wape_recovery.iloc[0])
+    print(f'[TEST_MASK] using {len(recovery)} test-mask recovery values')
+
 imputers = list(recovery.keys())
 recovery_vec = np.array([recovery[i] for i in imputers])
 print(f'{len(imputers)} imputer con WAPE_recovery')
