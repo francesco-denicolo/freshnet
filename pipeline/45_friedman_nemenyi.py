@@ -16,6 +16,7 @@ Output:
 """
 import os, glob, functools
 import numpy as np, pandas as pd
+from paper_labels import IMP_LABELS, FC_LABELS
 from scipy import stats
 from scipy.stats import studentized_range
 print = functools.partial(print, flush=True)
@@ -180,7 +181,13 @@ top = out.head(TOP_N).copy()
 fig, ax = plt.subplots(figsize=(14, 8))
 y = np.arange(TOP_N)
 ranks = top['mean_rank'].values
-labels = top['cell'].tolist()
+def _pretty_cell(c):
+    c = c.replace('_hpo', '')
+    if '__' in c:
+        i, f = c.split('__', 1)
+        return f'{IMP_LABELS.get(i, i)} / {FC_LABELS.get(f, f)}'
+    return FC_LABELS.get(c, c)
+labels = [_pretty_cell(c) for c in top['cell'].tolist()]
 colors = ['#4575b4' if top['cd_indistinguishable'].iloc[i] else '#cccccc'
           for i in range(TOP_N)]
 ax.barh(y, ranks, color=colors, alpha=0.85, edgecolor='black', linewidth=0.5)

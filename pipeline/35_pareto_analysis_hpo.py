@@ -7,6 +7,7 @@ Cliff's δ effect sizes. Salva figura + tabelle.
 """
 import os, glob, functools
 import numpy as np, pandas as pd
+from paper_labels import IMP_LABELS, FC_LABELS as _CANON_FC
 from scipy import stats
 print = functools.partial(print, flush=True)
 
@@ -36,14 +37,7 @@ FC_MARKERS = {
     'timesfm':'*',
     'global_mean':'s', 'dow_mean':'X', 'ma_k56':'v',
 }
-FC_LABELS = {
-    'lgb_nolags':'LGB_nolags', 'lgb_m5lags':'LGB_M5',
-    'mlp_nolags':'MLP_nolags', 'mlp_m5lags':'MLP_M5',
-    'tft':'TFT',
-    'chronos_bolt':'Chronos-bolt',
-    'timesfm':'TimesFM',
-    'global_mean':'Global Mean', 'dow_mean':'DoW Mean', 'ma_k56':'MA (K=56)',
-}
+FC_LABELS = _CANON_FC
 # Non-HPO forecasters (use _test_per_series.parquet, not _hpo)
 NON_HPO_FC = {'chronos_bolt','timesfm','global_mean','dow_mean','ma_k56','croston','sba','tsb'}
 
@@ -292,16 +286,16 @@ n_equiv = mat.equiv_to_best.sum() if 'equiv_to_best' in mat.columns else 0
 legend_handles += [
     mlines.Line2D([], [], color='gold', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=15,
-                  label=f'★ Best WAPE: {best_row.imputer}__{FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
+                  label=f'★ Best WAPE: {IMP_LABELS.get(best_row.imputer, best_row.imputer)} / {FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
     mlines.Line2D([], [], color='#ff7f0e', marker='o', linestyle='--', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
                   label=f'⊙ CD-indistinguishable from Friedman best (n={n_equiv})'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
-                  label=f'● Knee: {knee_row.imputer}__{FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
+                  label=f'● Knee: {IMP_LABELS.get(knee_row.imputer, knee_row.imputer)} / {FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
     mlines.Line2D([], [], color='#1f77b4', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
-                  label=f'● Min |WPE|: {min_wpe_row.imputer}__{FC_LABELS.get(min_wpe_row.forecaster, min_wpe_row.forecaster)}'),
+                  label=f'● Min |WPE|: {IMP_LABELS.get(min_wpe_row.imputer, min_wpe_row.imputer)} / {FC_LABELS.get(min_wpe_row.forecaster, min_wpe_row.forecaster)}'),
 ]
 ax.legend(handles=legend_handles, loc='center left',
           bbox_to_anchor=(1.02, 0.5), fontsize=13, framealpha=0.95)

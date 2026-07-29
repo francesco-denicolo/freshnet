@@ -4,6 +4,7 @@ WAPE, coloured by forecaster family. Shows that (i) the lag-based families separ
 fig_newsvendor.png into the Overleaf figures/ folder."""
 import os, functools
 import numpy as np, pandas as pd
+from paper_labels import IMP_LABELS
 from scipy.stats import spearmanr
 print = functools.partial(print, flush=True)
 import matplotlib
@@ -27,7 +28,7 @@ for fc, (lab, col, mk) in fam.items():
     rho = spearmanr(g.wape_h_med, g.cost_r2).correlation
     # annotate the cheapest cell of each family
     b = g.loc[g.cost_r2.idxmin()]
-    ax.annotate(b.imputer, (b.wape_h_med, b.cost_r2), textcoords='offset points',
+    ax.annotate(IMP_LABELS.get(b.imputer, b.imputer), (b.wape_h_med, b.cost_r2), textcoords='offset points',
                 xytext=(7, -2), fontsize=8.5, color=col)
     print(f'{lab}: Spearman(WAPE,cost_r2)={rho:.3f}')
 

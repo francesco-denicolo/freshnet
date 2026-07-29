@@ -10,6 +10,7 @@ Output: fig_pareto_friedman.png (figura originale fig_pareto_hpo.png invariata).
 """
 import os, functools
 import numpy as np, pandas as pd
+from paper_labels import IMP_LABELS
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -152,19 +153,19 @@ for fc in ['lgb_nolags','lgb_m5lags','mlp_nolags','mlp_m5lags','tft',
 legend_handles += [
     mlines.Line2D([], [], color='gold', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=16,
-                  label=f'★ Friedman best: {friedman_best.imputer}__{FC_LABELS.get(friedman_best.forecaster, friedman_best.forecaster)}'),
+                  label=f'★ Friedman best: {IMP_LABELS.get(friedman_best.imputer, friedman_best.imputer)} / {FC_LABELS.get(friedman_best.forecaster, friedman_best.forecaster)}'),
     mlines.Line2D([], [], color='lightgray', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=10,
-                  label=f'★ Median-WAPE best (reference): {median_best.imputer}__{FC_LABELS.get(median_best.forecaster, median_best.forecaster)}'),
+                  label=f'★ Median-WAPE best (reference): {IMP_LABELS.get(median_best.imputer, median_best.imputer)} / {FC_LABELS.get(median_best.forecaster, median_best.forecaster)}'),
     mlines.Line2D([], [], color='#ff7f0e', marker='o', linestyle='--',
                   markerfacecolor='none', markeredgewidth=2.5, markersize=12,
                   label=f'⊙ Nemenyi CD-equivalent to Friedman best (n={len(cd_equiv)})'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None',
                   markerfacecolor='none', markeredgewidth=2.5, markersize=12,
-                  label=f'● Knee: {knee.imputer}__{FC_LABELS.get(knee.forecaster, knee.forecaster)}'),
+                  label=f'● Knee: {IMP_LABELS.get(knee.imputer, knee.imputer)} / {FC_LABELS.get(knee.forecaster, knee.forecaster)}'),
     mlines.Line2D([], [], color='#1f77b4', marker='o', linestyle='None',
                   markerfacecolor='none', markeredgewidth=2.5, markersize=12,
-                  label=f'● Min |WPE|: {min_wpe.imputer}__{FC_LABELS.get(min_wpe.forecaster, min_wpe.forecaster)}'),
+                  label=f'● Min |WPE|: {IMP_LABELS.get(min_wpe.imputer, min_wpe.imputer)} / {FC_LABELS.get(min_wpe.forecaster, min_wpe.forecaster)}'),
 ]
 
 ax.legend(handles=legend_handles, loc='center left',
