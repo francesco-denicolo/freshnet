@@ -49,6 +49,15 @@ recovery = {
     'seasonal_naive': 1.0638,
     'forward_fill':   1.1878,
 }
+if os.getenv('TEST_MASK') == '1':
+    # #6a-ii: use the held-out TEST-mask recovery instead of the val-mask values above
+    import glob as _g
+    recovery = {}
+    for _f in sorted(_g.glob(f'{RESULTS_DIR}/traccia_a_*_test.parquet')):
+        _k = os.path.basename(_f).replace('traccia_a_', '').replace('_test.parquet', '')
+        recovery[_k] = float(pd.read_parquet(_f).wape_recovery.iloc[0])
+    print(f'[TEST_MASK] using {len(recovery)} test-mask recovery values')
+
 imputers_all = list(recovery.keys())
 rec_vec_all = np.array([recovery[i] for i in imputers_all])
 print(f'{len(imputers_all)} imputer con WAPE_recovery')
@@ -170,11 +179,12 @@ for fc in panels:
 # Save
 # ----------------------------------------------------------------------
 summary = pd.DataFrame(results)
-summary.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance.parquet', index=False)
+_sfx = '_test' if os.getenv('TEST_MASK') == '1' else ''
+summary.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance{_sfx}.parquet', index=False)
 print(f'\nSaved: rq2_pairwise_concordance.parquet ({len(summary)} forecaster)')
 
 pairs_df = pd.DataFrame(all_pairs_rows)
-pairs_df.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance_pairs.parquet', index=False)
+pairs_df.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance_pairs{_sfx}.parquet', index=False)
 print(f'Saved: rq2_pairwise_concordance_pairs.parquet ({len(pairs_df)} pair rows)')
 
 # ----------------------------------------------------------------------
