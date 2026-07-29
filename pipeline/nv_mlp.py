@@ -59,7 +59,11 @@ IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
               'imputeformer':'ImputeFormer'}
 cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
 out_path = os.path.join(RESULTS_DIR, f'newsvendor_q_{cell_key}.parquet')
-if os.path.exists(out_path): print(f'SKIP: {out_path} exists'); sys.exit(0)
+val_path = os.path.join(RESULTS_DIR, f'newsvendor_qval_{cell_key}.parquet')   # #4: validation orders for critical-fractile calibration
+safe_path = os.path.join(RESULTS_DIR, f'safehours_{cell_key}_test_per_series.parquet')  # #5: safe-in-stock-hours re-score
+OVERNIGHT = os.getenv('NV_OVERNIGHT') == '1'
+_needed = [out_path, val_path, safe_path] if OVERNIGHT else [out_path]
+if all(os.path.exists(p) for p in _needed): print(f'SKIP: outputs exist for {cell_key}'); sys.exit(0)
 
 print(f'=== MLP M5 × {IMP_LABELS[IMP_KEY]} (ore 6-22) ===')
 
@@ -248,6 +252,45 @@ qd['day_idx']=qd.groupby(['store_id','product_id'],sort=False).cumcount()
 qd=qd[['store_id','product_id','day_idx','q']]
 qd.to_parquet(out_path,index=False)
 print(f'  NEWSVENDOR q saved: {out_path} ({len(qd):,} rows, mean q={qd.q.mean():.3f})')
+
+if OVERNIGHT:
+    # (a) #4 --- validation daily orders q_val(series, val-day) for critical-fractile calibration
+    print('\n5. Overnight extras...')
+    vap=[]
+    with torch.no_grad():
+        for s in range(0,len(vc),10000):
+            e=min(s+10000,len(vc)); vap.append(model(vc[s:e],vco[s:e],vl[s:e]).cpu().numpy())
+    vpreds=np.concatenate(vap)
+    qv=pd.DataFrame({'store_id':va['store_ids'],'product_id':va['product_ids'],
+                     'q':vpreds.sum(1).astype(np.float64)})
+    qv['day_idx']=qv.groupby(['store_id','product_id'],sort=False).cumcount()
+    qv[['store_id','product_id','day_idx','q']].to_parquet(val_path,index=False)
+    print(f'  q_val saved: {val_path} ({len(qv):,} rows)')
+
+    # (b) #5 --- per-series WAPE/WPE on "safe" in-stock test hours (referee Assumption 1)
+    #     safe_A: in-stock hours on days with zero stock-out
+    #     safe_B: in-stock hours >= k=2 hours before the first stock-out of the day
+    stk=te['stock']; tgt=te['targets']; pr=preds; NH=N_HOURS
+    hidx=np.arange(NH)[None,:]
+    day_has_so=(stk>0).any(1)
+    first_so=np.where(stk>0, hidx, NH).min(1)
+    instock=(stk==0)
+    safeA=instock & (~day_has_so)[:,None]
+    safeB=instock & np.where(day_has_so[:,None], hidx<(first_so[:,None]-2), True)
+    df=pd.DataFrame({'sid':np.repeat(te['store_ids'],NH),'pid':np.repeat(te['product_ids'],NH),
+                     'p':pr.reshape(-1),'o':tgt.reshape(-1),
+                     'ins':instock.reshape(-1),'sA':safeA.reshape(-1),'sB':safeB.reshape(-1)})
+    df['ae']=np.abs(df.p-df.o); df['e']=df.p-df.o; df['ao']=np.abs(df.o)
+    def _agg(mask,tag):
+        g=df[df[mask]].groupby(['sid','pid']).agg(ae=('ae','sum'),ao=('ao','sum'),e=('e','sum'),o=('o','sum'),n=('p','size'))
+        g[f'wape_{tag}']=g.ae/g.ao.replace(0,np.nan); g[f'wpe_{tag}']=g.e/g.o.replace(0,np.nan)
+        return g[[f'wape_{tag}',f'wpe_{tag}','n']].rename(columns={'n':f'n_{tag}'})
+    out=_agg('ins','instock').join(_agg('sA','safeA'),how='outer').join(_agg('sB','safeB'),how='outer').reset_index()
+    out=out.rename(columns={'sid':'store_id','pid':'product_id'})
+    out.to_parquet(safe_path,index=False)
+    med=out[['wape_instock','wape_safeA','wape_safeB']].median()
+    print(f'  safe-hours saved: {safe_path} ({len(out):,} series) | '
+          f'median WAPE instock={med.wape_instock:.4f} safeA={med.wape_safeA:.4f} safeB={med.wape_safeB:.4f}')
 sys.exit(0)
 
 inst=te['stock']==0

@@ -50,7 +50,11 @@ IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
             'imputeformer':'ImputeFormer'}
 cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
 out_path=os.path.join(RESULTS_DIR,f'newsvendor_q_{cell_key}.parquet')
-if os.path.exists(out_path): print(f'SKIP: {out_path}'); sys.exit(0)
+val_path=os.path.join(RESULTS_DIR,f'newsvendor_qval_{cell_key}.parquet')   # #4: validation orders for critical-fractile calibration
+safe_path=os.path.join(RESULTS_DIR,f'safehours_{cell_key}_test_per_series.parquet')  # #5: safe-in-stock-hours re-score
+OVERNIGHT=os.getenv('NV_OVERNIGHT')=='1'
+_needed=[out_path,val_path,safe_path] if OVERNIGHT else [out_path]
+if all(os.path.exists(p) for p in _needed): print(f'SKIP: outputs exist for {cell_key}'); sys.exit(0)
 
 print(f'=== LGB M5 × {IMP_LABELS[IMP_KEY]} (ore 6-22) ===')
 
@@ -155,13 +159,22 @@ print('\n2. Building train...')
 t0=time.time()
 Xtr,ytr,_,_,_=build_lgb_ds('train'); print(f'  Train: {len(Xtr):,}')
 print('  Building val...')
-Xva,yva,_,_,_=build_lgb_ds('val'); print(f'  Val: {len(Xva):,}')
+Xva,yva,_,sva_sid,sva_pid=build_lgb_ds('val'); print(f'  Val: {len(Xva):,}')
 print('  Training...')
 ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True)
 lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=True)
 model=lgb.train(LGB_PARAMS,ltr,num_boost_round=500,valid_sets=[lva],valid_names=['val'],
                 callbacks=[lgb.early_stopping(30),lgb.log_evaluation(100)])
 print(f'  Best iter: {model.best_iteration}')
+if OVERNIGHT:
+    # #4 --- validation daily orders q_val(series, val-day) for critical-fractile calibration
+    vpred=np.clip(model.predict(Xva),0,None); ndv=len(vpred)//N_HOURS
+    vdf=pd.DataFrame({'sid':sva_sid,'pid':sva_pid,'day_idx':np.repeat(np.arange(ndv),N_HOURS),'pred':vpred.astype(np.float64)})
+    qv=vdf.groupby(['sid','pid','day_idx'],sort=False)['pred'].sum().reset_index()
+    qv['vday']=qv.groupby(['sid','pid'],sort=False).cumcount()
+    qv=qv.rename(columns={'sid':'store_id','pid':'product_id','pred':'q','vday':'day_idx'})
+    qv[['store_id','product_id','day_idx','q']].to_parquet(val_path,index=False)
+    print(f'  q_val saved: {val_path} ({len(qv):,} rows)')
 del Xtr,ytr,ltr,lva,Xva; gc.collect()
 
 print('  Building test...')
@@ -182,6 +195,30 @@ qd=qd.rename(columns={'sid':'store_id','pid':'product_id','pred':'q'})[['store_i
 qd=qd.rename(columns={'tday':'day_idx'})
 qd.to_parquet(out_path,index=False)
 print(f'  NEWSVENDOR q saved: {out_path} ({len(qd):,} rows, mean q={qd.q.mean():.3f})')
+
+if OVERNIGHT:
+    # #5 --- per-series WAPE/WPE on "safe" in-stock test hours (referee Assumption 1)
+    #     safe_A: in-stock hours on days with zero stock-out
+    #     safe_B: in-stock hours >= k=2 hours before the first stock-out of the day
+    print('\n5. Overnight safe-hours...')
+    d=dft  # long: sid,pid,day_idx(block),pred,obs,stock
+    d['hour']=d.groupby(['sid','pid','day_idx'],sort=False).cumcount()
+    d['day_has_so']=d.groupby(['sid','pid','day_idx'])['stock'].transform('max')>0
+    d['so_h']=d['hour'].where(d['stock']>0, N_HOURS)
+    d['first_so']=d.groupby(['sid','pid','day_idx'])['so_h'].transform('min')
+    d['ins']=d['stock']==0
+    d['sA']=d.ins & (~d.day_has_so)
+    d['sB']=d.ins & np.where(d.day_has_so, d.hour<(d.first_so-2), True)
+    d['ae']=np.abs(d.pred-d.obs); d['e']=d.pred-d.obs; d['ao']=np.abs(d.obs)
+    def _agg(mask,tag):
+        g=d[d[mask]].groupby(['sid','pid']).agg(ae=('ae','sum'),ao=('ao','sum'),e=('e','sum'),o=('obs','sum'),n=('pred','size'))
+        g[f'wape_{tag}']=g.ae/g.ao.replace(0,np.nan); g[f'wpe_{tag}']=g.e/g.o.replace(0,np.nan)
+        return g[[f'wape_{tag}',f'wpe_{tag}','n']].rename(columns={'n':f'n_{tag}'})
+    out=_agg('ins','instock').join(_agg('sA','safeA'),how='outer').join(_agg('sB','safeB'),how='outer').reset_index()
+    out=out.rename(columns={'sid':'store_id','pid':'product_id'})
+    out.to_parquet(safe_path,index=False)
+    med=out[['wape_instock','wape_safeA','wape_safeB']].median()
+    print(f'  safe-hours saved: {safe_path} ({len(out):,} series) | median WAPE instock={med.wape_instock:.4f} safeA={med.wape_safeA:.4f} safeB={med.wape_safeB:.4f}')
 sys.exit(0)
 recs=[]
 for (sid,pid),grp in dft.groupby(['sid','pid'],sort=False):
