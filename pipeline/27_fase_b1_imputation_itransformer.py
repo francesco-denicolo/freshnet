@@ -147,6 +147,38 @@ def make_model(device):
 model = make_model(DEVICE)
 print(f'  Model params: {sum(p.numel() for p in model.model.parameters() if p.requires_grad):,}')
 
+if os.getenv('TEST_MASK') == '1':
+    # --- #6a-ii: reload saved model + score recovery on TEST masks (days 1-90), vectorised ---
+    import sys, glob as _glob
+    _ck = sorted(_glob.glob(os.path.join(saving_path, '*', 'iTransformer.pypots')))
+    assert _ck, f'no saved model under {saving_path}'
+    model.load(_ck[-1]); print(f'  [TEST_MASK] loaded {_ck[-1]}')
+    _PB = 5000
+    mtt = pd.read_parquet(os.path.join(DATA_DIR, 'mnar_masks_test.parquet'))
+    mtt = mtt[(mtt['hour'] >= H_START) & (mtt['hour'] < H_END)].reset_index(drop=True)
+    df['row_idx'] = np.arange(n_rows)
+    rl = df.set_index(['store_id', 'product_id', 'dt'])['row_idx']
+    ridx = rl.reindex(pd.MultiIndex.from_arrays([mtt['store_id'].values, mtt['product_id'].values, mtt['dt'].values])).values
+    ok = ~pd.isna(ridx)
+    mtt = mtt[ok].reset_index(drop=True); ridx = ridx[ok].astype(np.int64)
+    si = ridx // 90; di = ridx % 90; wi = di // WINDOW_DAYS; dw = di % WINDOW_DAYS
+    samp = si * N_WINDOWS + wi; hi = mtt['hour'].values - H_START; step = dw * N_HOURS + hi
+    Xm = X_all.copy(); Xm[samp, step, 0] = np.nan
+    imf = np.zeros((n_samples, N_STEPS), dtype=np.float32)
+    for s0 in range(0, n_samples, _PB):
+        e0 = min(s0 + _PB, n_samples)
+        _r = model.predict({'X': Xm[s0:e0]}); _im = _r['imputation']
+        if _im.ndim == 4: _im = _im.mean(axis=1)
+        imf[s0:e0] = np.clip(_im[:, :, 0], 0, None)
+        del _r, _im; gc.collect()
+        if DEVICE == 'mps': torch.mps.empty_cache()
+    pm = imf[samp, step].astype(np.float64); gt = mtt['ground_truth'].values.astype(np.float64)
+    w = np.abs(pm - gt).sum() / np.abs(gt).sum(); wp = (pm - gt).sum() / gt.sum()
+    print(f'  [TEST masks] iTransformer: WAPE_recovery={w:.4f}, WPE_recovery={wp:.4f}  (n={len(mtt):,})')
+    pd.DataFrame([{'imputer': 'iTransformer', 'wape_recovery': w, 'wpe_recovery': wp}]).to_parquet(
+        os.path.join(RESULTS_DIR, 'traccia_a_itransformer_test.parquet'), index=False)
+    sys.exit(0)
+
 t0 = time.time()
 try:
     model.fit(train_set={'X': X_train}, val_set={'X': X_val, 'X_ori': X_val_ori})
