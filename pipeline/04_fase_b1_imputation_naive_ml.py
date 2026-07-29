@@ -91,6 +91,23 @@ masks_val = masks_val[(masks_val['hour'] >= H_START) & (masks_val['hour'] < H_EN
 masks_val_dow = pd.to_datetime(masks_val['dt']).dt.dayofweek.values
 print(f'  MNAR masks (6-22): {len(masks_val):,} ore mascherate')
 
+# --- #6a-ii: TEST masks (days 1-90, in-sample fit) for the held-out Track A evaluation ---
+masks_test = pd.read_parquet(os.path.join(DATA_DIR, 'mnar_masks_test.parquet'))
+masks_test = masks_test[(masks_test['hour'] >= H_START) & (masks_test['hour'] < H_END)].reset_index(drop=True)
+_mt_dow = pd.to_datetime(masks_test['dt']).dt.dayofweek.values
+_mt_kc = pd.MultiIndex.from_arrays([masks_test['store_id'].values, masks_test['product_id'].values, _mt_dow, masks_test['hour'].values])
+_mt_kg = pd.MultiIndex.from_arrays([masks_test['store_id'].values, masks_test['product_id'].values, masks_test['hour'].values])
+_mt_gt = masks_test['ground_truth'].values.astype(np.float64)
+def eval_test_cond(cond90, glob90, imp_key, label):
+    p = cond90.reindex(_mt_kc).values.astype(np.float64) if cond90 is not None else np.full(len(_mt_gt), np.nan)
+    if glob90 is not None:
+        p = np.where(np.isnan(p), glob90.reindex(_mt_kg).values.astype(np.float64), p)
+    p = np.nan_to_num(p, nan=0.0)
+    w = np.abs(p - _mt_gt).sum() / np.abs(_mt_gt).sum(); wp = (p - _mt_gt).sum() / _mt_gt.sum()
+    print(f'  [TEST masks] {label}: WAPE_recovery={w:.4f}, WPE_recovery={wp:.4f}')
+    pd.DataFrame([{'imputer': label, 'wape_recovery': w, 'wpe_recovery': wp}]).to_parquet(
+        os.path.join(RESULTS_DIR, f'traccia_a_{imp_key}_test.parquet'), index=False)
+
 # Pre-compute stockout indices
 stockout_idx = np.where(stock_flat == 1)[0]
 print(f'  Stockout indices: {len(stockout_idx):,}')
@@ -161,6 +178,8 @@ df_c90 = pd.DataFrame({'store_id':store_flat[train_mask_90],'product_id':product
                         'sale':sale_flat[train_mask_90]})
 cond_mean_90 = df_c90.groupby(['store_id','product_id','dow','hour'])['sale'].mean()
 glob_fb_90 = df_c90.groupby(['store_id','product_id','hour'])['sale'].mean()
+eval_test_cond(cond_mean_90, glob_fb_90, 'media_cond', 'Media condizionata')
+eval_test_cond(None, glob_fb_90, 'media_glob', 'Media globale')
 del df_c90
 
 imp = np.zeros(n_hourly, dtype=np.float32)
@@ -221,6 +240,7 @@ df_m90 = pd.DataFrame({'store_id':store_flat[train_mask_90],'product_id':product
                         'sale':sale_flat[train_mask_90]})
 cond_med_90 = df_m90.groupby(['store_id','product_id','dow','hour'])['sale'].median()
 glob_med_fb_90 = df_m90.groupby(['store_id','product_id','hour'])['sale'].median()
+eval_test_cond(cond_med_90, glob_med_fb_90, 'mediana_cond', 'Mediana condizionata')
 del df_m90
 
 imp3 = np.zeros(n_hourly, dtype=np.float32)
@@ -290,6 +310,21 @@ ltr90 = lgb.Dataset(Xtr90, ytr90, free_raw_data=True)
 model90 = lgb.train(LGB_PARAMS, ltr90, num_boost_round=model83.best_iteration)
 print(f'  Time: {time.time()-t0:.0f}s')
 del Xtr90, ytr90, ltr90, model83; gc.collect()
+
+# --- #6a-ii: LGB recovery on the TEST masks (model90, in-sample fit) ---
+mmt = masks_test[['store_id','product_id','dt','hour']].copy()
+mmt['dow'] = _mt_dow
+mmt['city_id'] = mmt.set_index(['store_id','product_id']).index.map(lambda x: city_map.get(x, 0))
+_mit = mmt.set_index(['store_id','product_id','dt'])
+mmt[CONT_FEATURES] = _mit.join(cont_map, how='left')[CONT_FEATURES].values.astype(np.float32)
+Xt = mmt[CAT_FEATURES_IMP + CONT_FEATURES].copy()
+for c in CAT_FEATURES_IMP: Xt[c] = Xt[c].astype('category')
+pt = np.clip(model90.predict(Xt), 0, None).astype(np.float64)
+wt = np.abs(pt-_mt_gt).sum()/np.abs(_mt_gt).sum(); wpt = (pt-_mt_gt).sum()/_mt_gt.sum()
+print(f'  [TEST masks] LGB: WAPE_recovery={wt:.4f}, WPE_recovery={wpt:.4f}')
+pd.DataFrame([{'imputer':'LGB','wape_recovery':wt,'wpe_recovery':wpt}]).to_parquet(
+    os.path.join(RESULTS_DIR, 'traccia_a_lgb_test.parquet'), index=False)
+del mmt, _mit, Xt; gc.collect()
 
 # Imputazione
 print('  Imputazione stockout...')

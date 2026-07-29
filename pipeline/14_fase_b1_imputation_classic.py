@@ -222,6 +222,31 @@ print(f'  Full computed in {time.time()-t0:.1f}s')
 save_completed(imputed_full, 'linear_interp')
 
 # ===========================================================================
+# #6a-ii: recovery on the TEST masks (days 1-90, held-out evaluation)
+# ===========================================================================
+print('\n' + '='*72); print('  TEST-MASK RECOVERY (days 1-90)'); print('='*72)
+mtt = pd.read_parquet(os.path.join(DATA_DIR, 'mnar_masks_test.parquet'))
+mtt = mtt[(mtt['hour'] >= H_START) & (mtt['hour'] < H_END)].reset_index(drop=True)
+mtt['day_num'] = pd.to_datetime(mtt['dt']).map(date_to_day)
+_msi = np.array([series_to_i.get((s,p), -1) for s,p in zip(mtt['store_id'], mtt['product_id'])], dtype=np.int64)
+_mfi = (mtt['day_num'].values - 1) * N_HOURS + (mtt['hour'].values - H_START)
+_vld = _msi >= 0
+mtt = mtt[_vld].reset_index(drop=True); _msi = _msi[_vld]; _mfi = _mfi[_vld]
+_gt_t = mtt['ground_truth'].values.astype(np.float64)
+_mnar_t = np.zeros((n_series, L_FULL), dtype=np.int8); _mnar_t[_msi, _mfi] = 1
+_stock_comb_t = np.maximum(stock_flat, _mnar_t)
+_sales_hidden_t = np.where(_mnar_t == 1, 0, sales_flat)
+def eval_test(imputed, imp_key, label):
+    p = imputed[_msi, _mfi].astype(np.float64)
+    w = np.abs(p-_gt_t).sum()/np.abs(_gt_t).sum(); wp = (p-_gt_t).sum()/_gt_t.sum()
+    print(f'  [TEST masks] {label}: WAPE_recovery={w:.4f}, WPE_recovery={wp:.4f}')
+    pd.DataFrame([{'imputer':label,'wape_recovery':w,'wpe_recovery':wp}]).to_parquet(
+        os.path.join(RESULTS_DIR, f'traccia_a_{imp_key}_test.parquet'), index=False)
+eval_test(forward_fill_vec(_sales_hidden_t, _stock_comb_t), 'forward_fill', 'Forward Fill')
+eval_test(seasonal_naive_vec(_sales_hidden_t, stock_flat, _stock_comb_t, L_FULL), 'seasonal_naive', 'Seasonal Naive')
+eval_test(linear_interp_vec(_sales_hidden_t, _stock_comb_t), 'linear_interp', 'Linear Interp')
+
+# ===========================================================================
 # Save Traccia A
 # ===========================================================================
 print('\n' + '='*72)

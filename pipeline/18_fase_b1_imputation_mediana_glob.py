@@ -108,6 +108,17 @@ glob_med_90 = df_90.groupby(['store_id','product_id','hour'])['sale'].median()
 del df_90
 print(f'  Train 90: {len(glob_med_90):,} chiavi, {time.time()-t0:.1f}s')
 
+# --- #6a-ii: recovery on the TEST masks (days 1-90, in-sample fit = glob_med_90) ---
+mt = pd.read_parquet(os.path.join(DATA_DIR, 'mnar_masks_test.parquet'))
+mt = mt[(mt['hour'] >= H_START) & (mt['hour'] < H_END)].reset_index(drop=True)
+kt = list(zip(mt['store_id'].values, mt['product_id'].values, mt['hour'].values))
+pt = np.nan_to_num(glob_med_90.reindex(kt).values.astype(np.float64), nan=0.0)
+gtt = mt['ground_truth'].values.astype(np.float64)
+wt = np.abs(pt - gtt).sum() / np.abs(gtt).sum(); wpt = (pt - gtt).sum() / gtt.sum()
+print(f'  Mediana globale TEST masks: WAPE_recovery={wt:.4f}, WPE_recovery={wpt:.4f}  (n={len(mt):,})')
+pd.DataFrame([{'imputer': 'Mediana globale', 'wape_recovery': wt, 'wpe_recovery': wpt}]).to_parquet(
+    os.path.join(RESULTS_DIR, 'traccia_a_mediana_glob_test.parquet'), index=False)
+
 # Apply to stockout positions
 imp = np.zeros(n_hourly, dtype=np.float32)
 for idx in stockout_idx:
