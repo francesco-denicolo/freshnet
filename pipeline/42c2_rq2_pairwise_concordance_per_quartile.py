@@ -40,6 +40,14 @@ recovery = {
     'seasonal_naive': 1.0638,
     'forward_fill':   1.1878,
 }
+if os.getenv('TEST_MASK') == '1':
+    # #6a-ii: held-out TEST-mask recovery instead of val-mask values above
+    import glob as _g
+    recovery = {}
+    for _f in sorted(_g.glob(f'{RESULTS_DIR}/traccia_a_*_test.parquet')):
+        _k = os.path.basename(_f).replace('traccia_a_', '').replace('_test.parquet', '')
+        recovery[_k] = float(pd.read_parquet(_f).wape_recovery.iloc[0])
+    print(f'[TEST_MASK] using {len(recovery)} test-mask recovery values')
 imputers_all = list(recovery.keys())
 
 NON_HPO_FC = {'chronos_bolt', 'timesfm', 'global_mean', 'dow_mean', 'ma_k56', 'croston', 'sba', 'tsb'}
@@ -173,7 +181,8 @@ for fc in panels:
 # Save
 # ----------------------------------------------------------------------
 summary = pd.DataFrame(results)
-summary.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance_per_quartile.parquet', index=False)
+_sfx = '_test' if os.getenv('TEST_MASK') == '1' else ''
+summary.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance_per_quartile{_sfx}.parquet', index=False)
 pairs_df = pd.DataFrame(all_pairs_rows)
 pairs_df.to_parquet(f'{RESULTS_DIR}/rq2_pairwise_concordance_per_quartile_pairs.parquet', index=False)
 print(f'\nSaved: rq2_pairwise_concordance_per_quartile.parquet ({len(summary)} rows)')

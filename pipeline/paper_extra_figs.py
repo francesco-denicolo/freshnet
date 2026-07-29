@@ -58,9 +58,10 @@ plt.tight_layout(); plt.savefig(f'{OUT}/fig_rq1_kendallw.png', dpi=200, bbox_inc
 print('saved fig_rq1_kendallw')
 
 # ---------------------------------------------------------------- RQ2
-s2 = pd.read_parquet(f'{RES}/rq2_pairwise_concordance.parquet')
+_rqsfx = '_test' if os.getenv('TEST_MASK') == '1' else ''   # #6a-ii: held-out test-mask recovery
+s2 = pd.read_parquet(f'{RES}/rq2_pairwise_concordance{_rqsfx}.parquet')
 s2['fk'] = s2.forecaster.map(T2K); s2 = s2.set_index('fk')
-q2 = pd.read_parquet(f'{RES}/rq2_pairwise_concordance_per_quartile.parquet'); q2['fk'] = q2.forecaster.map(T2K)
+q2 = pd.read_parquet(f'{RES}/rq2_pairwise_concordance_per_quartile{_rqsfx}.parquet'); q2['fk'] = q2.forecaster.map(T2K)
 fig, ax = plt.subplots(1, 2, figsize=(13, 4.6))
 for i,f in enumerate(ORDER):
     r = s2.loc[f]; c = GC[GROUP[f]]
