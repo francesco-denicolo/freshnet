@@ -169,10 +169,10 @@ print(f'  Best iter: {model.best_iteration}')
 if OVERNIGHT:
     # #4 --- validation daily orders q_val(series, val-day) for critical-fractile calibration
     vpred=np.clip(model.predict(Xva),0,None); ndv=len(vpred)//N_HOURS
-    vdf=pd.DataFrame({'sid':sva_sid,'pid':sva_pid,'day_idx':np.repeat(np.arange(ndv),N_HOURS),'pred':vpred.astype(np.float64)})
-    qv=vdf.groupby(['sid','pid','day_idx'],sort=False)['pred'].sum().reset_index()
-    qv['vday']=qv.groupby(['sid','pid'],sort=False).cumcount()
-    qv=qv.rename(columns={'sid':'store_id','pid':'product_id','pred':'q','vday':'day_idx'})
+    vdf=pd.DataFrame({'sid':sva_sid,'pid':sva_pid,'blk':np.repeat(np.arange(ndv),N_HOURS),'pred':vpred.astype(np.float64)})
+    qv=vdf.groupby(['sid','pid','blk'],sort=False)['pred'].sum().reset_index()
+    qv['day_idx']=qv.groupby(['sid','pid'],sort=False).cumcount()   # per-series val-day 0..6
+    qv=qv.rename(columns={'sid':'store_id','pid':'product_id','pred':'q'})
     qv[['store_id','product_id','day_idx','q']].to_parquet(val_path,index=False)
     print(f'  q_val saved: {val_path} ({len(qv):,} rows)')
 del Xtr,ytr,ltr,lva,Xva; gc.collect()
