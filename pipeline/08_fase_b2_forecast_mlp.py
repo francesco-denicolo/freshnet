@@ -29,6 +29,9 @@ BATCH_SIZE=4096; LR=1e-3; MAX_EPOCHS=100; PATIENCE=10; HIDDEN=[128,64]
 EMB_DIMS={'store_id':32,'product_id':32,'city_id':8,'dow':4}
 CARDINALITIES={'store_id':898,'product_id':865,'city_id':18,'dow':7}
 WEIGHT_DECAY=0.0; DROPOUT=0.0
+if os.getenv('NO_WEATHER') == '1':  # referee 2 minor: ablation of the realised-weather covariates
+    CONT_FEATURES = [c for c in CONT_FEATURES if c not in ('avg_temperature','avg_humidity','precpt','avg_wind_level')]
+    print(f'[NO_WEATHER] continuous features: {CONT_FEATURES}')
 
 if os.getenv('HPO_VARIANT') == '1':
     import json

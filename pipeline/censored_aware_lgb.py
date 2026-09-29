@@ -32,7 +32,7 @@ if os.getenv('HPO_VARIANT') == '1':
     for k in ['num_leaves','learning_rate','min_child_samples','bagging_fraction','feature_fraction']:
         LGB_BASE[k] = hpo[k]
 SUFFIX = '_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
-print(f'=== Censored-aware LGB-M5 (no imputer, quantile loss) | taus={TAUS} | rounds={N_ROUNDS} ===')
+print(f'=== Censored-aware LGB-M5 (quantile loss) | imputer={os.getenv("IMPUTER") or "none"} | taus={TAUS} | rounds={N_ROUNDS} ===')
 
 # ---- load raw CENSORED series (no imputation: series = S_obs) ----
 print('\n1. Loading (raw censored series)...')
@@ -47,11 +47,35 @@ sales_orig = np.array(df_full['hours_sale'].tolist(), dtype=np.float32)[:, H_STA
 stock_orig = np.array(df_full['hours_stock_status'].tolist(), dtype=np.float32)[:, H_START:H_END]
 del df_train_hf, df_eval
 
+# ---- optional imputer (referee 2 #1): lag features from the COMPLETED series, target stays S_obs ----
+IMPUTER = os.getenv('IMPUTER', '')
+IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
+SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
+if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series; outputs tagged _SMOKE so real runs never SKIP them
+    IMP_SFX += '_SMOKE'
+    _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
+    _m = df_full.set_index(['store_id','product_id']).index.isin(pd.MultiIndex.from_frame(_keep))
+    df_full = df_full[_m].reset_index(drop=True); sales_orig = sales_orig[_m]; stock_orig = stock_orig[_m]
+    print(f'  SMOKE: {len(_keep)} series, {len(df_full):,} rows')
+sales_lagsrc = sales_orig
+if IMPUTER and IMPUTER != 'no_imp':  # IMPUTER=no_imp -> raw censored lags, separate output files
+    df_cs = pd.read_parquet(os.path.join(DATA_DIR, 'completed_sales_622', f'{IMPUTER}.parquet'))
+    cs_sales = np.array(df_cs['hours_sale'].tolist(), dtype=np.float32)
+    km = dict(zip((df_cs['store_id'].astype(str)+'_'+df_cs['product_id'].astype(str)+'_'+df_cs['dt']).values, range(len(df_cs))))
+    fk = (df_full['store_id'].astype(str)+'_'+df_full['product_id'].astype(str)+'_'+df_full['dt']).values
+    sales_lagsrc = sales_orig.copy(); nrep = 0
+    for i in range(len(df_full)):
+        j = km.get(fk[i])
+        if j is not None: sales_lagsrc[i] = cs_sales[j]; nrep += 1
+    print(f'  IMPUTER={IMPUTER}: completed series aligned on {nrep:,}/{len(df_full):,} rows; '
+          f'lag source mean {sales_lagsrc.mean():.4f} vs S_obs {sales_orig.mean():.4f}')
+    del df_cs, cs_sales, km, fk; gc.collect()
+
 print('  Building series cache (lags from CENSORED series)...')
 series_cache = {}
 for (sid,pid), grp in df_full.groupby(['store_id','product_id'], sort=False):
     gs = grp.sort_values('day_num'); idx = gs.index.values
-    series_cache[(sid,pid)] = {'days':gs['day_num'].values,'dows':gs['dow'].values,'sales':sales_orig[idx]}
+    series_cache[(sid,pid)] = {'days':gs['day_num'].values,'dows':gs['dow'].values,'sales':sales_lagsrc[idx]}
 print(f'  {len(series_cache):,} series')
 
 def clags(as_, ad, dw, K):
@@ -114,7 +138,7 @@ ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True); del Xtr,ytr; gc.collect()
 Xva,yva,sva,siva,piva=build_ds('val'); print(f'  Val: {len(Xva):,}')
 lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=False); gc.collect()
 Xte,yte,ste,site,pite=build_ds('test'); print(f'  Test: {len(Xte):,}')
-del df_full,sales_orig,stock_orig,series_cache; gc.collect()
+del df_full,sales_orig,stock_orig,sales_lagsrc,series_cache; gc.collect()
 print(f'  Built in {time.time()-t0:.0f}s')
 
 def eval_and_save(preds, out_path):
@@ -135,6 +159,12 @@ def eval_and_save(preds, out_path):
         recs.append({'store_id':sid,'product_id':pid,'hourly_wape':hw,'hourly_wpe':hwp,
                      'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan})
     ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    if SAVE_PREDS:  # hourly test predictions (rows = series-days, cols = hours 6-22) for RMSSE / scaled pinball
+        os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
+        cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
+        np.savez_compressed(os.path.join(os.path.join(RESULTS_DIR, 'preds'),f'{cell}.npz'),preds=preds.reshape(-1,N_HOURS).astype(np.float32),
+                            store_id=site[::N_HOURS],product_id=pite[::N_HOURS],
+                            obs=yte.reshape(-1,N_HOURS),stock=ste.reshape(-1,N_HOURS))
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
 def eval_val_save(preds_val, tag):
@@ -147,14 +177,14 @@ def eval_val_save(preds_val, tag):
         ig=grp['stock'].values==0
         sao=np.abs(grp['obs'].values[ig]).sum(); sae=np.abs(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
         recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sae/sao if sao>0 else np.nan,'n_instock':int(ig.sum())})
-    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_lgb_m5_q{tag}{SUFFIX}_VAL_per_series.parquet'),index=False)
+    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_lgb_m5_q{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'),index=False)
     return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
 
 print('\n3. Quantile sweep (censored-aware, direct)...')
 for tau in TAUS:
     ts=f'{tau:.2f}'.rstrip('0').rstrip('.')
-    out_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}_test_per_series.parquet')
-    val_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}_VAL_per_series.parquet')
+    out_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}{IMP_SFX}_test_per_series.parquet')
+    val_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet')
     if os.path.exists(out_path) and os.path.exists(val_path): print(f'  tau={tau}: SKIP (exists)'); continue
     t1=time.time()
     params=dict(LGB_BASE); params['objective']='quantile'; params['alpha']=tau

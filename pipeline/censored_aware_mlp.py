@@ -34,7 +34,7 @@ if os.getenv('HPO_VARIANT') == '1':
     EMB_DIMS={k:max(2,int(v*emb_scale)) for k,v in EMB_DIMS.items()}
 if SMOKE: MAX_EPOCHS=2; PATIENCE=1
 SUFFIX='_hpo' if os.getenv('HPO_VARIANT') == '1' else ''
-print(f'=== Censored-aware MLP-M5 (no imputer, pinball loss) | taus={TAUS} | device={DEVICE} ===')
+print(f'=== Censored-aware MLP-M5 (pinball loss) | imputer={os.getenv("IMPUTER") or "none"} | taus={TAUS} | device={DEVICE} ===')
 
 # ---- load raw CENSORED series (no imputation) ----
 print('\n1. Loading (raw censored series)...')
@@ -55,15 +55,39 @@ TAU_H_MODE=os.getenv('TAU_H')=='1'
 print(f'  f(h) range: {FH.min():.3f}-{FH.max():.3f}  ->  tau(h) range: {TAU_H_VEC.min():.3f}-{TAU_H_VEC.max():.3f}')
 del df_train_hf,df_eval
 
+# ---- optional imputer (referee 2 #1): lag features from the COMPLETED series, target stays S_obs ----
+IMPUTER = os.getenv('IMPUTER', '')
+IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
+SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
+if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series; outputs tagged _SMOKE so real runs never SKIP them
+    IMP_SFX += '_SMOKE'
+    _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
+    _m = df_full.set_index(['store_id','product_id']).index.isin(pd.MultiIndex.from_frame(_keep))
+    df_full = df_full[_m].reset_index(drop=True); sales_orig = sales_orig[_m]; stock_orig = stock_orig[_m]
+    print(f'  SMOKE: {len(_keep)} series, {len(df_full):,} rows')
+sales_lagsrc = sales_orig
+if IMPUTER and IMPUTER != 'no_imp':  # IMPUTER=no_imp -> raw censored lags, separate output files
+    df_cs = pd.read_parquet(os.path.join(DATA_DIR, 'completed_sales_622', f'{IMPUTER}.parquet'))
+    cs_sales = np.array(df_cs['hours_sale'].tolist(), dtype=np.float32)
+    km = dict(zip((df_cs['store_id'].astype(str)+'_'+df_cs['product_id'].astype(str)+'_'+df_cs['dt']).values, range(len(df_cs))))
+    fk = (df_full['store_id'].astype(str)+'_'+df_full['product_id'].astype(str)+'_'+df_full['dt']).values
+    sales_lagsrc = sales_orig.copy(); nrep = 0
+    for i in range(len(df_full)):
+        j = km.get(fk[i])
+        if j is not None: sales_lagsrc[i] = cs_sales[j]; nrep += 1
+    print(f'  IMPUTER={IMPUTER}: completed series aligned on {nrep:,}/{len(df_full):,} rows; '
+          f'lag source mean {sales_lagsrc.mean():.4f} vs S_obs {sales_orig.mean():.4f}')
+    del df_cs, cs_sales, km, fk; gc.collect()
+
 print('  Building series cache (censored series)...')
 sc={}
 for (sid,pid),grp in df_full.groupby(['store_id','product_id'],sort=False):
     gs=grp.sort_values('day_num'); idx=gs.index.values
     sc[(sid,pid)]={'days':gs['day_num'].values,'dows':gs['dow'].values,
-                   'sales_c':sales_orig[idx],'sales_o':sales_orig[idx],'stock':stock_orig[idx],
+                   'sales_c':sales_lagsrc[idx],'sales_o':sales_orig[idx],'stock':stock_orig[idx],
                    'city_id':gs['city_id'].values[0],'conts':gs[CONT_FEATURES].values.astype(np.float32)}
 print(f'  {len(sc):,} series')
-del df_full,sales_orig,stock_orig; gc.collect()
+del df_full,sales_orig,stock_orig,sales_lagsrc; gc.collect()
 
 def clags(as_, ad, dw, K):
     z=np.float32; NH=N_HOURS
@@ -166,6 +190,11 @@ def eval_and_save(model,out_path):
                      'hourly_wpe':eh/oh2 if oh2!=0 else np.nan,'daily_wape':sd2/aod if aod>0 else np.nan,
                      'daily_wpe':ed/od if od!=0 else np.nan})
     ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    if SAVE_PREDS:  # hourly test predictions (rows = series-days, cols = hours 6-22) for RMSSE / scaled pinball
+        os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
+        cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
+        np.savez_compressed(os.path.join(os.path.join(RESULTS_DIR, 'preds'),f'{cell}.npz'),preds=preds.astype(np.float32),
+                            store_id=te['store_ids'],product_id=te['product_ids'],obs=te['targets'],stock=te['stock'])
     if os.getenv('EXPORT_Q'):
         cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
         qrows=[(sid,pid,j,float(preds[i].sum())) for (sid,pid),idxs in sm.items() for j,i in enumerate(idxs)]
@@ -189,7 +218,7 @@ def eval_val_save(model, tag):
             m=vi[i]
             sh+=np.abs(preds[i,m]-va['targets'][i,m]).sum(); aoh+=np.abs(va['targets'][i,m]).sum(); nh+=int(m.sum())
         recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sh/aoh if aoh>0 else np.nan,'n_instock':nh})
-    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_VAL_per_series.parquet'),index=False)
+    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'),index=False)
     return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
 
 print('\n3. Quantile (pinball) sweep, censored-aware direct...')
@@ -198,8 +227,8 @@ if TAU_H_MODE:
 else:
     TAU_ITEMS=[(f'q{("%.2f"%t).rstrip("0").rstrip(".")}', float(t)) for t in TAUS]
 for tag, tau in TAU_ITEMS:
-    out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_test_per_series.parquet')
-    val_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}_VAL_per_series.parquet')
+    out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_test_per_series.parquet')
+    val_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet')
     if os.path.exists(out_path) and os.path.exists(val_path) and not os.getenv('EXPORT_Q'): print(f'  {tag}: SKIP'); continue
     t1=time.time(); torch.manual_seed(42); np.random.seed(42)
     model=MLP(nc,nl).to(DEVICE); loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True)
