@@ -38,6 +38,10 @@ fr = pd.read_parquet(f'{RES}/friedman_nemenyi_ranks.parquet')
 best_cell = fr.iloc[0]['cell']
 equiv = set(fr[fr.cd_indistinguishable]['cell'])
 print(f'Friedman best: {best_cell} | equiv set: {sorted(equiv)} | cells: {len(mat)}')
+# Seed band (referee 2, minor): lag-based cells whose median WAPE lies within the 20-seed
+# range of their column's best cell (referee2_holm_seedband.py)
+_sb = pd.read_parquet(f'{RES}/referee2_seedband.parquet')
+seed_band = set(_sb[_sb.within_seed_band].apply(lambda r: f'{r.imputer}__{r.forecaster}', axis=1))
 
 pivot = mat.pivot(index='imputer', columns='forecaster', values='wape_h_med')
 pivot = pivot.reindex(index=IMP_ORDER, columns=FC_ORDER)
@@ -65,6 +69,8 @@ for i, imp in enumerate(IMP_ORDER):
         txtcol = 'white' if _lum < 0.5 else 'black'
         ax.text(j, i, f'{v:.3f}', ha='center', va='center', fontsize=9.5,
                 color=txtcol, fontweight='bold' if (is_best or is_equiv) else 'normal')
+        if cell in seed_band:
+            ax.plot(j + 0.36, i - 0.30, marker='o', ms=4.2, color='#222222', zorder=5)
         if is_best:
             ax.add_patch(Rectangle((j-0.5, i-0.5), 1, 1, fill=False, edgecolor='#0033cc', lw=3.2, zorder=4))
         elif is_equiv:
@@ -91,8 +97,10 @@ ax.set_title('Forecasting accuracy across the imputer $\\times$ forecaster matri
 # legend for the outlines
 from matplotlib.lines import Line2D
 leg = [Line2D([0], [0], color='#0033cc', lw=3.2, label='Best cell (Friedman)'),
-       Line2D([0], [0], color='#0033cc', lw=2.0, ls='--', label='Within critical difference')]
-ax.legend(handles=leg, loc='upper left', bbox_to_anchor=(0.0, -0.09), ncol=2,
+       Line2D([0], [0], color='#0033cc', lw=2.0, ls='--', label='Within critical difference'),
+       Line2D([0], [0], marker='o', ms=5, color='#222222', lw=0,
+              label="Within the 20-seed range of the column's best cell (lag-based ML)")]
+ax.legend(handles=leg, loc='upper left', bbox_to_anchor=(0.0, -0.09), ncol=3,
           frameon=False, fontsize=10)
 plt.tight_layout()
 plt.savefig(OUT, dpi=200, bbox_inches='tight')
