@@ -51,7 +51,7 @@ def friedman_block(cells, col):
 
 rows = []
 for fam in ['lgb', 'mlp']:
-    for loss in ['mae', '0.6', '0.7']:
+    for loss in ['mae', '0.5', '0.6', '0.7']:  # 0.5 = pinball MAE-equivalent, same pipeline as the tau grid
         cells = cells_for(fam, loss)
         if len(cells) < 3:
             print(f'{fam.upper()}-M5 | {loss:>4}: only {len(cells)} cells available, skipped'); continue

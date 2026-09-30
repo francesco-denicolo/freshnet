@@ -76,12 +76,14 @@ def score(path, tau):
 print('\n2. Scoring the 56 cells...')
 long, wrows = [], []
 for fam in ['lgb', 'mlp']:
-    for tau in ['0.6', '0.7']:
+    for tau in ['0.5', '0.6', '0.7']:  # 0.5 = MAE-equivalent block
         cells = {}
         for imp in IMPS:
             f = f'{PRED}/censored_{fam}_m5_q{tau}_hpo_imp-{imp}.npz'
             if os.path.exists(f):
                 cells[imp] = score(f, float(tau))
+        if len(cells) < 3:
+            print(f'   {fam.upper()}-M5 tau={tau}: only {len(cells)} cells, skipped'); continue
         for imp, d in cells.items():
             long.append(d.assign(family=fam, tau=float(tau), imputer=imp).reset_index())
         for met in ['rmsse_h', 'rmsse_d', 'spl_h']:
