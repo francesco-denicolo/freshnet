@@ -57,7 +57,7 @@ per_series = {}
 seen_cells = set()
 
 # Load HPO files first (for forecasters that have HP to tune)
-_AUX = ('censored', '_hicap')   # celle ausiliarie (§4.5 censored-aware, App.A capacity): fuori dalla matrice
+_AUX = ('censored', '_hicap', 'safehours_', '_noweather')   # celle ausiliarie (§4.5 censored-aware, App.A capacity): fuori dalla matrice
 hpo_files = [f for f in sorted(glob.glob(f'{RESULTS_DIR}/*_hpo_test_per_series.parquet'))
              if not any(x in os.path.basename(f) for x in _AUX)]
 for f in hpo_files:
@@ -286,16 +286,16 @@ n_equiv = mat.equiv_to_best.sum() if 'equiv_to_best' in mat.columns else 0
 legend_handles += [
     mlines.Line2D([], [], color='gold', marker='*', linestyle='None',
                   markeredgecolor='black', markersize=15,
-                  label=f'★ Best WAPE: {IMP_LABELS.get(best_row.imputer, best_row.imputer)} / {FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
+                  label=f'★ Best WAPE: {IMP_LABELS.get(best_row.imputer, best_row.imputer)} → {FC_LABELS.get(best_row.forecaster, best_row.forecaster)}'),
     mlines.Line2D([], [], color='#ff7f0e', marker='o', linestyle='--', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
                   label=f'⊙ CD-indistinguishable from Friedman best (n={n_equiv})'),
     mlines.Line2D([], [], color='#2ca02c', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
-                  label=f'● Knee: {IMP_LABELS.get(knee_row.imputer, knee_row.imputer)} / {FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
+                  label=f'● Knee: {IMP_LABELS.get(knee_row.imputer, knee_row.imputer)} → {FC_LABELS.get(knee_row.forecaster, knee_row.forecaster)}'),
     mlines.Line2D([], [], color='#1f77b4', marker='o', linestyle='None', markerfacecolor='none',
                   markeredgewidth=2.5, markersize=12,
-                  label=f'● Min |WPE|: {IMP_LABELS.get(min_wpe_row.imputer, min_wpe_row.imputer)} / {FC_LABELS.get(min_wpe_row.forecaster, min_wpe_row.forecaster)}'),
+                  label=f'● Min |WPE|: {IMP_LABELS.get(min_wpe_row.imputer, min_wpe_row.imputer)} → {FC_LABELS.get(min_wpe_row.forecaster, min_wpe_row.forecaster)}'),
 ]
 ax.legend(handles=legend_handles, loc='center left',
           bbox_to_anchor=(1.02, 0.5), fontsize=13, framealpha=0.95)

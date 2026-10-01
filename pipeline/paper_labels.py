@@ -30,5 +30,5 @@ def fc(name):
 
 
 def cell(imputer, forecaster):
-    """Pretty 'Imputer / Forecaster' label."""
-    return f'{imp(imputer)} / {fc(forecaster)}'
+    """Pretty 'Imputer → Forecaster' label (imputer first)."""
+    return f'{imp(imputer)} → {fc(forecaster)}'
