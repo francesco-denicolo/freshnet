@@ -59,6 +59,17 @@ del df_train_hf,df_eval
 IMPUTER = os.getenv('IMPUTER', '')
 IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
 SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
+SAVE_VAL_PREDS = os.getenv('SAVE_VAL_PREDS') == '1'          # referee 2 round 2: validation orders for tau selection
+SEED = int(os.getenv('SEED', '42'))
+IMP_SFX += os.getenv('RUN_TAG', '') + (f'_seed{SEED}' if os.getenv('SEED') else '')
+
+
+def _atomic_parquet(df, path):
+    tmp = path + '.tmp'; df.to_parquet(tmp, index=False); os.replace(tmp, path)
+
+
+def _atomic_npz(path, **arrays):
+    tmp = path[:-4] + '.tmp.npz'; np.savez_compressed(tmp, **arrays); os.replace(tmp, path)
 if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series; outputs tagged _SMOKE so real runs never SKIP them
     IMP_SFX += '_SMOKE'
     _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
@@ -189,12 +200,13 @@ def eval_and_save(model,out_path):
         recs.append({'store_id':sid,'product_id':pid,'hourly_wape':sh/aoh if aoh>0 else np.nan,
                      'hourly_wpe':eh/oh2 if oh2!=0 else np.nan,'daily_wape':sd2/aod if aod>0 else np.nan,
                      'daily_wpe':ed/od if od!=0 else np.nan})
-    ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    ps=pd.DataFrame(recs)
     if SAVE_PREDS:  # hourly test predictions (rows = series-days, cols = hours 6-22) for RMSSE / scaled pinball
         os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
         cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
-        np.savez_compressed(os.path.join(os.path.join(RESULTS_DIR, 'preds'),f'{cell}.npz'),preds=preds.astype(np.float32),
-                            store_id=te['store_ids'],product_id=te['product_ids'],obs=te['targets'],stock=te['stock'])
+        _atomic_npz(os.path.join(RESULTS_DIR,'preds',f'{cell}.npz'),preds=preds.astype(np.float32),
+                    store_id=te['store_ids'],product_id=te['product_ids'],obs=te['targets'],stock=te['stock'])
+    _atomic_parquet(ps,out_path)
     if os.getenv('EXPORT_Q'):
         cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
         qrows=[(sid,pid,j,float(preds[i].sum())) for (sid,pid),idxs in sm.items() for j,i in enumerate(idxs)]
@@ -218,7 +230,12 @@ def eval_val_save(model, tag):
             m=vi[i]
             sh+=np.abs(preds[i,m]-va['targets'][i,m]).sum(); aoh+=np.abs(va['targets'][i,m]).sum(); nh+=int(m.sum())
         recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sh/aoh if aoh>0 else np.nan,'n_instock':nh})
-    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'),index=False)
+    vp=pd.DataFrame(recs)
+    if SAVE_VAL_PREDS:  # hourly validation predictions (days 84-90) -> daily orders for tau selection on validation cost
+        os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
+        _atomic_npz(os.path.join(RESULTS_DIR,'preds',f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL.npz'),preds=preds.astype(np.float32),
+                    store_id=va['store_ids'],product_id=va['product_ids'],obs=va['targets'],stock=va['stock'])
+    _atomic_parquet(vp,os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'))
     return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
 
 print('\n3. Quantile (pinball) sweep, censored-aware direct...')
@@ -230,7 +247,7 @@ for tag, tau in TAU_ITEMS:
     out_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_test_per_series.parquet')
     val_path=os.path.join(RESULTS_DIR,f'censored_mlp_m5_{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet')
     if os.path.exists(out_path) and os.path.exists(val_path) and not os.getenv('EXPORT_Q'): print(f'  {tag}: SKIP'); continue
-    t1=time.time(); torch.manual_seed(42); np.random.seed(42)
+    t1=time.time(); torch.manual_seed(SEED); np.random.seed(SEED)
     model=MLP(nc,nl).to(DEVICE); loader=DataLoader(ds,batch_size=BATCH_SIZE,shuffle=True)
     opt=torch.optim.Adam(model.parameters(),lr=LR,weight_decay=WEIGHT_DECAY)
     bw,be,bs,ni=float('inf'),0,None,0

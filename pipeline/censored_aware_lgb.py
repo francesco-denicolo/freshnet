@@ -51,6 +51,17 @@ del df_train_hf, df_eval
 IMPUTER = os.getenv('IMPUTER', '')
 IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
 SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
+SAVE_VAL_PREDS = os.getenv('SAVE_VAL_PREDS') == '1'          # referee 2 round 2: validation orders for tau selection
+SEED = int(os.getenv('SEED', '42'))
+IMP_SFX += os.getenv('RUN_TAG', '') + (f'_seed{SEED}' if os.getenv('SEED') else '')
+
+
+def _atomic_parquet(df, path):
+    tmp = path + '.tmp'; df.to_parquet(tmp, index=False); os.replace(tmp, path)
+
+
+def _atomic_npz(path, **arrays):
+    tmp = path[:-4] + '.tmp.npz'; np.savez_compressed(tmp, **arrays); os.replace(tmp, path)
 if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series; outputs tagged _SMOKE so real runs never SKIP them
     IMP_SFX += '_SMOKE'
     _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
@@ -158,13 +169,14 @@ def eval_and_save(preds, out_path):
                 pv,ov=dg['pred'].values[dm].sum(),dg['obs'].values[dm].sum(); sd2+=abs(pv-ov);ao2+=abs(ov);se2+=pv-ov;so2+=ov
         recs.append({'store_id':sid,'product_id':pid,'hourly_wape':hw,'hourly_wpe':hwp,
                      'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan})
-    ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+    ps=pd.DataFrame(recs)
     if SAVE_PREDS:  # hourly test predictions (rows = series-days, cols = hours 6-22) for RMSSE / scaled pinball
         os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
         cell=os.path.basename(out_path).replace('_test_per_series.parquet','')
-        np.savez_compressed(os.path.join(os.path.join(RESULTS_DIR, 'preds'),f'{cell}.npz'),preds=preds.reshape(-1,N_HOURS).astype(np.float32),
-                            store_id=site[::N_HOURS],product_id=pite[::N_HOURS],
-                            obs=yte.reshape(-1,N_HOURS),stock=ste.reshape(-1,N_HOURS))
+        _atomic_npz(os.path.join(RESULTS_DIR,'preds',f'{cell}.npz'),preds=preds.reshape(-1,N_HOURS).astype(np.float32),
+                    store_id=site[::N_HOURS],product_id=pite[::N_HOURS],
+                    obs=yte.reshape(-1,N_HOURS),stock=ste.reshape(-1,N_HOURS))
+    _atomic_parquet(ps,out_path)
     return ps['hourly_wape'].dropna().median(), ps['hourly_wpe'].dropna().median()
 
 def eval_val_save(preds_val, tag):
@@ -177,7 +189,12 @@ def eval_val_save(preds_val, tag):
         ig=grp['stock'].values==0
         sao=np.abs(grp['obs'].values[ig]).sum(); sae=np.abs(grp['pred'].values[ig]-grp['obs'].values[ig]).sum()
         recs.append({'store_id':sid,'product_id':pid,'val_hourly_wape':sae/sao if sao>0 else np.nan,'n_instock':int(ig.sum())})
-    vp=pd.DataFrame(recs); vp.to_parquet(os.path.join(RESULTS_DIR,f'censored_lgb_m5_q{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'),index=False)
+    vp=pd.DataFrame(recs)
+    if SAVE_VAL_PREDS:  # hourly validation predictions (days 84-90) -> daily orders for tau selection on validation cost
+        os.makedirs(os.path.join(RESULTS_DIR, 'preds'),exist_ok=True)
+        _atomic_npz(os.path.join(RESULTS_DIR,'preds',f'censored_lgb_m5_q{tag}{SUFFIX}{IMP_SFX}_VAL.npz'),preds=preds_val.reshape(-1,N_HOURS).astype(np.float32),
+                    store_id=siva[::N_HOURS],product_id=piva[::N_HOURS],obs=yva.reshape(-1,N_HOURS),stock=sva.reshape(-1,N_HOURS))
+    _atomic_parquet(vp,os.path.join(RESULTS_DIR,f'censored_lgb_m5_q{tag}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet'))
     return vp[vp['n_instock']>=34]['val_hourly_wape'].dropna().median()
 
 print('\n3. Quantile sweep (censored-aware, direct)...')
@@ -187,7 +204,7 @@ for tau in TAUS:
     val_path=os.path.join(RESULTS_DIR, f'censored_lgb_m5_q{ts}{SUFFIX}{IMP_SFX}_VAL_per_series.parquet')
     if os.path.exists(out_path) and os.path.exists(val_path): print(f'  tau={tau}: SKIP (exists)'); continue
     t1=time.time()
-    params=dict(LGB_BASE); params['objective']='quantile'; params['alpha']=tau
+    params=dict(LGB_BASE); params['objective']='quantile'; params['alpha']=tau; params['seed']=SEED
     model=lgb.train(params,ltr,num_boost_round=N_ROUNDS,valid_sets=[lva],valid_names=['val'],
                     callbacks=[lgb.early_stopping(30),lgb.log_evaluation(0)])
     preds=np.clip(model.predict(Xte),0,None)
