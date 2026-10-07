@@ -20,10 +20,10 @@ def pareto(x, y):
     return np.array(k)
 front = pareto(mat.wape_h_med.values, mat.abs_wpe_med.values)
 
-# ---- censored-aware direct cells ----
+# ---- censored-aware direct cells (single consolidated run, RUN_TAG=_nvsel; referee 2 round 2) ----
 def load_curve(model):
     rows=[]
-    for f in sorted(glob.glob(f'{RES}/censored_{model}_m5_q*_hpo_test_per_series.parquet')):
+    for f in sorted(glob.glob(f'{RES}/censored_{model}_m5_q*_hpo_imp-no_imp_nvsel_test_per_series.parquet')):
         tau=float(re.search(r'_q([0-9.]+)_hpo', f).group(1))
         d=pd.read_parquet(f)
         rows.append((tau, d.hourly_wape.dropna().median(), abs(d.hourly_wpe.dropna().median())))
