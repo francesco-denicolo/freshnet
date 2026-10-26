@@ -60,7 +60,8 @@ IMP_LABELS = {'media_cond':'Media condizionata','media_glob':'Media globale',
               'timesnet':'TimesNet',
               'csdi':'CSDI',
               'imputeformer':'ImputeFormer'}
-cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '') + os.getenv('CELL_SUFFIX', '')
+TARGET_COMPLETED = os.getenv('TARGET_COMPLETED') == '1'   # target = completed series (imputer also enters the target)
+cell_key = f'{IMP_KEY}__mlp_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '') + os.getenv('CELL_SUFFIX', '') + ('_SMOKE' if os.getenv('SMOKE') == '1' else '')
 out_path = os.path.join(RESULTS_DIR, f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path} exists'); sys.exit(0)
 
@@ -81,6 +82,12 @@ df_full['dow'] = df_full['dt_parsed'].dt.dayofweek
 sales_orig = np.array(df_full['hours_sale'].tolist(), dtype=np.float32)[:, H_START:H_END]
 stock_orig = np.array(df_full['hours_stock_status'].tolist(), dtype=np.float32)[:, H_START:H_END]
 del df_train_hf, df_eval
+if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series (outputs tagged _SMOKE)
+    _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
+    _m = df_full.set_index(['store_id','product_id']).index.isin(pd.MultiIndex.from_frame(_keep))
+    df_full = df_full[_m].reset_index(drop=True); sales_orig = sales_orig[_m]; stock_orig = stock_orig[_m]
+    print(f'  SMOKE: {len(_keep)} series, {len(df_full):,} rows')
+
 
 # Align completed_sales
 df_cs = pd.read_parquet(os.path.join(COMPLETED_DIR, f'{IMP_KEY}.parquet'))
@@ -143,7 +150,7 @@ def build_ds(split, cm=None, cs=None, lm=None, ls=None):
             if d<d0 or d>d1: continue
             ad=d-1 if split=='train' else (83 if split=='val' else 90)
             cl.append([sid,pid,ci,dows[idx]]); col.append(co[idx])
-            tl.append(so[idx]); sl.append(stk[idx]); si.append(sid); pi.append(pid)
+            tl.append((sc_ if TARGET_COMPLETED else so)[idx]); sl.append(stk[idx]); si.append(sid); pi.append(pid)
             am=days<=ad; K=int(am.sum())
             ld=clags(sc_[am],dows[am],dows[idx],K) if K>0 \
                 else {n:np.full(N_HOURS,np.nan,dtype=np.float32) for n in LAG_NAMES}
@@ -167,7 +174,7 @@ def build_ds(split, cm=None, cs=None, lm=None, ls=None):
 # Build all datasets, then free series_cache
 print('\n2. Building datasets...')
 t0=time.time()
-tr=build_ds('train'); print(f'  Train: {len(tr["targets"]):,}')
+tr=build_ds('train'); print(f'  Train: {len(tr["targets"]):,}  | target={"completed" if TARGET_COMPLETED else "observed"} mean={tr["targets"].mean():.5f}')
 va=build_ds('val',tr['cont_mean'],tr['cont_std'],tr['lag_mean'],tr['lag_std']); print(f'  Val: {len(va["targets"]):,}')
 te=build_ds('test',tr['cont_mean'],tr['cont_std'],tr['lag_mean'],tr['lag_std']); print(f'  Test: {len(te["targets"]):,}')
 del sc; gc.collect()
@@ -265,7 +272,7 @@ for (sid,pid),idxs in sm.items():
     recs.append({'store_id':sid,'product_id':pid,
                  'hourly_wape':sh/aoh if aoh>0 else np.nan,'hourly_wpe':eh/oh2 if oh2!=0 else np.nan,
                  'daily_wape':sd2/aod if aod>0 else np.nan,'daily_wpe':ed/od if od!=0 else np.nan})
-ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+ps=pd.DataFrame(recs); ps.to_parquet(out_path+'.tmp',index=False); os.replace(out_path+'.tmp',out_path)
 med={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
 
 print(f'\n  WAPE_h pool={pooled["hourly_wape"]:.4f}, med={med["hourly_wape"]:.4f}')

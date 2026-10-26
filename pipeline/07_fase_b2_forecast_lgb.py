@@ -48,7 +48,8 @@ IMP_LABELS={'media_cond':'Media condizionata','media_glob':'Media globale',
             'timesnet':'TimesNet',
             'csdi':'CSDI',
             'imputeformer':'ImputeFormer'}
-cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '')
+TARGET_COMPLETED = os.getenv('TARGET_COMPLETED') == '1'   # target = completed series (imputer also enters the target)
+cell_key=f'{IMP_KEY}__lgb_m5lags' + ('_hpo' if os.getenv('HPO_VARIANT') == '1' else '') + os.getenv('CELL_SUFFIX', '') + ('_SMOKE' if os.getenv('SMOKE') == '1' else '')
 out_path=os.path.join(RESULTS_DIR,f'{cell_key}_test_per_series.parquet')
 if os.path.exists(out_path): print(f'SKIP: {out_path}'); sys.exit(0)
 
@@ -69,6 +70,12 @@ df_full['dow']=df_full['dt_parsed'].dt.dayofweek
 sales_orig=np.array(df_full['hours_sale'].tolist(),dtype=np.float32)[:,H_START:H_END]
 stock_orig=np.array(df_full['hours_stock_status'].tolist(),dtype=np.float32)[:,H_START:H_END]
 del df_train_hf,df_eval
+if os.getenv('SMOKE') == '1':  # quick end-to-end test on 300 series (outputs tagged _SMOKE)
+    _keep = df_full[['store_id','product_id']].drop_duplicates().head(300)
+    _m = df_full.set_index(['store_id','product_id']).index.isin(pd.MultiIndex.from_frame(_keep))
+    df_full = df_full[_m].reset_index(drop=True); sales_orig = sales_orig[_m]; stock_orig = stock_orig[_m]
+    print(f'  SMOKE: {len(_keep)} series, {len(df_full):,} rows')
+
 
 # Align completed_sales
 df_cs=pd.read_parquet(os.path.join(COMPLETED_DIR,f'{IMP_KEY}.parquet'))
@@ -89,7 +96,7 @@ for (sid,pid),grp in df_full.groupby(['store_id','product_id'],sort=False):
     gs=grp.sort_values('day_num'); idx=gs.index.values
     series_cache[(sid,pid)]={'days':gs['day_num'].values,'dows':gs['dow'].values,
                               'sales':completed_full[idx]}
-del completed_full; gc.collect()
+if not TARGET_COMPLETED: del completed_full; gc.collect()
 print(f'  {len(series_cache):,} series')
 
 def clags(as_,ad,dw,K):
@@ -121,7 +128,7 @@ def build_lgb_ds(split):
     sids=ds['store_id'].values; pids=ds['product_id'].values
     cids=ds['city_id'].values; dows=ds['dow'].values
     conts=ds[CONT_FEATURES].values.astype(np.float32); dnums=ds['day_num'].values
-    sd=sales_orig[idx_s]; sk=stock_orig[idx_s]
+    sd=(completed_full if TARGET_COMPLETED else sales_orig)[idx_s]; sk=stock_orig[idx_s]
     nh=nd*N_HOURS; hrs=np.tile(HOURS_RANGE,nd)
     sh=np.repeat(sids,N_HOURS); ph=np.repeat(pids,N_HOURS)
     ch=np.repeat(cids,N_HOURS); dh=np.repeat(dows,N_HOURS)
@@ -149,7 +156,7 @@ def build_lgb_ds(split):
 # Train
 print('\n2. Building train...')
 t0=time.time()
-Xtr,ytr,_,_,_=build_lgb_ds('train'); print(f'  Train: {len(Xtr):,}')
+Xtr,ytr,_,_,_=build_lgb_ds('train'); print(f'  Train: {len(Xtr):,}  | target={"completed" if TARGET_COMPLETED else "observed"} mean={ytr.mean():.5f}')
 print('  Building val...')
 Xva,yva,_,_,_=build_lgb_ds('val'); print(f'  Val: {len(Xva):,}')
 print('  Training...')
@@ -187,7 +194,7 @@ for (sid,pid),grp in dft.groupby(['sid','pid'],sort=False):
             sd2+=abs(pv-ov);ao2+=abs(ov);se2+=pv-ov;so2+=ov;nv+=1
     recs.append({'store_id':sid,'product_id':pid,'hourly_wape':hw,'hourly_wpe':hwp,
                  'daily_wape':sd2/ao2 if ao2>0 else np.nan,'daily_wpe':se2/so2 if so2!=0 else np.nan})
-ps=pd.DataFrame(recs); ps.to_parquet(out_path,index=False)
+ps=pd.DataFrame(recs); ps.to_parquet(out_path+'.tmp',index=False); os.replace(out_path+'.tmp',out_path)
 med={c:ps[c].dropna().median() for c in ['hourly_wape','hourly_wpe']}
 
 print(f'\n  WAPE_h pool={pooled["hourly_wape"]:.4f}, med={med["hourly_wape"]:.4f}')
