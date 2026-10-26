@@ -198,7 +198,7 @@ ax.set_yticklabels(labels, fontsize=10)
 ax.invert_yaxis()
 ax.set_xlabel('Mean rank across series (lower = better)', fontsize=13)
 ax.set_title(f'Top-{TOP_N} cells by Friedman mean rank   '
-             f'(k={k}, N={N:,}, χ²={chi2:.0f}, p<{p_fried:.1e})\n'
+             f'(k={k}, N={N:,}, χ²={chi2:.0f}, ' + ('p < 1e-300' if p_fried == 0 else f'p = {p_fried:.1e}') + ', Kendall W = ' + f'{kendall_W:.2f})\n'
              f'Blue = CD-indistinguishable from best (CD={CD:.3f})',
              fontsize=12, pad=10)
 ax.axvline(best_rank, color='red', linestyle='--', alpha=0.7, linewidth=1.5,
