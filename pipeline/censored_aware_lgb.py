@@ -53,6 +53,7 @@ IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
 SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
 SAVE_VAL_PREDS = os.getenv('SAVE_VAL_PREDS') == '1'          # referee 2 round 2: validation orders for tau selection
 SEED = int(os.getenv('SEED', '42'))
+MASK_STOCKOUT = os.getenv('MASK_STOCKOUT') == '1'   # internal review (ii): stock-out hours carry zero weight in the loss
 IMP_SFX += os.getenv('RUN_TAG', '') + (f'_seed{SEED}' if os.getenv('SEED') else '')
 
 
@@ -144,10 +145,10 @@ def build_ds(split):
 
 print('\n2. Building datasets (once)...')
 t0=time.time()
-Xtr,ytr,_,_,_=build_ds('train'); print(f'  Train: {len(Xtr):,}')
-ltr=lgb.Dataset(Xtr,ytr,free_raw_data=True); del Xtr,ytr; gc.collect()
+Xtr,ytr,str_,_,_=build_ds('train'); print(f'  Train: {len(Xtr):,}  | stock-out hours {"masked (weight 0)" if MASK_STOCKOUT else "in the loss"}')
+ltr=lgb.Dataset(Xtr,ytr,weight=(1.0-str_) if MASK_STOCKOUT else None,free_raw_data=True); del Xtr,ytr,str_; gc.collect()
 Xva,yva,sva,siva,piva=build_ds('val'); print(f'  Val: {len(Xva):,}')
-lva=lgb.Dataset(Xva,yva,reference=ltr,free_raw_data=False); gc.collect()
+lva=lgb.Dataset(Xva,yva,weight=(1.0-sva) if MASK_STOCKOUT else None,reference=ltr,free_raw_data=False); gc.collect()
 Xte,yte,ste,site,pite=build_ds('test'); print(f'  Test: {len(Xte):,}')
 del df_full,sales_orig,stock_orig,sales_lagsrc,series_cache; gc.collect()
 print(f'  Built in {time.time()-t0:.0f}s')

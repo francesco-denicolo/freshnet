@@ -61,6 +61,7 @@ IMP_SFX = f'_imp-{IMPUTER}' if IMPUTER else ''
 SAVE_PREDS = os.getenv('SAVE_PREDS') == '1'
 SAVE_VAL_PREDS = os.getenv('SAVE_VAL_PREDS') == '1'          # referee 2 round 2: validation orders for tau selection
 SEED = int(os.getenv('SEED', '42'))
+MASK_STOCKOUT = os.getenv('MASK_STOCKOUT') == '1'   # internal review (ii): stock-out hours carry zero weight in the loss
 IMP_SFX += os.getenv('RUN_TAG', '') + (f'_seed{SEED}' if os.getenv('SEED') else '')
 
 
@@ -157,9 +158,9 @@ del sc; gc.collect()
 print(f'  Train {len(tr["targets"]):,} Val {len(va["targets"]):,} Test {len(te["targets"]):,} — built in {time.time()-t0:.0f}s')
 
 class DS2(Dataset):
-    def __init__(s,c,co,l,t): s.c,s.co,s.l,s.t=[torch.from_numpy(x) for x in (c,co,l,t)]
+    def __init__(s,c,co,l,t,m): s.c,s.co,s.l,s.t,s.m=[torch.from_numpy(x) for x in (c,co,l,t,m)]
     def __len__(s): return len(s.t)
-    def __getitem__(s,i): return s.c[i],s.co[i],s.l[i],s.t[i]
+    def __getitem__(s,i): return s.c[i],s.co[i],s.l[i],s.t[i],s.m[i]
 class MLP(nn.Module):
     def __init__(s,nc,nl):
         super().__init__()
@@ -171,11 +172,13 @@ class MLP(nn.Module):
         e=[s.embs[n](cat[:,i]) for i,n in enumerate(s.names)]
         return s.mlp(torch.cat(e+[cont,lags],dim=1))
 
-def pinball(pred,target,tau):
+def pinball(pred,target,tau,mask=None):
     err=target-pred
-    return torch.maximum(tau*err,(tau-1.0)*err).mean()
+    loss=torch.maximum(tau*err,(tau-1.0)*err)
+    if mask is None: return loss.mean()
+    return (loss*mask).sum()/mask.sum().clamp_min(1.0)   # mean over in-stock hours only
 
-ds=DS2(tr['cat'],tr['cont'],tr['lags'],tr['targets']); nc,nl=tr['cont'].shape[1],tr['lags'].shape[1]; del tr; gc.collect()
+ds=DS2(tr['cat'],tr['cont'],tr['lags'],tr['targets'],(tr['stock']==0).astype(np.float32)); nc,nl=tr['cont'].shape[1],tr['lags'].shape[1]; del tr; gc.collect()
 vi=va['stock']==0
 vc=torch.from_numpy(va['cat']).to(DEVICE); vco=torch.from_numpy(va['cont']).to(DEVICE); vl=torch.from_numpy(va['lags']).to(DEVICE)
 tc=torch.from_numpy(te['cat']).to(DEVICE); tco=torch.from_numpy(te['cont']).to(DEVICE); tlg=torch.from_numpy(te['lags']).to(DEVICE)
@@ -253,9 +256,9 @@ for tag, tau in TAU_ITEMS:
     bw,be,bs,ni=float('inf'),0,None,0
     for ep in range(1,MAX_EPOCHS+1):
         model.train()
-        for c,co,l,t in loader:
-            c,co,l,t=c.to(DEVICE),co.to(DEVICE),l.to(DEVICE),t.to(DEVICE)
-            loss=pinball(model(c,co,l),t,tau); opt.zero_grad(); loss.backward(); opt.step()
+        for c,co,l,t,m in loader:
+            c,co,l,t,m=c.to(DEVICE),co.to(DEVICE),l.to(DEVICE),t.to(DEVICE),m.to(DEVICE)
+            loss=pinball(model(c,co,l),t,tau,m if MASK_STOCKOUT else None); opt.zero_grad(); loss.backward(); opt.step()
         model.eval()
         with torch.no_grad():
             ap=[]
